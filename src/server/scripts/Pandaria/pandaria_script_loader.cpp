@@ -16,13 +16,15 @@
  */
 
 // This is where scripts' loading functions should be declared:
-void AddSC_winterspring();
+void AddSC_siege_of_orgrimmar();
+void AddSC_boss_garrosh_hellscream();
+void AddSC_instance_siege_of_orgrimmar();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddPandariaScripts()
 {
-    AddSC_siege_of_orgrimmar();         	//Siege of Orgrimmar
-	AddSC_boss_garrosh_hellscream();
+    AddSC_siege_of_orgrimmar();             //Siege of Orgrimmar
+    AddSC_boss_garrosh_hellscream();
     AddSC_instance_siege_of_orgrimmar();
 }
