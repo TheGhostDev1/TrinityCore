@@ -22,7 +22,9 @@
 
 DoorData const doorData[] =
 {
-    { 0, 0, DOOR_TYPE_ROOM },// END
+    { GO_GARROSH_HELLSCREAM_ENTRANCE_1, DATA_GARROSH_HELLSCREAM,    DOOR_TYPE_ROOM },
+    { GO_GARROSH_HELLSCREAM_ENTRANCE_2, DATA_GARROSH_HELLSCREAM,    DOOR_TYPE_ROOM },
+    { 0,                                0,                          DOOR_TYPE_ROOM }, // END
 };
 
 class instance_siege_of_orgrimmar : public InstanceMapScript
@@ -74,8 +76,27 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
             {
                 switch (go->GetEntry())
                 {
+                    case GO_GARROSH_HELLSCREAM_ENTRANCE_1:
+                    case GO_GARROSH_HELLSCREAM_ENTRANCE_2:
+                        AddDoor(go, true);
+                        break;
                     case GO_HEART_OF_YSHAARJ:
                         HeartOfYshaarjMainRoomGameobjectGUID = go->GetGUID();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            void OnGameObjectRemove(GameObject* go) override
+            {
+                switch (go->GetEntry())
+                {
+                    case GO_GARROSH_HELLSCREAM_ENTRANCE_1:
+                    case GO_GARROSH_HELLSCREAM_ENTRANCE_2:
+                        AddDoor(go, false);
+                        break;
+                    default:
                         break;
                 }
             }

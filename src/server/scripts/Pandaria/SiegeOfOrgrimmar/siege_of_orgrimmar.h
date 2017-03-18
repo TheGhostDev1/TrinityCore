@@ -43,39 +43,40 @@ enum Encounter
     MAX_BOSS_DATA
 };
 
-enum Data
+enum InstanceData
 {
-    DATA_NONE,
-    DATA_INSTANCE_PROGRESS,
-    DATA_GARROSH_THRALL,
-    DATA_GARROSH_HELLSCREAM_SANCTUM_BREACH,
-    DATA_GARROSH_HELLSCREAM_INTRO,
-    DATA_GARROSH_HELLSCREAM,
-    DATA_HEART_OF_YSHAARJ_CREATURE_MAIN_ROOM,
-    DATA_HEART_OF_YSHAARJ_GAMEOBJECT_MAIN_ROOM,
+    DATA_INSTANCE_PROGRESS                      = 1000,
+    DATA_GARROSH_THRALL                         = 1001,
+    DATA_GARROSH_HELLSCREAM_SANCTUM_BREACH      = 1002,
+    DATA_GARROSH_HELLSCREAM_INTRO               = 1003,
+    DATA_GARROSH_HELLSCREAM                     = 1004,
+    DATA_HEART_OF_YSHAARJ_CREATURE_MAIN_ROOM    = 1005,
+    DATA_HEART_OF_YSHAARJ_GAMEOBJECT_MAIN_ROOM  = 1006,
 };
 
 enum InstanceActions
 {
-    ACTION_GARROSH_INTRO                = 1001,
+    ACTION_GARROSH_INTRO                    = 1001,
 };
 
 enum Creatures
 {
-    NPC_GARROSH_THRALL                    = 73483,
-    NPC_GARROSH_HELLSCREAM                = 71865,
-    NPC_HEART_OF_YSHAARJ_MAIN_ROOM        = 72215,
+    NPC_GARROSH_THRALL                      = 73483,
+    NPC_GARROSH_HELLSCREAM                  = 71865,
+    NPC_HEART_OF_YSHAARJ_MAIN_ROOM          = 72215,
 
-    NPC_SIEGE_ENGINEER                  = 71984,
-    NPC_KORKRON_WARBRINGER              = 71979,
-    NPC_FARSEER_WOLF_RIDER              = 71983,
+    NPC_SIEGE_ENGINEER                      = 71984,
+    NPC_KORKRON_WARBRINGER                  = 71979,
+    NPC_FARSEER_WOLF_RIDER                  = 71983,
 
-    NPC_KORKRON_IRON_STAR                = 71985,
+    NPC_KORKRON_IRON_STAR                   = 71985,
 };
 
 enum GameObjects
 {
-    GO_HEART_OF_YSHAARJ                    = 221995,
+    GO_HEART_OF_YSHAARJ                     = 221995,
+    GO_GARROSH_HELLSCREAM_ENTRANCE_1        = 221438,
+    GO_GARROSH_HELLSCREAM_ENTRANCE_2        = 221441,
 };
 
 enum InstanceSpells

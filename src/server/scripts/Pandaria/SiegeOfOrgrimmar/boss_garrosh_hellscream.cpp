@@ -35,6 +35,7 @@ EndScriptData */
 #include "siege_of_orgrimmar.h"
 #include "PassiveAI.h"
 #include "AreaTrigger.h"
+#include "Vehicle.h"
 
 #define HEALTH_PHASE_2_3          10
 #define HEALTH_PHASE_4          2
@@ -78,7 +79,7 @@ enum Spells
     SPELL_WHIRLING_CORRUPTION_3 = 144994,
     SPELL_EMPOWERED_WHIRLING_CORRUPTION = 145023,
     SPELL_EMPOWERED_WHIRLING_CORRUPTION_2 = 145833,
-    SPELL_EMPOWERED_DESECRATE_2     = 145829,
+    SPELL_EMPOWERED_DESECRATE       = 145829,
 
     SPELL_CANCEL_REALM_OF_YSHAARJ   = 145647,
     SPELL_TRANSITION_VISUAL_2       = 146845,
@@ -159,6 +160,11 @@ enum Events
     EVENT_GROUP_NORMAL = 1,
 };
 
+enum Data
+{
+    DATA_KORKRON_IRON_STAR_ID   = 1,
+};
+
 enum Actions
 {
     ACTION_NONE,
@@ -172,93 +178,63 @@ enum Actions
 enum Texts
 {
     // Thrall
-    SAY_THRALL_INTRO_1                = 0,
-    SAY_THRALL_INTRO_2                = 1,
-    SAY_THRALL_INTRO_3                = 2,
-    SAY_THRALL_INTRO_4                = 3,
+    SAY_THRALL_INTRO_1                  = 0,
+    SAY_THRALL_INTRO_2                  = 1,
+    SAY_THRALL_INTRO_3                  = 2,
 
     // Garrosh Hellscream
     // Intro
-    SAY_INTRO_1                        = 0,
-    SAY_INTRO_2                        = 1,
-    SAY_INTRO_3                        = 2,
-    SAY_INTRO_4                        = 3,
-    SAY_INTRO_5                        = 4,
+    SAY_INTRO_1                         = 0,
+    SAY_INTRO_2                         = 1,
+    SAY_INTRO_3                         = 2,
+    SAY_INTRO_4                         = 3,
+    SAY_INTRO_5                         = 4,
 
-    SAY_UNK_1                        = 5,
+    SAY_ENTER_COMBAT                    = 5,
+    SAY_KILL                            = 6,
+    SAY_WIPE                            = 7,
+    SAY_BERSERK                         = 8,
+    SAY_DEFEAT_NORMAL                   = 9,
+    SAY_DEFEAT_HEROIC                   = 10,
 
-    SAY_ENTER_COMBAT                = 6,
-    SAY_KILL                        = 7,
-    SAY_WIPE                        = 8,
-    SAY_BERSERK                        = 9,
-    SAY_DEFEAT_NORMAL                = 10,
-    SAY_DEFEAT_HEROIC                = 11,
+    SAY_KORKRON_WARBRINGER              = 11,
+    SAY_KORKRON_FARSEER                 = 12,
+    SAY_HELLSCREAMS_WARSONG             = 13,
+    SAY_WHIRLING_CORRUPTION             = 14,
+    SAY_E_WHIRLING_CORRUPION            = 15,
+    SAY_KORKRON_IRON_STAR               = 16,
 
-    SAY_KORKRON_IRON_STAR            = 12,
-    SAY_KORKRON_WARBRINGER            = 13,
-    SAY_KORKRON_FARSEER                = 14,
-    SAY_HELLSCREAMS_WARSONG            = 15,
-    SAY_WHIRLING_CORRUPTION            = 16,
-    SAY_E_WHIRLING_CORRUPION        = 17,
+    SAY_PHASE_2_1                       = 17,
+    SAY_PHASE_2_2                       = 18,
+    SAY_REALM_OF_YSHAARJ                = 19,
 
-    SAY_PHASE_2_1                    = 18,
-    SAY_PHASE_2_2                    = 19,
-    SAY_REALM_OF_YSHAARJ            = 20,
+    SAY_PHASE_3                         = 20,
 
-    SAY_PHASE_3                        = 21,
+    SAY_PHASE_4_1                       = 21,
+    SAY_PHASE_4_2                       = 22,
 
-    SAY_PHASE_4_1                    = 22,
-    SAY_PHASE_4_2                    = 23,
+    SAY_MANIFEST_RAGE                   = 23,
+    SAY_CALL_BOMBARDMENT                = 24,
+    SAY_UNK_1                           = 25,
 
-    SAY_MANIFEST_RAGE                = 24,
-    SAY_CALL_BOMBARDMENT            = 25,
-
-    EMOTE_SIEGE_ENGINEERS            = 26,
-    EMOTE_WHIRLING_CORRUPTION        = 27,
-    EMOTE_E_WHIRLING_CORRUPTION        = 28,
-    EMOTE_WHIRLING_CORRUPTION_TIP    = 29,
-    EMOTE_MANIFEST_RAGE                = 30,
-    EMOTE_BOMBARDMENT                = 31,
-    EMOTE_UNSTABLE_IRON_STAR        = 32,
-    EMOTE_MALICE                    = 33,
-
-
- //   TALK_AGGRO                            = 5, //
-    //TALK_IRON_STAR                        = 6,
- //   TALK_HELLSCREAM_WARSONG                = 7,
-    //TALK_FARSEERS                        = 8,
-
-    //TALK_PHASE_2_1                        = 9,
-    //TALK_PHASE_2_2                        = 10,
-
-    //TALK_REALM_OF_YSHAARJ                = 11,
-
-    //TALK_WHIRLING_CORRUPTION            = 12,
-    //TALK_EMPOWERED_WHIRLING_CORRUPTION    = 13,
-
-    //TALK_PHASE_3                        = 14,
-    //
-    //TALK_PHASE_4_1                        = 15,
-    //TALK_PHASE_4_2                        = 16,
-
-    //TALK_CALL_BOMBARDMENT                = 17,
-    //TALK_MANIFEST_RAGE                    = 18,
-    //TALK_BERSERK                        = 19,
-    //TALK_KILL                            = 20,
-    //TALK_WIPE                            = 21,
-    //TALK_DEATH_NORMAL                    = 22,
-    //TALK_DEATH_ALTERNATE                = 23,
-
- //   EMOTE_SIEGE_ENGINEERS                = 24,
+    EMOTE_SIEGE_ENGINEERS               = 26,
+    EMOTE_WHIRLING_CORRUPTION           = 27,
+    EMOTE_E_WHIRLING_CORRUPTION         = 28,
+    EMOTE_WHIRLING_CORRUPTION_TIP       = 29,
+    EMOTE_MANIFEST_RAGE                 = 30,
+    EMOTE_BOMBARDMENT                   = 31,
+    EMOTE_UNSTABLE_IRON_STAR            = 32,
+    EMOTE_MALICE                        = 33,
 };
 
 enum CreatureGroups
 {
-    CG_WARBRINGERS        = 0,
-    CG_FARSEER_1        = 1,
-    CG_FARSEER_2        = 2,
-    CG_SIEGE_ENGINEERS    = 3,
-    CG_IRON_STARS        = 4,
+    CG_WARBRINGERS                      = 0,
+    CG_FARSEER_1                        = 1,
+    CG_FARSEER_2                        = 2,
+    CG_SIEGE_ENGINEERS                  = 3,
+    CG_KORKRON_IRON_STAR_EAST           = 4,
+    CG_KORKRON_IRON_STAR_WEST           = 5,
 };
 
 enum Phases
@@ -275,6 +251,12 @@ enum Phases
     PHASE_MASK_ONE        = 1 << PHASE_ONE,
     PHASE_MASK_TWO        = 1 << PHASE_TWO,
     PHASE_MASK_THREE    = 1 << PHASE_THREE,
+};
+
+enum MiscData
+{
+    KORKRON_IRON_STAR_EAST = 1,
+    KORKRON_IRON_STAR_WEST = 2,
 };
 
 enum Points
@@ -306,7 +288,24 @@ Position GarroshIntroPosition = { 1028.61f, -5633.94f, -317.6976f };
 Position ThrallIntroPosition = { 1035.373f, -5635.088f, -317.7258f };
 
 Position RealmOfYshaarjExitPosition = { 1068.59f, -5640.31f, -277.636f };
-Position RealmOfYshaarjJumpTarget = { 1072.880615f, -5639.467773f, -317.4f }; //Not taken from sniff, custm
+Position RealmOfYshaarjJumpTarget = { 1072.880615f, -5639.467773f, -317.4f }; //Not taken from sniff, custom
+
+class DelayedDespawnEvent : public BasicEvent
+{
+    public:
+        DelayedDespawnEvent(std::function<void(Seconds const&, Creature* who)> func, Seconds time) : BasicEvent(), _func(func), _time(time) { }
+
+        bool Execute(uint64 /*eventTime*/, uint32 /*diff*/) override
+        {
+            _func(_time, nullptr);
+            return true;
+        }
+
+    private:
+        Creature* _owner;
+        std::function<void(Seconds const&, Creature* who)> _func;
+        Seconds _time;
+};
 
 class boss_garrosh_hellscream : public CreatureScript
 {
@@ -319,10 +318,11 @@ class boss_garrosh_hellscream : public CreatureScript
 
             void Reset()
             {
-                me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+                if (instance->GetData(DATA_GARROSH_HELLSCREAM_INTRO) == NOT_STARTED)
+                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+
                 _Reset();
                 SetEquipmentSlots(true);
-                me->SetCurrentEquipmentId(1);
                 me->SetSheath(SHEATH_STATE_MELEE);
                 DoCastAOE(SPELL_ZERO_ENERGY_ZERO_REGEN, true);
                 warbringerWaveCnt = 0, farseerWaveCnt = 0;
@@ -330,7 +330,8 @@ class boss_garrosh_hellscream : public CreatureScript
                 canYell = true;
                 atIntroFight = false;
                 yellIronStar = false;
-                me->SummonCreatureGroup(CG_IRON_STARS);
+                SummonKorkronIronStar(KORKRON_IRON_STAR_EAST);
+                SummonKorkronIronStar(KORKRON_IRON_STAR_WEST);
             }
 
             void SpellHitTarget(Unit* target, const SpellInfo* spellInfo) override
@@ -389,8 +390,40 @@ class boss_garrosh_hellscream : public CreatureScript
                     Talk(SAY_WIPE);
 
                 summons.DespawnAll();
-                BossAI::EnterEvadeMode();
-                _DespawnAtEvade();
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+
+                // Copy paste from CreatureAI::EnterEvadeMode
+                if (!_EnterEvadeMode(why))
+                    return;
+
+                TC_LOG_DEBUG("entities.unit", "Creature %u enters evade mode.", me->GetEntry());
+
+                if (!me->GetVehicle()) // otherwise me will be in evade mode forever
+                {
+                    if (Unit* owner = me->GetCharmerOrOwner())
+                    {
+                        me->GetMotionMaster()->Clear(false);
+                        me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, me->GetFollowAngle(), MOTION_SLOT_ACTIVE);
+                    }
+                    else
+                    {
+                        // Required to prevent attacking creatures that are evading and cause them to reenter combat
+                        // Does not apply to MoveFollow
+                        me->AddUnitState(UNIT_STATE_EVADE);
+                    }
+                }
+
+                if (me->IsVehicle()) // use the same sequence of addtoworld, aireset may remove all summons!
+                    me->GetVehicleKit()->Reset(true);
+                // Copy paste end
+
+                // Need to call protected member _DespawnAtEvade after waiting 2.5 seconds. UpdateAI is blocked when creature is in evade mode, what do we do?
+            }
+
+            void JustDied(Unit* killer) override
+            {
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
+                BossAI::JustDied(killer);
             }
 
             void KilledUnit(Unit* who)
@@ -429,18 +462,32 @@ class boss_garrosh_hellscream : public CreatureScript
                 }
             }
 
-            void SummonedCreatureDies(Creature* summon, Unit* /*killer*/)
-            {
-                if (summon->GetEntry() == NPC_SIEGE_ENGINEER)
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, summon);
-            }
-
-            void SummonedCreatureDespawn(Creature* summon)
+            void SummonedCreatureDies(Creature* summon, Unit* killer)
             {
                 summons.Despawn(summon);
 
-                if (summon->GetEntry() == NPC_SIEGE_ENGINEER)
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, summon);
+                switch (summon->GetEntry())
+                {
+                    case NPC_KORKRON_IRON_STAR:
+                    {
+                        if (!summon->IsAIEnabled)
+                            break;
+
+                        uint32 id = summon->AI()->GetData(DATA_KORKRON_IRON_STAR_ID);
+                        scheduler.Schedule(Seconds(10), [this, id](TaskContext)
+                        {
+                            SummonKorkronIronStar(id);
+                        });
+                        break;
+                    }
+                    case NPC_SIEGE_ENGINEER:
+                        instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, summon);
+                        break;
+                    default:
+                        break;
+                }
+
+                summon->DespawnOrUnsummon(Seconds(3));
             }
 
             void PreparePhase(Phases _phase, Phases _previousPhase = PHASE_NONE)
@@ -483,6 +530,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 UpdateVictim();
 
                 events.Update(diff);
+                scheduler.Update(diff);
 
                 while (uint32 eventId = events.ExecuteEvent())
                 {
@@ -604,6 +652,27 @@ class boss_garrosh_hellscream : public CreatureScript
             int32 warbringerWaveCnt, farseerWaveCnt;
             int8 farseerSpawn;
             bool atIntroFight, canYell, yellIronStar;
+            void SummonKorkronIronStar(uint32 id)
+            {
+                uint32 creatureGroup;
+                switch (id)
+                {
+                    case KORKRON_IRON_STAR_EAST:
+                        creatureGroup = CG_KORKRON_IRON_STAR_EAST;
+                        break;
+                    case KORKRON_IRON_STAR_WEST:
+                        creatureGroup = CG_KORKRON_IRON_STAR_WEST;
+                        break;
+                    default:
+                        return;
+                }
+
+                std::list<TempSummon*> summonGroup;
+                me->SummonCreatureGroup(creatureGroup, &summonGroup);
+                for (auto ironStar : summonGroup)
+                    if (ironStar->IsAIEnabled)
+                        ironStar->AI()->SetData(DATA_KORKRON_IRON_STAR_ID, id);
+            }
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -620,10 +689,7 @@ class npc_garrosh_thrall : public CreatureScript
 
         struct npc_garrosh_thrallAI : public NullCreatureAI
         {
-            npc_garrosh_thrallAI(Creature* creature) : NullCreatureAI(creature)
-            {
-                creature->SetCurrentEquipmentId(1);
-            }
+            npc_garrosh_thrallAI(Creature* creature) : NullCreatureAI(creature) { }
 
             void DoAction(int32 action) override
             {
@@ -736,12 +802,22 @@ class npc_korkron_iron_star : public CreatureScript
 
         struct npc_korkron_iron_starAI : public NullCreatureAI
         {
-            npc_korkron_iron_starAI(Creature* creature) : NullCreatureAI(creature) { }
+            npc_korkron_iron_starAI(Creature* creature) : NullCreatureAI(creature), _ironStarId(0) { }
 
-            void JustDied(Unit* killer) override
+            void SetData(uint32 type, uint32 data) override
             {
-                me->DespawnOrUnsummon(3 * IN_MILLISECONDS);
-                me->SetRespawnTime(10 * IN_MILLISECONDS);
+                if (type != DATA_KORKRON_IRON_STAR_ID)
+                    return;
+
+                _ironStarId = data;
+            }
+
+            uint32 GetData(uint32 type) const override
+            {
+                if (type != DATA_KORKRON_IRON_STAR_ID)
+                    return 0;
+
+                return _ironStarId;
             }
 
             void DoAction(int32 action) override
@@ -772,6 +848,16 @@ class npc_korkron_iron_star : public CreatureScript
                 DoCastAOE(SPELL_IRON_STAR_EXPLOSION);
                 me->KillSelf();
             }
+
+            void UpdateAI(uint32 diff)
+            {
+                _scheduler.Update(diff);
+                NullCreatureAI::UpdateAI(diff);
+            }
+
+        private:
+            TaskScheduler _scheduler;
+            uint8 _ironStarId;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -841,7 +927,6 @@ class npc_garrosh_siege_engineer : public CreatureScript
         }
 };
 
-
 // http://www.wowhead.com/spell=144745
 class spell_garrosh_hellscream_desecrate : public SpellScriptLoader
 {
@@ -852,9 +937,9 @@ public:
     {
         PrepareSpellScript(spell_garrosh_hellscream_desecrate_SpellScript);
 
-        bool Validate(SpellInfo const* /*spellInfo*/)
+        bool Validate(SpellInfo const* spellInfo)
         {
-            if (!sSpellMgr->GetSpellInfo(SPELL_DESECRATE))
+            if (!spellInfo->GetEffect(EFFECT_1))
                 return false;
 
             return true;
@@ -862,7 +947,7 @@ public:
 
         void HandleScript(SpellEffIndex effIndex)
         {
-            if (GetCaster()->HasAura(SPELL_EMPOWERED_DESECRATE_2))
+            if (GetCaster()->HasAura(SPELL_EMPOWERED_DESECRATE))
                 GetCaster()->CastSpell(GetHitUnit(), GetSpellInfo()->GetEffect(EFFECT_1)->BasePoints, true);
             else
                 GetCaster()->CastSpell(GetHitUnit(), GetSpellInfo()->GetEffect(effIndex)->BasePoints, true);
@@ -1285,9 +1370,9 @@ class at_soo_garrosh_fire_pit : public AreaTriggerScript
         bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/, bool entered) override
         {
             if (entered)
-                player->RemoveAurasDueToSpell(SPELL_FIRE_PIT);
-            else
                 player->CastSpell(player, SPELL_FIRE_PIT, true);
+            else
+                player->RemoveAurasDueToSpell(SPELL_FIRE_PIT);
 
             return true;
         }
@@ -1304,17 +1389,6 @@ class at_entity_korkron_iron_star : public AreaTriggerEntityScript
                 return;
 
             unit->CastSpell(unit, 144653, true);
-        }
-};
-
-class achievement_garrosh_hellscream_strike : public AchievementCriteriaScript
-{
-    public:
-        achievement_garrosh_hellscream_strike() : AchievementCriteriaScript("achievement_garrosh_hellscream_strike") { }
-
-        bool OnCheck(Player* /*player*/, Unit* target) override
-        {
-            return target && target->GetAI()->GetData(DATA_KNOCK_ON_WOOD) >= 1;
         }
 };
 
