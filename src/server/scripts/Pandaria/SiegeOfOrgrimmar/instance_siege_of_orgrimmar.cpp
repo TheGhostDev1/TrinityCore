@@ -44,6 +44,7 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
 
                 InstanceProgress = INSTANCE_PROGRESS_NONE;
                 GarroshHellscreamIntroState = NOT_STARTED;
+                HeartOfYshaarjState = NOT_STARTED;
             }
 
             void OnPlayerEnter(Player* player) override
@@ -233,6 +234,13 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
                                 break;
                         }
                         break;
+                    case DATA_HEART_OF_YSHAARJ_STATE:
+                        if (HeartOfYshaarjState = data)
+                            break;
+
+                        HeartOfYshaarjState = data;
+                        DoUpdateWorldState(WORLD_STATE_SOO_HEART_OF_YSHAARJ_ACTIVE, data == IN_PROGRESS);
+                        break;
                     default:
                         break;
                 }
@@ -244,6 +252,8 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
                 {
                     case DATA_GARROSH_HELLSCREAM_INTRO:
                         return GarroshHellscreamIntroState;
+                    case DATA_HEART_OF_YSHAARJ_STATE:
+                        return HeartOfYshaarjState;
                     default:
                         return 0;
                 }
@@ -288,15 +298,77 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
                 return true;
             }*/
 
+            void SetGuidData(uint32 data, ObjectGuid guid) override
+            {
+                switch (data)
+                {
+                    case DATA_HEART_OF_YSHAARJ_UNIT_ENTER:
+                        if (HeartOfYshaarjState == IN_PROGRESS)
+                            InHeartOfYshaarjUnitGUIDs.push_back(guid);
+                        else
+                            SetGuidData(DATA_HEART_OF_YSHAARJ_UNIT_BOOT, guid);
+                        break;
+                    case DATA_HEART_OF_YSHAARJ_UNIT_LEAVE:
+                        InHeartOfYshaarjUnitGUIDs.remove(guid);
+                        break;
+                    case DATA_HEART_OF_YSHAARJ_UNIT_BOOT:
+                        BootUnitFromHeartOfYshaarj(guid);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
         protected:
             ObjectGuid GarroshHellscreamGUID;
             ObjectGuid GarroshThrallGUID;
             ObjectGuid HeartOfYshaarjMainRoomCreatureGUID;
             ObjectGuid HeartOfYshaarjMainRoomGameobjectGUID;
+            GuidList InHeartOfYshaarjUnitGUIDs;
 
             uint32 InstanceProgress;
             uint32 GarroshHellscreamIntroState;
+            uint32 HeartOfYshaarjState;
+            uint32 HeartOfYshaarjId;
             EventMap events;
+
+            void BootUnitFromHeartOfYshaarj(ObjectGuid guid)
+            {
+                Unit* unit = nullptr;
+                switch (guid.GetTypeId())
+                {
+                    case TYPEID_PLAYER:
+                    {
+                        Map::PlayerList const& Players = instance->GetPlayers();
+                        for (Map::PlayerList::const_iterator itr = Players.begin(); itr != Players.end(); ++itr)
+                        {
+                            if (Player* player = itr->GetSource())
+                            {
+                                if (player->GetGUID() != guid)
+                                    continue;
+
+                                unit = player;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case TYPEID_UNIT:
+                        unit = instance->GetCreature(guid);
+                        break;
+                    default:
+                        break;
+                }
+
+                BootUnitFromHeartOfYshaarj(unit);
+            }
+
+            void BootUnitFromHeartOfYshaarj(Unit* unit)
+            {
+                unit->NearTeleportTo(1068.59f, -5640.31f, -277.636f, 0.0f);
+                unit->UpdatePosition(1068.59f, -5640.31f, -277.636f, 0.0f, true);
+                unit->CastSpell(unit, 144956, true);
+            }
         };
 
         InstanceScript* GetInstanceScript(InstanceMap* map) const

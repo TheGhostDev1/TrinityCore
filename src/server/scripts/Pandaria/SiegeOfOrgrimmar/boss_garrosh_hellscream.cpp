@@ -173,6 +173,7 @@ enum Actions
     ACTION_INTRO_2,
     ACTION_INTRO_3,
     ACTION_ACTIVATE_IRON_STAR,
+    ACTION_DESPAWN_AT_EVADE,
 };
 
 enum Texts
@@ -293,18 +294,17 @@ Position RealmOfYshaarjJumpTarget = { 1072.880615f, -5639.467773f, -317.4f }; //
 class DelayedDespawnEvent : public BasicEvent
 {
     public:
-        DelayedDespawnEvent(std::function<void(Seconds const&, Creature* who)> func, Seconds time) : BasicEvent(), _func(func), _time(time) { }
+        DelayedDespawnEvent(Creature* owner) : BasicEvent(), _owner(owner) { }
 
         bool Execute(uint64 /*eventTime*/, uint32 /*diff*/) override
         {
-            _func(_time, nullptr);
+            if (_owner->IsAIEnabled)
+                _owner->AI()->DoAction(ACTION_DESPAWN_AT_EVADE);
             return true;
         }
 
     private:
         Creature* _owner;
-        std::function<void(Seconds const&, Creature* who)> _func;
-        Seconds _time;
 };
 
 class boss_garrosh_hellscream : public CreatureScript
@@ -314,7 +314,7 @@ class boss_garrosh_hellscream : public CreatureScript
 
         struct boss_garrosh_hellscreamAI : public BossAI
         {
-            boss_garrosh_hellscreamAI(Creature* creature) : BossAI(creature, BOSS_GARROSH_HELLSCREAM) { }
+            boss_garrosh_hellscreamAI(Creature* creature) : BossAI(creature, BOSS_GARROSH_HELLSCREAM), _evaded(false) { }
 
             void Reset()
             {
@@ -330,6 +330,7 @@ class boss_garrosh_hellscream : public CreatureScript
                 canYell = true;
                 atIntroFight = false;
                 yellIronStar = false;
+                _evaded = false;
                 SummonKorkronIronStar(KORKRON_IRON_STAR_EAST);
                 SummonKorkronIronStar(KORKRON_IRON_STAR_WEST);
             }
@@ -366,6 +367,9 @@ class boss_garrosh_hellscream : public CreatureScript
                         yellIronStar = false;
                         Talk(SAY_KORKRON_IRON_STAR);
                         break;
+                    case ACTION_DESPAWN_AT_EVADE:
+                        summons.DespawnAll();
+                        _DespawnAtEvade();
                     default:
                         break;
                 }
@@ -380,44 +384,39 @@ class boss_garrosh_hellscream : public CreatureScript
                 Talk(EMOTE_SIEGE_ENGINEERS);
                 me->SummonCreatureGroup(CG_SIEGE_ENGINEERS);
 
-                if (instance)
-                    instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_ENGAGE, me);
             }
 
             void EnterEvadeMode(EvadeReason why) override
             {
+                if (_evaded)
+                    return;
+
+                _evaded = true;
+
                 if (why == EVADE_REASON_NO_HOSTILES)
                     Talk(SAY_WIPE);
 
-                summons.DespawnAll();
                 instance->SendEncounterUnit(ENCOUNTER_FRAME_DISENGAGE, me);
 
-                // Copy paste from CreatureAI::EnterEvadeMode
-                if (!_EnterEvadeMode(why))
+                if (!me->IsAlive())
                     return;
 
-                TC_LOG_DEBUG("entities.unit", "Creature %u enters evade mode.", me->GetEntry());
+                me->RemoveAurasOnEvade();
 
-                if (!me->GetVehicle()) // otherwise me will be in evade mode forever
-                {
-                    if (Unit* owner = me->GetCharmerOrOwner())
-                    {
-                        me->GetMotionMaster()->Clear(false);
-                        me->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, me->GetFollowAngle(), MOTION_SLOT_ACTIVE);
-                    }
-                    else
-                    {
-                        // Required to prevent attacking creatures that are evading and cause them to reenter combat
-                        // Does not apply to MoveFollow
-                        me->AddUnitState(UNIT_STATE_EVADE);
-                    }
-                }
+                // sometimes bosses stuck in combat?
+                me->DeleteThreatList();
+                me->CombatStop(true);
+                me->LoadCreaturesAddon();
+                me->SetLootRecipient(nullptr);
+                me->ResetPlayerDamageReq();
+                me->SetLastDamagedTime(0);
+                me->SetCannotReachTarget(false);
 
-                if (me->IsVehicle()) // use the same sequence of addtoworld, aireset may remove all summons!
-                    me->GetVehicleKit()->Reset(true);
-                // Copy paste end
+                me->StopMoving();
+                me->AddUnitState(UNIT_STATE_EVADE);
 
-                // Need to call protected member _DespawnAtEvade after waiting 2.5 seconds. UpdateAI is blocked when creature is in evade mode, what do we do?
+                me->m_Events.AddEvent(new DelayedDespawnEvent(me), me->m_Events.CalculateTime(2500));
             }
 
             void JustDied(Unit* killer) override
@@ -438,6 +437,12 @@ class boss_garrosh_hellscream : public CreatureScript
 
             void DamageTaken(Unit* /*attacker*/, uint32& damage)
             {
+                if (_evaded && damage >= me->GetHealth())
+                    damage = me->GetHealth() - 1;
+
+                if (_evaded)
+                    return;
+
                 if (events.GetPhaseMask() & PHASE_MASK_ONE && me->HealthBelowPctDamaged(HEALTH_PHASE_2_3, damage))
                     PreparePhase(PHASE_THREE, PHASE_ONE);
             }
@@ -652,6 +657,7 @@ class boss_garrosh_hellscream : public CreatureScript
             int32 warbringerWaveCnt, farseerWaveCnt;
             int8 farseerSpawn;
             bool atIntroFight, canYell, yellIronStar;
+            bool _evaded;
             void SummonKorkronIronStar(uint32 id)
             {
                 uint32 creatureGroup;
@@ -714,9 +720,7 @@ class npc_garrosh_thrall : public CreatureScript
             void SpellHit(Unit* caster, const SpellInfo* spell) override
             {
                 if (spell->Id == SPELL_CALL_OF_THE_ELEMENTS)
-                {
                     events.ScheduleEvent(EVENT_INTRO_1, 16 * IN_MILLISECONDS, 0, PHASE_INTRO);
-                }
             }
 
             void MovementInform(uint32 type, uint32 pointId) override
@@ -1249,35 +1253,6 @@ public:
     }
 };
 
-// http://www.wowhead.com/spell=147831/attack-thrall
-class spell_garrosh_attack_thrall : public SpellScriptLoader
-{
-public:
-    spell_garrosh_attack_thrall() : SpellScriptLoader("spell_garrosh_attack_thrall") {}
-
-    class spell_garrosh_attack_thrall_SpellScript : public SpellScript
-    {
-        PrepareSpellScript(spell_garrosh_attack_thrall_SpellScript);
-
-        void GetThrall(WorldObject*& target)
-        {
-            target = nullptr;
-            if (InstanceScript* instance = GetCaster()->GetInstanceScript())
-                target = ObjectAccessor::GetCreature(*GetCaster(), instance->GetGuidData(DATA_GARROSH_THRALL));
-        }
-
-        void Register()
-        {
-            OnObjectTargetSelect += SpellObjectTargetSelectFn(spell_garrosh_attack_thrall_SpellScript::GetThrall, EFFECT_0, TARGET_UNIT_NEARBY_ENTRY);
-        }
-    };
-
-    SpellScript* GetSpellScript() const
-    {
-        return new spell_garrosh_attack_thrall_SpellScript();
-    }
-};
-
 // http://www.wowhead.com/spell=144954/realm-of-yshaarj
 class spell_garrosh_realm_of_yshaarj : public SpellScriptLoader
 {
@@ -1392,6 +1367,23 @@ class at_entity_korkron_iron_star : public AreaTriggerEntityScript
         }
 };
 
+// 9282,9283,9284
+class at_soo_heart_of_yshaarj  : public AreaTriggerScript
+{
+    public:
+        at_soo_heart_of_yshaarj() : AreaTriggerScript("at_soo_heart_of_yshaarj") { }
+
+        bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/, bool entered) override
+        {
+            InstanceScript* instance = player->GetInstanceScript();
+            if (!instance)
+                return true;
+
+            instance->SetGuidData(entered ? DATA_HEART_OF_YSHAARJ_UNIT_ENTER : DATA_HEART_OF_YSHAARJ_UNIT_LEAVE, player->GetGUID());
+            return true;
+        }
+};
+
 void AddSC_boss_garrosh_hellscream()
 {
     new boss_garrosh_hellscream();
@@ -1407,7 +1399,6 @@ void AddSC_boss_garrosh_hellscream()
     new spell_enter_realm_of_yshaarj();
     new spell_power_iron_star();
     new spell_enter_realm_of_yshaarj_jump();
-    new spell_garrosh_attack_thrall();
     new spell_garrosh_jump_to_ground();
     new spell_garrosh_realm_of_yshaarj();
 
@@ -1416,4 +1407,5 @@ void AddSC_boss_garrosh_hellscream()
     new at_soo_garrosh_fire_pit();
 
     new at_entity_korkron_iron_star();
+    new at_soo_heart_of_yshaarj();
 }

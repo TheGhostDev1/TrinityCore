@@ -3505,6 +3505,11 @@ void SpellMgr::LoadSpellInfoCorrections()
             case 102445: // Summon Master Li Fei
                 const_cast<SpellEffectInfo*>(spellInfo->GetEffect(EFFECT_0))->TargetA = SpellImplicitTargetInfo(TARGET_DEST_DB);
                 break;
+            // Siege of Orgrimmar Spells
+            case 147831: // Attack Thrall
+                spellInfo->AttributesEx3 &= ~SPELL_ATTR3_ONLY_TARGET_PLAYERS;
+                break;
+            // endof Siege of Orgrimmar Spells
             default:
                 break;
         }
