@@ -27,6 +27,28 @@ DoorData const doorData[] =
     { 0,                                0,                          DOOR_TYPE_ROOM }, // END
 };
 
+
+class DelayedCastEvent : public BasicEvent
+{
+    public:
+        DelayedCastEvent(Unit* caster, uint32 spellId, Unit* target, bool triggered) : _caster(caster), _spellId(spellId), _target(target), _triggered(triggered)
+        {
+        }
+
+        bool Execute(uint64 /*time*/, uint32 /*diff*/) override
+        {
+            if (_caster && _target)
+                _caster->CastSpell(_target, _spellId, _triggered);
+            return true;
+        }
+
+    private:
+        Unit* _caster;
+        Unit* _target;
+        uint32 _spellId;
+        bool _triggered;
+};
+
 class instance_siege_of_orgrimmar : public InstanceMapScript
 {
     public:
@@ -365,9 +387,10 @@ class instance_siege_of_orgrimmar : public InstanceMapScript
 
             void BootUnitFromHeartOfYshaarj(Unit* unit)
             {
+                //unit->UpdatePosition(1068.59f, -5640.31f, -277.636f, 0.0f, true);
                 unit->NearTeleportTo(1068.59f, -5640.31f, -277.636f, 0.0f);
-                unit->UpdatePosition(1068.59f, -5640.31f, -277.636f, 0.0f, true);
                 unit->CastSpell(unit, 144956, true);
+                //unit->m_Events.AddEvent(new DelayedCastEvent(unit, 144956, unit, true), unit->m_Events.CalculateTime(0));
             }
         };
 
