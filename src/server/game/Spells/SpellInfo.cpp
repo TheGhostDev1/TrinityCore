@@ -435,6 +435,7 @@ bool SpellEffectInfo::IsAreaAuraEffect() const
         Effect == SPELL_EFFECT_APPLY_AREA_AURA_FRIEND   ||
         Effect == SPELL_EFFECT_APPLY_AREA_AURA_ENEMY    ||
         Effect == SPELL_EFFECT_APPLY_AREA_AURA_PET      ||
+        Effect == SPELL_EFFECT_APPLY_AREA_AURA_SUMMONS  ||
         Effect == SPELL_EFFECT_APPLY_AREA_AURA_OWNER)
         return true;
     return false;

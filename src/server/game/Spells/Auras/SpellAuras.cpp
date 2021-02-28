@@ -2345,6 +2345,14 @@ void UnitAura::FillTargetMap(std::unordered_map<Unit*, uint32>& targets, Unit* c
                                 units.push_back(owner);
                         break;
                     }
+                    case SPELL_EFFECT_APPLY_AREA_AURA_SUMMONS:
+                    {
+                        units.push_back(GetUnitOwner());
+                        Trinity::WorldObjectSpellAreaTargetCheck check(radius, GetUnitOwner(), caster, GetUnitOwner(), m_spellInfo, TARGET_CHECK_SUMMONED, nullptr, TARGET_OBJECT_TYPE_UNIT);
+                        Trinity::UnitListSearcher<Trinity::WorldObjectSpellAreaTargetCheck> searcher(GetUnitOwner(), units, check);
+                        Cell::VisitAllObjects(GetUnitOwner(), searcher, radius);
+                        break;
+                    }
                 }
             }
         }
