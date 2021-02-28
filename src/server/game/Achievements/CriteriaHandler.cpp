@@ -1817,6 +1817,8 @@ bool CriteriaHandler::AdditionalRequirementsSatisfied(ModifierTreeNode const* tr
                 return false;
             break;
         }
+        case CRITERIA_ADDITIONAL_CONDITION_USED_LEVEL_BOOST_LESS_THAN_HOURS_AGO: // 188
+            return false;
         case CRITERIA_ADDITIONAL_CONDITION_HONOR_LEVEL: // 193
             if (!referencePlayer || referencePlayer->GetHonorLevel() != reqValue)
                 return false;
