@@ -425,8 +425,7 @@ public:
         std::string accountName = std::to_string(accountId) + '#' + std::to_string(uint32(index));
 
         // Generate random hex string for password, these accounts must not be logged on with GRUNT
-        BigNumber randPassword;
-        randPassword.SetRand(8 * 16);
+        std::array<uint8, 8> randPassword = Trinity::Crypto::GetRandomBytes<8>();
 
         switch (sAccountMgr->CreateAccount(accountName, ByteArrayToHexStr(randPassword.AsByteArray().get(), randPassword.GetNumBytes()), bnetAccountName, accountId, index))
         {
