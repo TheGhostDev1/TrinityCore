@@ -480,10 +480,11 @@ class TC_GAME_API Spell
         void EffectUpdateZoneAurasAndPhases(SpellEffIndex effIndex);
         void EffectGiveArtifactPower(SpellEffIndex effIndex);
         void EffectGiveArtifactPowerNoBonus(SpellEffIndex effIndex);
+        void EffectPlaySceneScriptPackage(SpellEffIndex effIndex);
         void EffectPlayScene(SpellEffIndex effIndex);
         void EffectGiveHonor(SpellEffIndex effIndex);
         void EffectLearnTransmogSet(SpellEffIndex effIndex);
-
+        void EffectCreatePrivateConversation(SpellEffIndex effIndex);
         typedef std::unordered_set<Aura*> UsedSpellMods;
 
         Spell(Unit* caster, SpellInfo const* info, TriggerCastFlags triggerFlags, ObjectGuid originalCasterGUID = ObjectGuid::Empty, bool skipCheck = false);
