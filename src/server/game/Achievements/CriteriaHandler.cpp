@@ -1767,6 +1767,15 @@ bool CriteriaHandler::AdditionalRequirementsSatisfied(ModifierTreeNode const* tr
             if (referencePlayer->GetQuestStatus(reqValue) != QUEST_STATUS_COMPLETE)
                 return false;
             break;
+        case CRITERIA_ADDITIONAL_CONDITION_COMPLETED_QUEST_OBJECTIVE: // 112
+        {
+            QuestObjective const* objective = sObjectMgr->GetQuestObjective(reqValue);
+            if (!objective)
+                return false;
+            if (referencePlayer->GetQuestRewardStatus(objective->QuestID) || !referencePlayer->IsQuestObjectiveComplete(*objective))
+                return false;
+            break;
+        }
         case CRITERIA_ADDITIONAL_CONDITION_GARRISON_FOLLOWER_ENTRY: // 144
         {
             if (!referencePlayer)
