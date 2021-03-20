@@ -114,6 +114,7 @@ void AuctionsBucketData::BuildBucketInfo(WorldPackets::AuctionHouse::BucketInfo*
 {
     bucketInfo->Key = Key;
     bucketInfo->MinPrice = MinPrice;
+    bucketInfo->RequiredLevel = RequiredLevel;
     bucketInfo->TotalQuantity = 0;
 
     for (AuctionPosting const* auction : Auctions)
@@ -260,7 +261,7 @@ public:
     {
         for (std::size_t i = 0; i < _sortCount; ++i)
         {
-            int32 ordering = CompareColumns(_sorts[i].SortOrder, left, right);
+            int64 ordering = CompareColumns(_sorts[i].SortOrder, left, right);
             if (ordering != 0)
                 return (ordering < 0) == !_sorts[i].ReverseSort;
         }
@@ -269,7 +270,7 @@ public:
     }
 
 private:
-    int32 CompareColumns(AuctionHouseSortOrder column, AuctionsBucketData const* left, AuctionsBucketData const* right) const
+    int64 CompareColumns(AuctionHouseSortOrder column, AuctionsBucketData const* left, AuctionsBucketData const* right) const
     {
         switch (column)
         {
@@ -303,7 +304,7 @@ public:
     {
         for (std::size_t i = 0; i < _sortCount; ++i)
         {
-            int32 ordering = CompareColumns(_sorts[i].SortOrder, left, right);
+            int64 ordering = CompareColumns(_sorts[i].SortOrder, left, right);
             if (ordering != 0)
                 return (ordering < 0) == !_sorts[i].ReverseSort;
         }
@@ -316,7 +317,7 @@ public:
     }
 
 private:
-    int32 CompareColumns(AuctionHouseSortOrder column, AuctionPosting const* left, AuctionPosting const* right) const
+    int64 CompareColumns(AuctionHouseSortOrder column, AuctionPosting const* left, AuctionPosting const* right) const
     {
         switch (column)
         {

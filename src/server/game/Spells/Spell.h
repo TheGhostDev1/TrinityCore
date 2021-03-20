@@ -23,6 +23,7 @@
 #include "ObjectGuid.h"
 #include "Position.h"
 #include "SharedDefines.h"
+#include "SpellDefines.h"
 #include <memory>
 
 namespace WorldPackets
@@ -303,7 +304,7 @@ struct SpellValue
     uint32    CustomBasePointsMask;
     uint32    MaxAffectedTargets;
     float     RadiusMod;
-    uint8     AuraStackAmount;
+    int32     AuraStackAmount;
 };
 
 enum SpellState
@@ -337,7 +338,6 @@ class TC_GAME_API Spell
         void EffectNULL(SpellEffIndex effIndex);
         void EffectUnused(SpellEffIndex effIndex);
         void EffectDistract(SpellEffIndex effIndex);
-        void EffectPull(SpellEffIndex effIndex);
         void EffectSchoolDMG(SpellEffIndex effIndex);
         void EffectEnvironmentalDMG(SpellEffIndex effIndex);
         void EffectInstaKill(SpellEffIndex effIndex);
@@ -391,7 +391,6 @@ class TC_GAME_API Spell
         void EffectSummonObjectWild(SpellEffIndex effIndex);
         void EffectScriptEffect(SpellEffIndex effIndex);
         void EffectSanctuary(SpellEffIndex effIndex);
-        void EffectAddComboPoints(SpellEffIndex effIndex);
         void EffectDuel(SpellEffIndex effIndex);
         void EffectStuck(SpellEffIndex effIndex);
         void EffectSummonPlayer(SpellEffIndex effIndex);
@@ -448,7 +447,6 @@ class TC_GAME_API Spell
         void EffectGameObjectDamage(SpellEffIndex effIndex);
         void EffectGameObjectRepair(SpellEffIndex effIndex);
         void EffectGameObjectSetDestructionState(SpellEffIndex effIndex);
-        void EffectActivateRune(SpellEffIndex effIndex);
         void EffectCreateTamedPet(SpellEffIndex effIndex);
         void EffectDiscoverTaxi(SpellEffIndex effIndex);
         void EffectTitanGrip(SpellEffIndex effIndex);
@@ -461,6 +459,7 @@ class TC_GAME_API Spell
         void EffectCastButtons(SpellEffIndex effIndex);
         void EffectRechargeItem(SpellEffIndex effIndex);
         void EffectGiveCurrency(SpellEffIndex effIndex);
+        void EffectSummonPersonalGameObject(SpellEffIndex effIndex);
         void EffectResurrectWithAura(SpellEffIndex effIndex);
         void EffectCreateAreaTrigger(SpellEffIndex effIndex);
         void EffectRemoveTalent(SpellEffIndex effIndex);
@@ -481,11 +480,13 @@ class TC_GAME_API Spell
         void EffectUpdateZoneAurasAndPhases(SpellEffIndex effIndex);
         void EffectGiveArtifactPower(SpellEffIndex effIndex);
         void EffectGiveArtifactPowerNoBonus(SpellEffIndex effIndex);
+        void EffectPlaySceneScriptPackage(SpellEffIndex effIndex);
         void EffectPlayScene(SpellEffIndex effIndex);
         void EffectGiveHonor(SpellEffIndex effIndex);
         void EffectLearnTransmogSet(SpellEffIndex effIndex);
         void EffectRespecAzeriteEmpoweredItem(SpellEffIndex effIndex);
         void EffectLearnAzeriteEssencePower(SpellEffIndex effIndex);
+        void EffectCreatePrivateConversation(SpellEffIndex effIndex);
 
         typedef std::unordered_set<Aura*> UsedSpellMods;
 
@@ -574,7 +575,7 @@ class TC_GAME_API Spell
         void CheckSrc();
         void CheckDst();
 
-        static void SendCastResult(Player* caster, SpellInfo const* spellInfo, uint32 spellVisual, ObjectGuid cast_count, SpellCastResult result, SpellCustomErrors customError = SPELL_CUSTOM_ERROR_NONE, uint32* param1 = nullptr, uint32* param2 = nullptr);
+        static void SendCastResult(Player* caster, SpellInfo const* spellInfo, SpellCastVisual spellVisual, ObjectGuid cast_count, SpellCastResult result, SpellCustomErrors customError = SPELL_CUSTOM_ERROR_NONE, uint32* param1 = nullptr, uint32* param2 = nullptr);
         void SendCastResult(SpellCastResult result, uint32* param1 = nullptr, uint32* param2 = nullptr) const;
         void SendPetCastResult(SpellCastResult result, uint32* param1 = nullptr, uint32* param2 = nullptr) const;
         void SendMountResult(MountResult result);
@@ -643,7 +644,7 @@ class TC_GAME_API Spell
                 uint32 Data[2];
             } Raw;
         } m_misc;
-        uint32 m_SpellVisual;
+        SpellCastVisual m_SpellVisual;
         SpellCastTargets m_targets;
         int8 m_comboPointGain;
         SpellCustomErrors m_customError;
@@ -659,6 +660,7 @@ class TC_GAME_API Spell
         bool IsProcDisabled() const;
         bool IsChannelActive() const;
         bool IsAutoActionResetSpell() const;
+        bool IsPositive() const;
 
         bool IsTriggeredByAura(SpellInfo const* auraSpellInfo) const { return (auraSpellInfo == m_triggeredByAuraSpell); }
 
@@ -681,6 +683,7 @@ class TC_GAME_API Spell
         SpellInfo const* GetSpellInfo() const { return m_spellInfo; }
         Difficulty GetCastDifficulty() const;
         std::vector<SpellPowerCost> const& GetPowerCost() const { return m_powerCost; }
+        bool HasPowerTypeCost(Powers power) const;
 
         bool UpdatePointers();                              // must be used at call Spell code after time delay (non triggered spell cast/update spell call/etc)
 
@@ -715,7 +718,7 @@ class TC_GAME_API Spell
         SpellSchoolMask m_spellSchoolMask;                  // Spell school (can be overwrite for some spells (wand shoot for example)
         WeaponAttackType m_attackType;                      // For weapon based attack
 
-        std::vector<SpellPowerCost> m_powerCost;       // Calculated spell cost initialized only in Spell::prepare
+        std::vector<SpellPowerCost> m_powerCost;            // Calculated spell cost initialized only in Spell::prepare
         int32 m_casttime;                                   // Calculated spell cast time initialized only in Spell::prepare
         int32 m_channeledDuration;                          // Calculated channeled spell duration in order to calculate correct pushback.
         bool m_canReflect;                                  // can reflect this spell?
@@ -909,9 +912,10 @@ namespace Trinity
         SpellTargetCheckTypes _targetSelectionType;
         ConditionSourceInfo* _condSrcInfo;
         ConditionContainer* _condList;
+        SpellTargetObjectTypes _objectType;
 
         WorldObjectSpellTargetCheck(Unit* caster, Unit* referer, SpellInfo const* spellInfo,
-            SpellTargetCheckTypes selectionType, ConditionContainer* condList);
+            SpellTargetCheckTypes selectionType, ConditionContainer* condList, SpellTargetObjectTypes objectType);
         ~WorldObjectSpellTargetCheck();
         bool operator()(WorldObject* target);
     };
@@ -921,7 +925,7 @@ namespace Trinity
         float _range;
         Position const* _position;
         WorldObjectSpellNearbyTargetCheck(float range, Unit* caster, SpellInfo const* spellInfo,
-            SpellTargetCheckTypes selectionType, ConditionContainer* condList);
+            SpellTargetCheckTypes selectionType, ConditionContainer* condList, SpellTargetObjectTypes objectType);
         bool operator()(WorldObject* target);
     };
 
@@ -930,7 +934,7 @@ namespace Trinity
         float _range;
         Position const* _position;
         WorldObjectSpellAreaTargetCheck(float range, Position const* position, Unit* caster,
-            Unit* referer, SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList);
+            Unit* referer, SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList, SpellTargetObjectTypes objectType);
         bool operator()(WorldObject* target);
     };
 
@@ -939,7 +943,7 @@ namespace Trinity
         float _coneAngle;
         float _lineWidth;
         WorldObjectSpellConeTargetCheck(float coneAngle, float lineWidth, float range, Unit* caster,
-            SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList);
+            SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList, SpellTargetObjectTypes objectType);
         bool operator()(WorldObject* target);
     };
 
@@ -948,7 +952,7 @@ namespace Trinity
         float _range;
         Position const* _position;
         WorldObjectSpellTrajTargetCheck(float range, Position const* position, Unit* caster,
-            SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList);
+            SpellInfo const* spellInfo, SpellTargetCheckTypes selectionType, ConditionContainer* condList, SpellTargetObjectTypes objectType);
         bool operator()(WorldObject* target);
     };
 }

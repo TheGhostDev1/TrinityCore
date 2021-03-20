@@ -36,6 +36,11 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <cstring>
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 std::shared_ptr<CASC::Storage> CascStorage;
 
@@ -68,6 +73,7 @@ std::unordered_map<uint32, LiquidMaterialEntry> LiquidMaterials;
 std::unordered_map<uint32, LiquidObjectEntry> LiquidObjects;
 std::unordered_map<uint32, LiquidTypeEntry> LiquidTypes;
 std::set<uint32> CameraFileDataIds;
+bool PrintProgress = true;
 boost::filesystem::path input_path;
 boost::filesystem::path output_path;
 
@@ -235,7 +241,7 @@ void TryLoadDB2(char const* name, DB2CascFileSource* source, DB2FileLoader* db2,
     }
     catch (std::exception const& e)
     {
-        printf("Fatal error: Invalid %s file format! %s\n%s\n", name, CASC::HumanReadableCASCError(GetLastError()), e.what());
+        printf("Fatal error: Invalid %s file format! %s\n%s\n", name, CASC::HumanReadableCASCError(GetCascError()), e.what());
         exit(1);
     }
 }
@@ -1149,7 +1155,8 @@ void ExtractMaps(uint32 build)
                 }
 
                 // draw progress bar
-                printf("Processing........................%d%%\r", (100 * (y + 1)) / WDT_MAP_SIZE);
+                if (PrintProgress)
+                    printf("Processing........................%d%%\r", (100 * (y + 1)) / WDT_MAP_SIZE);
             }
         }
 
@@ -1215,7 +1222,7 @@ bool ExtractDB2File(uint32 fileDataId, char const* cascFileName, int locale, boo
     DB2CascFileSource source(CascStorage, fileDataId, false);
     if (!source.IsOpen())
     {
-        printf("Unable to open file %s in the archive for locale %s: %s\n", cascFileName, localeNames[locale], CASC::HumanReadableCASCError(GetLastError()));
+        printf("Unable to open file %s in the archive for locale %s: %s\n", cascFileName, localeNames[locale], CASC::HumanReadableCASCError(GetCascError()));
         return false;
     }
 
@@ -1351,7 +1358,7 @@ void ExtractCameraFiles()
                     ++count;
         }
         else
-            printf("Unable to open file %u in the archive: %s\n", cameraFileDataId, CASC::HumanReadableCASCError(GetLastError()));
+            printf("Unable to open file %u in the archive: %s\n", cameraFileDataId, CASC::HumanReadableCASCError(GetCascError()));
     }
 
     printf("Extracted %u camera files\n", count);
@@ -1371,9 +1378,6 @@ void ExtractGameTables()
     {
         { 1582086, "ArtifactKnowledgeMultiplier.txt" },
         { 1391662, "ArtifactLevelXP.txt" },
-        { 1892815, "AzeriteBaseExperiencePerLevel.txt" },
-        { 1892816, "AzeriteKnowledgeMultiplier.txt" },
-        { 1859377, "AzeriteLevelToItemLevel.txt" },
         { 1391663, "BarberShopCostBase.txt" },
         { 1391664, "BaseMp.txt" },
         { 1391665, "BattlePetTypeDamageMod.txt" },
@@ -1391,7 +1395,7 @@ void ExtractGameTables()
         { 1391659, "SandboxScaling.txt" },
         { 1391660, "SpellScaling.txt" },
         { 1980632, "StaminaMultByILvl.txt" },
-        { 1391661, "xp.txt" },
+        { 1391661, "xp.txt" }
     };
 
     uint32 count = 0;
@@ -1407,7 +1411,7 @@ void ExtractGameTables()
                     ++count;
         }
         else
-            printf("Unable to open file %s in the archive: %s\n", gt.Name, CASC::HumanReadableCASCError(GetLastError()));
+            printf("Unable to open file %s in the archive: %s\n", gt.Name, CASC::HumanReadableCASCError(GetCascError()));
     }
 
     printf("Extracted %u files\n\n", count);
@@ -1486,6 +1490,7 @@ int main(int argc, char * arg[])
 {
     Trinity::Banner::Show("Map & DBC Extractor", [](char const* text) { printf("%s\n", text); }, nullptr);
 
+    PrintProgress = isatty(fileno(stdout));
     input_path = boost::filesystem::current_path();
     output_path = boost::filesystem::current_path();
 

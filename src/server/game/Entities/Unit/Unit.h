@@ -38,50 +38,51 @@
 #define SPELL_DH_DOUBLE_JUMP 196055
 #define DISPLAYID_HIDDEN_MOUNT 73200
 
-enum SpellModOp : uint8
+enum class SpellModOp : uint8
 {
-    SPELLMOD_DAMAGE                     = 0,
-    SPELLMOD_DURATION                   = 1,
-    SPELLMOD_THREAT                     = 2,
-    SPELLMOD_EFFECT1                    = 3,
-    SPELLMOD_CHARGES                    = 4,
-    SPELLMOD_RANGE                      = 5,
-    SPELLMOD_RADIUS                     = 6,
-    SPELLMOD_CRITICAL_CHANCE            = 7,
-    SPELLMOD_ALL_EFFECTS                = 8,
-    SPELLMOD_NOT_LOSE_CASTING_TIME      = 9,
-    SPELLMOD_CASTING_TIME               = 10,
-    SPELLMOD_COOLDOWN                   = 11,
-    SPELLMOD_EFFECT2                    = 12,
-    SPELLMOD_IGNORE_ARMOR               = 13,
-    SPELLMOD_COST                       = 14, // Used when SpellPowerEntry::PowerIndex == 0
-    SPELLMOD_CRIT_DAMAGE_BONUS          = 15,
-    SPELLMOD_RESIST_MISS_CHANCE         = 16,
-    SPELLMOD_JUMP_TARGETS               = 17,
-    SPELLMOD_CHANCE_OF_SUCCESS          = 18,
-    SPELLMOD_ACTIVATION_TIME            = 19,
-    SPELLMOD_DAMAGE_MULTIPLIER          = 20,
-    SPELLMOD_GLOBAL_COOLDOWN            = 21,
-    SPELLMOD_DOT                        = 22,
-    SPELLMOD_EFFECT3                    = 23,
-    SPELLMOD_BONUS_MULTIPLIER           = 24,
-    // spellmod 25
-    SPELLMOD_PROC_PER_MINUTE            = 26,
-    SPELLMOD_VALUE_MULTIPLIER           = 27,
-    SPELLMOD_RESIST_DISPEL_CHANCE       = 28,
-    SPELLMOD_CRIT_DAMAGE_BONUS_2        = 29, //one not used spell
-    SPELLMOD_SPELL_COST_REFUND_ON_FAIL  = 30,
-    SPELLMOD_STACK_AMOUNT               = 31, // has no effect on tooltip parsing
-    SPELLMOD_EFFECT4                    = 32,
-    SPELLMOD_EFFECT5                    = 33,
-    SPELLMOD_SPELL_COST2                = 34, // Used when SpellPowerEntry::PowerIndex == 1
-    SPELLMOD_JUMP_DISTANCE              = 35,
-    // spellmod 36
-    SPELLMOD_STACK_AMOUNT2              = 37  // same as SPELLMOD_STACK_AMOUNT but affects tooltips
-    // spellmod 38
+    HealingAndDamage            = 0,
+    Duration                    = 1,
+    Hate                        = 2,
+    PointsIndex0                = 3,
+    ProcCharges                 = 4,
+    Range                       = 5,
+    Radius                      = 6,
+    CritChance                  = 7,
+    Points                      = 8,
+    ResistPushback              = 9,
+    ChangeCastTime              = 10,
+    Cooldown                    = 11,
+    PointsIndex1                = 12,
+    TargetResistance            = 13,
+    PowerCost0                  = 14, // Used when SpellPowerEntry::PowerIndex == 0
+    CritDamageAndHealing        = 15,
+    HitChance                   = 16,
+    ChainTargets                = 17,
+    ProcChance                  = 18,
+    Period                      = 19,
+    ChainAmplitude              = 20,
+    StartCooldown               = 21,
+    PeriodicHealingAndDamage    = 22,
+    PointsIndex2                = 23,
+    BonusCoefficient            = 24,
+    TriggerDamage               = 25, // NYI
+    ProcFrequency               = 26,
+    Amplitude                   = 27,
+    DispelResistance            = 28,
+    CrowdDamage                 = 29, // NYI
+    PowerCostOnMiss             = 30,
+    Doses                       = 31,
+    PointsIndex3                = 32,
+    PointsIndex4                = 33,
+    PowerCost1                  = 34, // Used when SpellPowerEntry::PowerIndex == 1
+    ChainJumpDistance           = 35,
+    AreaTriggerMaxSummons       = 36, // NYI
+    MaxAuraStacks               = 37,
+    ProcCooldown                = 38,
+    PowerCost2                  = 39, // Used when SpellPowerEntry::PowerIndex == 2
 };
 
-#define MAX_SPELLMOD 39
+#define MAX_SPELLMOD 40
 
 enum SpellValueMod : uint8
 {
@@ -690,13 +691,13 @@ struct CalcDamageInfo
 // Spell damage info structure based on structure sending in SMSG_SPELLNONMELEEDAMAGELOG opcode
 struct TC_GAME_API SpellNonMeleeDamage
 {
-    SpellNonMeleeDamage(Unit* _attacker, Unit* _target, SpellInfo const* _spellInfo, uint32 _SpellXSpellVisualID, uint32 _schoolMask, ObjectGuid _castId = ObjectGuid::Empty);
+    SpellNonMeleeDamage(Unit* _attacker, Unit* _target, SpellInfo const* _spellInfo, SpellCastVisual spellVisual, uint32 _schoolMask, ObjectGuid _castId = ObjectGuid::Empty);
 
     Unit   *target;
     Unit   *attacker;
     ObjectGuid castId;
     SpellInfo const* Spell;
-    uint32 SpellXSpellVisualID;
+    SpellCastVisual SpellVisual;
     uint32 damage;
     uint32 originalDamage;
     uint32 schoolMask;
@@ -892,11 +893,10 @@ struct TC_GAME_API CharmInfo
 enum ReactiveType
 {
     REACTIVE_DEFENSE      = 0,
-    REACTIVE_HUNTER_PARRY = 1,
-    REACTIVE_OVERPOWER    = 2
+    REACTIVE_DEFENSE_2    = 1
 };
 
-#define MAX_REACTIVE 3
+#define MAX_REACTIVE 2
 #define SUMMON_SLOT_PET     0
 #define SUMMON_SLOT_TOTEM   1
 #define MAX_TOTEM_SLOT      5
@@ -1082,12 +1082,13 @@ class TC_GAME_API Unit : public WorldObject
         int32 CountPctFromMaxPower(Powers power, int32 pct) const { return CalculatePct(GetMaxPower(power), pct); }
         void SetPower(Powers power, int32 val);
         void SetMaxPower(Powers power, int32 val);
+        void TriggerOnPowerChangeAuras(Powers power, int32 oldVal, int32 newVal);
         inline void SetFullPower(Powers power) { SetPower(power, GetMaxPower(power)); }
         // returns the change in power
         int32 ModifyPower(Powers power, int32 val);
 
-        void ApplyModPowerCostModifier(SpellSchools school, int32 mod, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::PowerCostModifier, school), mod, apply); }
-        void ApplyModPowerCostMultiplier(SpellSchools school, float pct, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::PowerCostMultiplier, school), pct, apply); }
+        void ApplyModManaCostMultiplier(float manaCostMultiplier, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ManaCostMultiplier),  manaCostMultiplier, apply); }
+        void ApplyModManaCostModifier(SpellSchools school, int32 mod, bool apply) { ApplyModUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ManaCostModifier, school), mod, apply); }
 
         uint32 GetBaseAttackTime(WeaponAttackType att) const;
         void SetBaseAttackTime(WeaponAttackType att, uint32 val);
@@ -1220,7 +1221,7 @@ class TC_GAME_API Unit : public WorldObject
 
         void ApplyResilience(Unit const* victim, int32* damage) const;
 
-        float MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, uint32 spellId) const;
+        float MeleeSpellMissChance(Unit const* victim, WeaponAttackType attType, SpellInfo const* spellInfo) const;
         SpellMissInfo MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo) const;
         SpellMissInfo MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo) const;
         SpellMissInfo SpellHitResult(Unit* victim, SpellInfo const* spellInfo, bool canReflect = false);
@@ -1233,7 +1234,7 @@ class TC_GAME_API Unit : public WorldObject
         int32 GetMechanicResistChance(SpellInfo const* spellInfo) const;
         bool CanUseAttackType(uint8 attacktype) const;
 
-        virtual uint32 GetBlockPercent() const { return 30; }
+        virtual float GetBlockPercent(uint8 /*attackerLevel*/) const { return 30.0f; }
 
         float GetWeaponProcChance() const;
         float GetPPMProcChance(uint32 WeaponSpeed, float PPM, SpellInfo const* spellProto) const;
@@ -1291,7 +1292,7 @@ class TC_GAME_API Unit : public WorldObject
         void ClearInPetCombat();
         uint32 GetCombatTimer() const { return m_CombatTimer; }
 
-        bool HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, uint32 familyFlags) const;
+        bool HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, flag128 familyFlags) const;
         bool virtual HasSpell(uint32 /*spellID*/) const { return false; }
         bool HasBreakableByDamageAuraType(AuraType type, uint32 excludeAura = 0) const;
         bool HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel = nullptr) const;
@@ -1330,7 +1331,7 @@ class TC_GAME_API Unit : public WorldObject
         void CastSpell(Unit* victim, SpellInfo const* spellInfo, TriggerCastFlags triggerFlags = TRIGGERED_NONE, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
         void CastSpell(float x, float y, float z, uint32 spellId, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
         void CastSpell(float x, float y, float z, uint32 spellId, TriggerCastFlags triggerFlags = TRIGGERED_NONE, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
-        void CastSpell(GameObject* go, uint32 spellId, bool triggered, Item* castItem = nullptr, AuraEffect* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
+        void CastSpell(GameObject* go, uint32 spellId, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
         void CastCustomSpell(Unit* victim, uint32 spellId, int32 const* bp0, int32 const* bp1, int32 const* bp2, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
         void CastCustomSpell(uint32 spellId, SpellValueMod mod, int32 value, Unit* victim, bool triggered, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
         void CastCustomSpell(uint32 spellId, SpellValueMod mod, int32 value, Unit* victim = nullptr, TriggerCastFlags triggerFlags = TRIGGERED_NONE, Item* castItem = nullptr, AuraEffect const* triggeredByAura = nullptr, ObjectGuid originalCaster = ObjectGuid::Empty);
@@ -1646,13 +1647,14 @@ class TC_GAME_API Unit : public WorldObject
                 .ModifyValue(&UF::UnitData::ChannelData)
                 .ModifyValue(&UF::UnitChannel::SpellID), channelSpellId);
         }
-        uint32 GetChannelSpellXSpellVisualId() const { return m_unitData->ChannelData->SpellXSpellVisualID; }
-        void SetChannelSpellXSpellVisualId(uint32 channelSpellXSpellVisualId)
+        uint32 GetChannelSpellXSpellVisualId() const { return m_unitData->ChannelData->SpellVisual.SpellXSpellVisualID; }
+        uint32 GetChannelScriptVisualId() const { return m_unitData->ChannelData->SpellVisual.ScriptVisualID; }
+        void SetChannelVisual(SpellCastVisual channelVisual)
         {
             SetUpdateFieldValue(m_values
                 .ModifyValue(&Unit::m_unitData)
                 .ModifyValue(&UF::UnitData::ChannelData)
-                .ModifyValue(&UF::UnitChannel::SpellXSpellVisualID), channelSpellXSpellVisualId);
+                .ModifyValue(&UF::UnitChannel::SpellVisual), channelVisual);
         }
         void AddChannelObject(ObjectGuid guid) { AddDynamicUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ChannelObjects)) = guid; }
         void SetChannelObject(uint32 slot, ObjectGuid guid) { SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ChannelObjects, slot), guid); }
@@ -1858,8 +1860,8 @@ class TC_GAME_API Unit : public WorldObject
         float SpellHealingPctDone(Unit* victim, SpellInfo const* spellProto) const;
         uint32 SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, uint32 healamount, DamageEffectType damagetype, SpellEffectInfo const* effect, uint32 stack = 1) const;
 
-        uint32 MeleeDamageBonusDone(Unit* pVictim, uint32 damage, WeaponAttackType attType, SpellInfo const* spellProto = nullptr);
-        uint32 MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackType attType, SpellInfo const* spellProto = nullptr);
+        uint32 MeleeDamageBonusDone(Unit* pVictim, uint32 damage, WeaponAttackType attType, DamageEffectType damagetype, SpellInfo const* spellProto = nullptr);
+        uint32 MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackType attType, DamageEffectType damagetype, SpellInfo const* spellProto = nullptr);
 
         bool   isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttackType attackType = BASE_ATTACK);
         bool   isBlockCritical();
@@ -1912,7 +1914,7 @@ class TC_GAME_API Unit : public WorldObject
 
         bool IsStopped() const { return !(HasUnitState(UNIT_STATE_MOVING)); }
         void StopMoving();
-        void PauseMovement(uint32 timer = 0, uint8 slot = 0); // timer in ms
+        void PauseMovement(uint32 timer = 0, uint8 slot = 0, bool forced = true); // timer in ms
         void ResumeMovement(uint32 timer = 0, uint8 slot = 0); // timer in ms
 
         void AddUnitMovementFlag(uint32 f) { m_movementInfo.AddMovementFlag(f); }
@@ -2034,6 +2036,7 @@ class TC_GAME_API Unit : public WorldObject
         virtual void TextEmote(uint32 textId, WorldObject const* target = nullptr, bool isBossEmote = false);
         virtual void Whisper(uint32 textId, Player* target, bool isBossWhisper = false);
 
+        float GetCollisionHeight() const override;
         uint32 GetVirtualItemId(uint32 slot) const;
         uint16 GetVirtualItemAppearanceMod(uint32 slot) const;
         void SetVirtualItem(uint32 slot, uint32 itemId, uint16 appearanceModId = 0, uint16 itemVisual = 0);
@@ -2134,6 +2137,7 @@ class TC_GAME_API Unit : public WorldObject
 
         void ProcessPositionDataChanged(PositionFullTerrainStatus const& data) override;
         virtual void ProcessTerrainStatusUpdate(ZLiquidStatus status, Optional<LiquidData> const& liquidData);
+        virtual void SetInWater(bool inWater);
 
     private:
 
