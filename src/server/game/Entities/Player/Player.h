@@ -1877,7 +1877,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         ObjectGuid const& GetLootGUID() const { return m_playerData->LootTargetGUID; }
         void SetLootGUID(ObjectGuid const& guid) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::LootTargetGUID), guid); }
         ObjectGuid GetLootWorldObjectGUID(ObjectGuid const& lootObjectGuid) const;
-        void RemoveAELootedObject(ObjectGuid const& lootObjectGuid);
+        void RemoveAELootedWorldObject(ObjectGuid const& lootWorldObjectGuid);
         bool HasLootWorldObjectGUID(ObjectGuid const& lootWorldObjectGuid) const;
         std::unordered_map<ObjectGuid, ObjectGuid> const& GetAELootView() const { return m_AELootView; }
 
@@ -2334,6 +2334,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         /***                   GROUP SYSTEM                    ***/
         /*********************************************************/
 
+        bool IsInGroup(ObjectGuid groupGuid) const;
         Group* GetGroupInvite() const { return m_groupInvite; }
         void SetGroupInvite(Group* group) { m_groupInvite = group; }
         Group* GetGroup() { return m_group.getTarget(); }
