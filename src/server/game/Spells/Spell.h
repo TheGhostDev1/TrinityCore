@@ -349,6 +349,7 @@ class TC_GAME_API Spell
         void EffectPowerDrain(SpellEffIndex effIndex);
         void EffectHeal(SpellEffIndex effIndex);
         void EffectBind(SpellEffIndex effIndex);
+        void EffectTeleportToReturnPoint(SpellEffIndex effIndex);
         void EffectHealthLeech(SpellEffIndex effIndex);
         void EffectQuestComplete(SpellEffIndex effIndex);
         void EffectCreateItem(SpellEffIndex effIndex);
@@ -845,6 +846,9 @@ class TC_GAME_API Spell
         void CallScriptBeforeHitHandlers(SpellMissInfo missInfo);
         void CallScriptOnHitHandlers();
         void CallScriptAfterHitHandlers();
+    public:
+        void CallScriptCalcCritChanceHandlers(Unit* victim, float& chance);
+    protected:
         void CallScriptObjectAreaTargetSelectHandlers(std::list<WorldObject*>& targets, SpellEffIndex effIndex, SpellImplicitTargetInfo const& targetType);
         void CallScriptObjectTargetSelectHandlers(WorldObject*& target, SpellEffIndex effIndex, SpellImplicitTargetInfo const& targetType);
         void CallScriptDestinationTargetSelectHandlers(SpellDestination& target, SpellEffIndex effIndex, SpellImplicitTargetInfo const& targetType);
