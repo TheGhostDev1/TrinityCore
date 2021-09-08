@@ -18,17 +18,18 @@
 #ifndef CriteriaHandler_h__
 #define CriteriaHandler_h__
 
-#include "DBCEnums.h"
-#include "ObjectGuid.h"
-#include "DatabaseEnvFwd.h"
 #include "Common.h"
+#include "DatabaseEnvFwd.h"
+#include "DBCEnums.h"
+#include "Duration.h"
+#include "ObjectGuid.h"
 #include <map>
 #include <unordered_map>
 #include <vector>
 #include <ctime>
 
 class Player;
-class Unit;
+class WorldObject;
 class WorldPacket;
 struct AchievementEntry;
 struct CriteriaEntry;
@@ -238,14 +239,14 @@ struct CriteriaData
     }
 
     bool IsValid(Criteria const* criteria);
-    bool Meets(uint32 criteriaId, Player const* source, Unit const* target, uint32 miscValue1 = 0, uint32 miscValue2 = 0) const;
+    bool Meets(uint32 criteriaId, Player const* source, WorldObject const* target, uint32 miscValue1 = 0, uint32 miscValue2 = 0) const;
 };
 
 struct CriteriaDataSet
 {
     CriteriaDataSet() : _criteriaId(0) { }
     void Add(CriteriaData const& data) { _storage.push_back(data); }
-    bool Meets(Player const* source, Unit const* target, uint32 miscValue1 = 0, uint32 miscValue2 = 0) const;
+    bool Meets(Player const* source, WorldObject const* target, uint32 miscValue1 = 0, uint32 miscValue2 = 0) const;
     void SetCriteriaId(uint32 id) { _criteriaId = id; }
 private:
     uint32 _criteriaId;
@@ -270,16 +271,16 @@ public:
 
     virtual void Reset();
 
-    void UpdateCriteria(CriteriaTypes type, uint64 miscValue1 = 0, uint64 miscValue2 = 0, uint64 miscValue3 = 0, Unit const* unit = nullptr, Player* referencePlayer = nullptr);
+    void UpdateCriteria(CriteriaTypes type, uint64 miscValue1 = 0, uint64 miscValue2 = 0, uint64 miscValue3 = 0, WorldObject const* ref = nullptr, Player* referencePlayer = nullptr);
 
     virtual void SendAllData(Player const* receiver) const = 0;
 
     void UpdateTimedCriteria(uint32 timeDiff);
-    void StartCriteriaTimer(CriteriaTimedTypes type, uint32 entry, uint32 timeLost = 0);
-    void RemoveCriteriaTimer(CriteriaTimedTypes type, uint32 entry);   // used for quest and scripted timed s
+    void StartCriteriaTimer(CriteriaStartEvent startEvent, uint32 entry, uint32 timeLost = 0);
+    void RemoveCriteriaTimer(CriteriaStartEvent startEvent, uint32 entry);   // used for quest and scripted timed s
 
 protected:
-    virtual void SendCriteriaUpdate(Criteria const* criteria, CriteriaProgress const* progress, uint32 timeElapsed, bool timedCompleted) const = 0;
+    virtual void SendCriteriaUpdate(Criteria const* criteria, CriteriaProgress const* progress, Seconds timeElapsed, bool timedCompleted) const = 0;
 
     CriteriaProgress* GetCriteriaProgress(Criteria const* entry);
     void SetCriteriaProgress(Criteria const* criteria, uint64 changeValue, Player* referencePlayer, ProgressType progressType = PROGRESS_SET);
@@ -293,15 +294,15 @@ protected:
     virtual void AfterCriteriaTreeUpdate(CriteriaTree const* /*tree*/, Player* /*referencePlayer*/) { }
 
     bool IsCompletedCriteria(Criteria const* criteria, uint64 requiredAmount);
-    bool CanUpdateCriteria(Criteria const* criteria, CriteriaTreeList const* trees, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, Unit const* unit, Player* referencePlayer);
+    bool CanUpdateCriteria(Criteria const* criteria, CriteriaTreeList const* trees, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, WorldObject const* ref, Player* referencePlayer);
 
     virtual void SendPacket(WorldPacket const* data) const = 0;
 
     bool ConditionsSatisfied(Criteria const* criteria, Player* referencePlayer) const;
-    bool RequirementsSatisfied(Criteria const* criteria, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, Unit const* unit, Player* referencePlayer) const;
+    bool RequirementsSatisfied(Criteria const* criteria, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, WorldObject const* ref, Player* referencePlayer) const;
     virtual bool RequiredAchievementSatisfied(uint32 /*achievementId*/) const { return false; }
-    bool ModifierTreeSatisfied(ModifierTreeNode const* parent, uint64 miscValue1, uint64 miscValue2, Unit const* unit, Player* referencePlayer) const;
-    bool ModifierSatisfied(ModifierTreeEntry const* modifier, uint64 miscValue1, uint64 miscValue2, Unit const* unit, Player* referencePlayer) const;
+    bool ModifierTreeSatisfied(ModifierTreeNode const* parent, uint64 miscValue1, uint64 miscValue2, WorldObject const* ref, Player* referencePlayer) const;
+    bool ModifierSatisfied(ModifierTreeEntry const* modifier, uint64 miscValue1, uint64 miscValue2, WorldObject const* ref, Player* referencePlayer) const;
 
     virtual std::string GetOwnerInfo() const = 0;
     virtual CriteriaList const& GetCriteriaByType(CriteriaTypes type, uint32 asset) const = 0;
@@ -344,15 +345,15 @@ public:
         return itr != _criteriaTreeByCriteria.end() ? &itr->second : nullptr;
     }
 
-    CriteriaList const& GetTimedCriteriaByType(CriteriaTimedTypes type) const
+    CriteriaList const& GetTimedCriteriaByType(CriteriaStartEvent startEvent) const
     {
-        return _criteriasByTimedType[type];
+        return _criteriasByTimedType[size_t(startEvent)];
     }
 
-    CriteriaList const* GetCriteriaByFailEvent(CriteriaCondition condition, int32 asset)
+    CriteriaList const* GetCriteriaByFailEvent(CriteriaFailEvent condition, int32 asset)
     {
-        auto itr = _criteriasByFailEvent[condition].find(asset);
-        return itr != _criteriasByFailEvent[condition].end() ? &itr->second : nullptr;
+        auto itr = _criteriasByFailEvent[size_t(condition)].find(asset);
+        return itr != _criteriasByFailEvent[size_t(condition)].end() ? &itr->second : nullptr;
     }
 
     CriteriaDataSet const* GetCriteriaDataSet(Criteria const* Criteria) const
@@ -411,8 +412,8 @@ private:
     CriteriaList _scenarioCriteriasByType[CRITERIA_TYPE_TOTAL];
     CriteriaList _questObjectiveCriteriasByType[CRITERIA_TYPE_TOTAL];
 
-    CriteriaList _criteriasByTimedType[CRITERIA_TIMED_TYPE_MAX];
-    std::unordered_map<int32, CriteriaList> _criteriasByFailEvent[CRITERIA_CONDITION_MAX];
+    CriteriaList _criteriasByTimedType[size_t(CriteriaStartEvent::Count)];
+    std::unordered_map<int32, CriteriaList> _criteriasByFailEvent[size_t(CriteriaFailEvent::Count)];
 };
 
 #define sCriteriaMgr CriteriaMgr::Instance()

@@ -39,13 +39,13 @@ WorldPacket const* WorldPackets::Ticket::GMTicketCaseStatus::Write()
 {
     _worldPacket << int32(Cases.size());
 
-    for (auto const& c : Cases)
+    for (GMTicketCase const& c : Cases)
     {
         _worldPacket << int32(c.CaseID);
-        _worldPacket << int32(c.CaseOpened);
+        _worldPacket << c.CaseOpened;
         _worldPacket << int32(c.CaseStatus);
-        _worldPacket << int16(c.CfgRealmID);
-        _worldPacket << int64(c.CharacterID);
+        _worldPacket << uint16(c.CfgRealmID);
+        _worldPacket << uint64(c.CharacterID);
         _worldPacket << int32(c.WaitTimeOverrideMinutes);
 
         _worldPacket.WriteBits(c.Url.size(), 11);
@@ -76,7 +76,7 @@ void WorldPackets::Ticket::SubmitUserFeedback::Read()
     }
 }
 
-WorldPackets::Ticket::SupportTicketSubmitComplaint::SupportTicketChatLine::SupportTicketChatLine(uint32 timestamp, std::string const& text) :
+WorldPackets::Ticket::SupportTicketSubmitComplaint::SupportTicketChatLine::SupportTicketChatLine(time_t timestamp, std::string const& text) :
     Timestamp(timestamp), Text(text)
 { }
 
@@ -250,6 +250,17 @@ ByteBuffer& operator>>(ByteBuffer& data, Optional<WorldPackets::Ticket::SupportT
     return data;
 }
 
+ByteBuffer& operator>>(ByteBuffer& data, Optional<WorldPackets::Ticket::SupportTicketSubmitComplaint::SupportTicketUnused910>& unused)
+{
+    unused = boost::in_place();
+
+    uint32 field_0Length = data.ReadBits(7);
+    data >> unused->field_104;
+    unused->field_0 = data.ReadString(field_0Length);
+
+    return data;
+}
+
 void WorldPackets::Ticket::SupportTicketSubmitComplaint::Read()
 {
     _worldPacket >> Header;
@@ -266,6 +277,7 @@ void WorldPackets::Ticket::SupportTicketSubmitComplaint::Read()
     bool hasLFGListApplicant = _worldPacket.ReadBit();
     bool hasClubMessage = _worldPacket.ReadBit();
     bool hasClubFinderResult = _worldPacket.ReadBit();
+    bool hasUnk910 = _worldPacket.ReadBit();
 
     _worldPacket.ResetBitPos();
 
@@ -300,6 +312,9 @@ void WorldPackets::Ticket::SupportTicketSubmitComplaint::Read()
 
     if (hasClubFinderResult)
         _worldPacket >> ClubFinderResult;
+
+    if (hasUnk910)
+        _worldPacket >> Unused910;
 }
 
 ByteBuffer& operator>>(ByteBuffer& data, WorldPackets::Ticket::Complaint::ComplaintOffender& complaintOffender)

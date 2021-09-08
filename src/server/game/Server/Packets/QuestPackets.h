@@ -20,12 +20,11 @@
 
 #include "Packet.h"
 #include "ItemPacketsCommon.h"
+#include "LootItemType.h"
 #include "NPCPackets.h"
 #include "ObjectGuid.h"
 #include "QuestDef.h"
 #include <array>
-
-enum class LootItemType : uint8;
 
 namespace WorldPackets
 {
@@ -156,6 +155,7 @@ namespace WorldPackets
             int32 RewardNumSkillUps         = 0; // reward skill points
             int32 PortraitGiver             = 0; // quest giver entry ?
             int32 PortraitGiverMount        = 0;
+            int32 PortraitGiverModelSceneID = 0;
             int32 PortraitTurnIn            = 0; // quest turn in entry ?
             std::string PortraitGiverText;
             std::string PortraitGiverName;
@@ -238,7 +238,7 @@ namespace WorldPackets
 
         struct QuestChoiceItem
         {
-            ::LootItemType LootItemType = ::LootItemType(0);
+            ::LootItemType LootItemType = ::LootItemType::Item;
             Item::ItemInstance Item;
             int32 Quantity  = 0;
         };
@@ -300,6 +300,7 @@ namespace WorldPackets
             int32 PortraitTurnIn = 0;
             int32 PortraitGiver = 0;
             int32 PortraitGiverMount = 0;
+            int32 PortraitGiverModelSceneID = 0;
             std::string QuestTitle;
             std::string RewardText;
             std::string PortraitGiverText;
@@ -391,6 +392,7 @@ namespace WorldPackets
             int32 PortraitTurnIn = 0;
             int32 PortraitGiver = 0;
             int32 PortraitGiverMount = 0;
+            int32 PortraitGiverModelSceneID = 0;
             int32 QuestStartItemID = 0;
             int32 QuestSessionBonus = 0;
             std::string PortraitGiverText;
@@ -629,9 +631,9 @@ namespace WorldPackets
 
         struct WorldQuestUpdateInfo
         {
-            WorldQuestUpdateInfo(int32 lastUpdate, uint32 questID, uint32 timer, int32 variableID, int32 value) :
+            WorldQuestUpdateInfo(time_t lastUpdate, uint32 questID, uint32 timer, int32 variableID, int32 value) :
                 LastUpdate(lastUpdate), QuestID(questID), Timer(timer), VariableID(variableID), Value(value) { }
-            int32 LastUpdate;
+            Timestamp<> LastUpdate;
             uint32 QuestID;
             uint32 Timer;
             // WorldState
@@ -715,6 +717,7 @@ namespace WorldPackets
             int32 ChoiceID = 0;
             int32 UiTextureKitID = 0;
             uint32 SoundKitID = 0;
+            uint8 NumRerolls = 0;
             std::string Question;
             std::vector<PlayerChoiceResponse> Responses;
             bool CloseChoiceFrame = false;
@@ -731,6 +734,7 @@ namespace WorldPackets
 
             int32 ChoiceID = 0;
             int32 ResponseID = 0;
+            bool IsReroll = false;
         };
     }
 }

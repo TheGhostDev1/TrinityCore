@@ -195,6 +195,7 @@ ByteBuffer& operator<<(ByteBuffer& data, AuctionItem const& auctionItem)
     data.WriteBit(auctionItem.CensorServerSideInfo);
     data.WriteBit(auctionItem.CensorBidInfo);
     data.WriteBit(auctionItem.AuctionBucketKey.is_initialized());
+    data.WriteBit(auctionItem.Creator.is_initialized());
     if (!auctionItem.CensorBidInfo)
     {
         data.WriteBit(auctionItem.Bidder.is_initialized());
@@ -235,6 +236,9 @@ ByteBuffer& operator<<(ByteBuffer& data, AuctionItem const& auctionItem)
         data << auctionItem.OwnerAccountID;
         data << int32(auctionItem.EndTime);
     }
+
+    if (auctionItem.Creator)
+        data << *auctionItem.Creator;
 
     if (!auctionItem.CensorBidInfo)
     {
@@ -544,7 +548,7 @@ WorldPacket const* AuctionGetCommodityQuoteResult::Write()
     _worldPacket.WriteBit(TotalPrice.is_initialized());
     _worldPacket.WriteBit(Quantity.is_initialized());
     _worldPacket.WriteBit(QuoteDuration.is_initialized());
-    _worldPacket << int32(Unknown830);
+    _worldPacket << int32(ItemID);
     _worldPacket << uint32(DesiredDelay);
 
     if (TotalPrice)
@@ -554,7 +558,7 @@ WorldPacket const* AuctionGetCommodityQuoteResult::Write()
         _worldPacket << uint32(*Quantity);
 
     if (QuoteDuration)
-        _worldPacket << int32(*QuoteDuration);
+        _worldPacket << *QuoteDuration;
 
     return &_worldPacket;
 }

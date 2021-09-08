@@ -126,10 +126,10 @@ struct boss_gurtogg_bloodboil : public BossAI
         BossAI::AttackStart(who);
     }
 
-    void EnterCombat(Unit* /*who*/) override
+    void JustEngagedWith(Unit* /*who*/) override
     {
         Talk(SAY_AGGRO);
-        _EnterCombat();
+        _JustEngagedWith();
         events.ScheduleEvent(EVENT_BERSERK, Minutes(10));
         events.ScheduleEvent(EVENT_CHANGE_PHASE, Seconds(60));
         ScheduleEvents();
@@ -176,10 +176,10 @@ struct boss_gurtogg_bloodboil : public BossAI
         if (!UpdateVictim())
             return;
 
+        events.Update(diff);
+
         if (me->HasUnitState(UNIT_STATE_CASTING))
             return;
-
-        events.Update(diff);
 
         while (uint32 eventId = events.ExecuteEvent())
         {

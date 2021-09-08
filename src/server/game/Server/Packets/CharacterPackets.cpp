@@ -134,7 +134,7 @@ EnumCharactersResult::CharacterInfo::CharacterInfo(Field* fields)
 
     Tokenizer equipment(fields[17].GetString(), ' ');
     ListPosition = fields[19].GetUInt8();
-    LastPlayedTime = fields[20].GetUInt32();
+    LastPlayedTime = fields[20].GetInt64();
     if (ChrSpecializationEntry const* spec = sDB2Manager.GetChrSpecializationByIndex(ClassID, fields[21].GetUInt8()))
         SpecID = spec->ID;
 
@@ -142,11 +142,12 @@ EnumCharactersResult::CharacterInfo::CharacterInfo(Field* fields)
 
     for (uint8 slot = 0; slot < INVENTORY_SLOT_BAG_END; ++slot)
     {
-        uint32 visualBase = slot * 4;
+        uint32 visualBase = slot * 5;
         VisualItems[slot].InvType = Player::GetUInt32ValueFromArray(equipment, visualBase);
         VisualItems[slot].DisplayID = Player::GetUInt32ValueFromArray(equipment, visualBase + 1);
         VisualItems[slot].DisplayEnchantID = Player::GetUInt32ValueFromArray(equipment, visualBase + 2);
         VisualItems[slot].Subclass = Player::GetUInt32ValueFromArray(equipment, visualBase + 3);
+        VisualItems[slot].SecondaryItemModifiedAppearanceID = Player::GetUInt32ValueFromArray(equipment, visualBase + 4);
     }
 }
 
@@ -154,7 +155,7 @@ ByteBuffer& operator<<(ByteBuffer& data, EnumCharactersResult::CharacterInfo::Vi
 {
     data << uint32(visualItem.DisplayID);
     data << uint32(visualItem.DisplayEnchantID);
-    data << int32(visualItem.ItemModifiedAppearanceID);
+    data << int32(visualItem.SecondaryItemModifiedAppearanceID);
     data << uint8(visualItem.InvType);
     data << uint8(visualItem.Subclass);
 
@@ -190,7 +191,7 @@ ByteBuffer& operator<<(ByteBuffer& data, EnumCharactersResult::CharacterInfo con
     for (EnumCharactersResult::CharacterInfo::VisualItemInfo const& visualItem : charInfo.VisualItems)
         data << visualItem;
 
-    data << uint32(charInfo.LastPlayedTime);
+    data << charInfo.LastPlayedTime;
     data << uint16(charInfo.SpecID);
     data << uint32(charInfo.Unknown703);
     data << uint32(charInfo.LastLoginVersion);

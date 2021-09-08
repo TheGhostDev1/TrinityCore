@@ -69,7 +69,7 @@ void EscortAI::JustDied(Unit* /*killer*/)
     }
 }
 
-void EscortAI::JustAppeared()
+void EscortAI::InitializeAI()
 {
     _escortState = STATE_ESCORT_NONE;
 
@@ -81,8 +81,6 @@ void EscortAI::JustAppeared()
 
     if (me->GetFaction() != me->GetCreatureTemplate()->faction)
         me->RestoreFaction();
-
-    Reset();
 }
 
 void EscortAI::ReturnToLastPoint()
@@ -216,7 +214,7 @@ void EscortAI::UpdateAI(uint32 diff)
     }
 
     // Check if player or any member of his group is within range
-    if (_despawnAtFar && HasEscortState(STATE_ESCORT_ESCORTING) && !_playerGUID.IsEmpty() && !me->GetVictim() && !HasEscortState(STATE_ESCORT_RETURNING))
+    if (_despawnAtFar && HasEscortState(STATE_ESCORT_ESCORTING) && !_playerGUID.IsEmpty() && !me->IsEngaged() && !HasEscortState(STATE_ESCORT_RETURNING))
     {
         if (_playerCheckTimer <= diff)
         {
@@ -228,10 +226,13 @@ void EscortAI::UpdateAI(uint32 diff)
                 if (CreatureData const* creatureData = me->GetCreatureData())
                     isEscort = (sWorld->getBoolConfig(CONFIG_RESPAWN_DYNAMIC_ESCORTNPC) && (creatureData->spawnGroupData->flags & SPAWNGROUP_FLAG_ESCORTQUESTNPC));
 
-                if (_instantRespawn && !isEscort)
-                    me->DespawnOrUnsummon(0, Seconds(1));
-                else if (_instantRespawn && isEscort)
-                    me->GetMap()->RemoveRespawnTime(SPAWN_TYPE_CREATURE, me->GetSpawnId(), true);
+                if (_instantRespawn)
+                {
+                    if (!isEscort)
+                      me->DespawnOrUnsummon(0, 1s);
+                    else
+                      me->GetMap()->RemoveRespawnTime(SPAWN_TYPE_CREATURE, me->GetSpawnId(), true);
+                }
                 else
                     me->DespawnOrUnsummon();
 

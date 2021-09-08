@@ -137,7 +137,7 @@ namespace WorldPackets
                 uint32 Flags4            = 0;
                 bool FirstLogin      = false;
                 uint8 unkWod61x          = 0;
-                uint32 LastPlayedTime    = 0;
+                Timestamp<> LastPlayedTime;
                 uint16 SpecID            = 0;
                 uint32 Unknown703        = 0;
                 uint32 LastLoginVersion  = 0;
@@ -154,7 +154,7 @@ namespace WorldPackets
                 {
                     uint32 DisplayID        = 0;
                     uint32 DisplayEnchantID = 0;
-                    int32 ItemModifiedAppearanceID = 0; // also -1 is some special value
+                    int32 SecondaryItemModifiedAppearanceID = 0; // also -1 is some special value
                     uint8 InvType           = 0;
                     uint8 Subclass          = 0;
                 };

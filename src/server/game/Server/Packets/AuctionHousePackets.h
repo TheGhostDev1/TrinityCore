@@ -130,6 +130,7 @@ namespace WorldPackets
             Optional<uint64> BidAmount;
             std::vector<Item::ItemGemData> Gems;
             Optional<WorldPackets::AuctionHouse::AuctionBucketKey> AuctionBucketKey;
+            Optional<ObjectGuid> Creator;
         };
 
         struct AuctionBidderNotification
@@ -396,8 +397,8 @@ namespace WorldPackets
 
             Optional<uint64> TotalPrice;
             Optional<uint32> Quantity;
-            Optional<int32> QuoteDuration;
-            int32 Unknown830 = 0;
+            Optional<Duration<Milliseconds>> QuoteDuration;
+            int32 ItemID = 0;
             uint32 DesiredDelay = 0;
         };
 

@@ -325,7 +325,8 @@ ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::Battleground::RatedPvpInf
     data << int32(bracketInfo.BestSeasonRating);
     data << int32(bracketInfo.PvpTierID);
     data << int32(bracketInfo.Unused3);
-    data.WriteBit(bracketInfo.Unused4);
+    data << int32(bracketInfo.WeeklyBestWinPvpTierID);
+    data.WriteBit(bracketInfo.Disqualified);
     data.FlushBits();
 
     return data;
@@ -343,8 +344,8 @@ WorldPacket const* WorldPackets::Battleground::PVPMatchInitialize::Write()
 {
     _worldPacket << uint32(MapID);
     _worldPacket << uint8(State);
-    _worldPacket << int32(StartTime);
-    _worldPacket << int32(Duration);
+    _worldPacket << StartTime;
+    _worldPacket << Duration;
     _worldPacket << uint8(ArenaFaction);
     _worldPacket << uint32(BattlemasterListID);
     _worldPacket.WriteBit(Registered);
@@ -357,7 +358,7 @@ WorldPacket const* WorldPackets::Battleground::PVPMatchInitialize::Write()
 WorldPacket const* WorldPackets::Battleground::PVPMatchComplete::Write()
 {
     _worldPacket << uint8(Winner);
-    _worldPacket << int32(Duration);
+    _worldPacket << Duration;
     _worldPacket.WriteBit(LogData.is_initialized());
     _worldPacket.FlushBits();
 

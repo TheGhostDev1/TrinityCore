@@ -84,7 +84,7 @@ public:
             me->SetFaction(FACTION_OGRE);
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void DoNice()
         {
@@ -99,9 +99,10 @@ public:
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            Player* player = done_by->ToPlayer();
+            if (!done_by || !me->HealthBelowPctDamaged(30, damage))
+                return;
 
-            if (player && me->HealthBelowPctDamaged(30, damage))
+            if (Player* player = done_by->ToPlayer())
             {
                 if (Group* group = player->GetGroup())
                 {
@@ -198,7 +199,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void MoveInLineOfSight(Unit* who) override
 

@@ -247,12 +247,11 @@ namespace VMAP
         if (groups != 1)
             printf("Warning: '%s' does not seem to be a M2 model!\n", modelFilename.c_str());
 
-        AABox modelBound;
+        AABox rotated_bounds;
+        for (int i = 0; i < 8; ++i)
+            rotated_bounds.merge(modelPosition.transform(raw_model.groupsArray[0].bounds.corner(i)));
 
-        modelBound.merge(modelPosition.transform(raw_model.groupsArray[0].bounds.low()));
-        modelBound.merge(modelPosition.transform(raw_model.groupsArray[0].bounds.high()));
-
-        spawn.iBound = modelBound + spawn.iPos;
+        spawn.iBound = rotated_bounds + spawn.iPos;
         spawn.flags |= MOD_HAS_BOUND;
         return true;
     }
@@ -427,8 +426,8 @@ namespace VMAP
         READ_OR_RETURN(&nindexes, sizeof(uint32));
         if (nindexes >0)
         {
-            uint16 *indexarray = new uint16[nindexes];
-            READ_OR_RETURN_WITH_DELETE(indexarray, nindexes*sizeof(uint16));
+            uint32 *indexarray = new uint32[nindexes];
+            READ_OR_RETURN_WITH_DELETE(indexarray, nindexes*sizeof(uint32));
             triangles.reserve(nindexes / 3);
             for (uint32 i=0; i<nindexes; i+=3)
                 triangles.push_back(MeshTriangle(indexarray[i], indexarray[i+1], indexarray[i+2]));

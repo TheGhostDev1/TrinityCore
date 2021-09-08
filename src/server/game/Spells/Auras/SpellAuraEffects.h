@@ -18,23 +18,24 @@
 #ifndef TRINITY_SPELLAURAEFFECTS_H
 #define TRINITY_SPELLAURAEFFECTS_H
 
-class Unit;
-class AuraEffect;
-class Aura;
-
 #include "SpellAuras.h"
+
+class AuraEffect;
+class Unit;
 
 typedef void(AuraEffect::*pAuraEffectHandler)(AuraApplication const* aurApp, uint8 mode, bool apply) const;
 
 class TC_GAME_API AuraEffect
 {
-    friend void Aura::_InitEffects(uint32 effMask, Unit* caster, int32* baseAmount);
-    friend Aura* Unit::_TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint32 effMask, Unit* caster, int32* baseAmount, Item* castItem, ObjectGuid casterGUID, bool resetPeriodicTimer, ObjectGuid castItemGuid, uint32 castItemId, int32 castItemLevel);
+    friend void Aura::_InitEffects(uint32 effMask, Unit* caster, int32 const* baseAmount);
     friend Aura::~Aura();
+    friend class Unit;
+
+    private:
+        ~AuraEffect();
+        explicit AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster);
 
     public:
-        ~AuraEffect();
-        AuraEffect(Aura* base, SpellEffectInfo const* spellEfffectInfo, int32 *baseAmount, Unit* caster);
         Unit* GetCaster() const { return GetBase()->GetCaster(); }
         ObjectGuid GetCasterGUID() const { return GetBase()->GetCasterGUID(); }
         Aura* GetBase() const { return m_base; }
@@ -47,15 +48,17 @@ class TC_GAME_API AuraEffect
 
         SpellInfo const* GetSpellInfo() const { return m_spellInfo; }
         uint32 GetId() const { return m_spellInfo->Id; }
-        uint32 GetEffIndex() const { return m_effectInfo->EffectIndex; }
+        SpellEffIndex GetEffIndex() const { return m_effectInfo.EffectIndex; }
         int32 GetBaseAmount() const { return m_baseAmount; }
         int32 GetPeriod() const { return _period; }
 
-        int32 GetMiscValueB() const { return GetSpellEffectInfo()->MiscValueB; }
-        int32 GetMiscValue() const { return GetSpellEffectInfo()->MiscValue; }
-        AuraType GetAuraType() const { return (AuraType)GetSpellEffectInfo()->ApplyAuraName; }
-        int32 GetAmount() const { return m_amount; }
-        void SetAmount(int32 amount) { m_amount = amount; m_canBeRecalculated = false;}
+        int32 GetMiscValueB() const { return GetSpellEffectInfo().MiscValueB; }
+        int32 GetMiscValue() const { return GetSpellEffectInfo().MiscValue; }
+        AuraType GetAuraType() const { return GetSpellEffectInfo().ApplyAuraName; }
+        int32 GetAmount() const { return _amount; }
+        void SetAmount(int32 amount) { _amount = amount; m_canBeRecalculated = false; }
+
+        Optional<float> GetEstimatedAmount() const { return _estimatedAmount; }
 
         int32 GetPeriodicTimer() const { return _periodicTimer; }
         void SetPeriodicTimer(int32 periodicTimer) { _periodicTimer = periodicTimer; }
@@ -72,13 +75,6 @@ class TC_GAME_API AuraEffect
         void HandleEffect(Unit* target, uint8 mode, bool apply, AuraEffect const* triggeredBy = nullptr);
         void ApplySpellMod(Unit* target, bool apply, AuraEffect const* triggeredBy = nullptr);
 
-        void  SetDamage(int32 val) { m_damage = val; }
-        int32 GetDamage() const { return m_damage; }
-        void  SetCritChance(float val) { m_critChance = val; }
-        float GetCritChance() const { return m_critChance; }
-        void  SetDonePct(float val) { m_donePct = val; }
-        float GetDonePct() const { return m_donePct; }
-
         void Update(uint32 diff, Unit* caster);
 
         uint32 GetTickNumber() const { return _ticksDone; }
@@ -90,7 +86,7 @@ class TC_GAME_API AuraEffect
         bool IsPeriodic() const { return m_isPeriodic; }
         void SetPeriodic(bool isPeriodic) { m_isPeriodic = isPeriodic; }
         bool IsAffectingSpell(SpellInfo const* spell) const;
-        bool HasSpellClassMask() const { return GetSpellEffectInfo()->SpellClassMask; }
+        bool HasSpellClassMask() const { return GetSpellEffectInfo().SpellClassMask; }
 
         void SendTickImmune(Unit* target, Unit* caster) const;
         void PeriodicTick(AuraApplication* aurApp, Unit* caster) const;
@@ -101,25 +97,23 @@ class TC_GAME_API AuraEffect
         // add/remove SPELL_AURA_MOD_SHAPESHIFT (36) linked auras
         void HandleShapeshiftBoosts(Unit* target, bool apply) const;
 
-        SpellEffectInfo const* GetSpellEffectInfo() const { return m_effectInfo; }
+        SpellEffectInfo const& GetSpellEffectInfo() const { return m_effectInfo; }
 
-        bool IsEffect() const { return m_effectInfo->Effect != 0; }
-        bool IsEffect(SpellEffectName effectName) const { return m_effectInfo->Effect == uint32(effectName); }
+        bool IsEffect() const { return m_effectInfo.Effect != 0; }
+        bool IsEffect(SpellEffectName effectName) const { return m_effectInfo.Effect == effectName; }
         bool IsAreaAuraEffect() const;
 
     private:
         Aura* const m_base;
 
         SpellInfo const* const m_spellInfo;
-        SpellEffectInfo const* m_effectInfo;
+        SpellEffectInfo const& m_effectInfo;
 
         SpellModifier* m_spellmod;
 
         int32 const m_baseAmount;
-        int32 m_amount;
-        int32 m_damage;
-        float m_critChance;
-        float m_donePct;
+        int32 _amount;
+        Optional<float> _estimatedAmount;   // for periodic damage and healing auras this will include damage done bonuses
 
         // periodic stuff
         int32 _periodicTimer;
@@ -128,6 +122,8 @@ class TC_GAME_API AuraEffect
 
         bool m_canBeRecalculated;
         bool m_isPeriodic;
+
+        float GetCritChanceFor(Unit const* caster, Unit const* target) const;
 
     public:
         // aura effect apply/remove handlers
@@ -193,6 +189,7 @@ class TC_GAME_API AuraEffect
         void HandleModThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModTotalThreat(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModTaunt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleModDetaunt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //  control
         void HandleModConfuse(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModFear(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -265,7 +262,6 @@ class TC_GAME_API AuraEffect
         void HandleAuraModBlockPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModRegenInterrupt(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModWeaponCritPercent(AuraApplication const* aurApp, uint8 mode, bool apply) const;
-        void HandleModHitChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModSpellHitChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleModSpellCritChance(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraModCritPct(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -309,6 +305,7 @@ class TC_GAME_API AuraEffect
         void HandleAuraOverrideSpells(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraSetVehicle(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandlePreventResurrection(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+        void HandleAbsorbOverkill(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleMastery(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraForceWeather(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleEnableAltPower(AuraApplication const* aurApp, uint8 mode, bool apply) const;
@@ -337,6 +334,9 @@ class TC_GAME_API AuraEffect
         void HandleObsModPowerAuraTick(Unit* target, Unit* caster) const;
         void HandlePeriodicEnergizeAuraTick(Unit* target, Unit* caster) const;
         void HandlePeriodicPowerBurnAuraTick(Unit* target, Unit* caster) const;
+
+        bool CanPeriodicTickCrit() const;
+        float CalcPeriodicCritChance(Unit const* caster) const;
 
         // aura effect proc handlers
         void HandleBreakableCCAuraProc(AuraApplication* aurApp, ProcEventInfo& eventInfo);

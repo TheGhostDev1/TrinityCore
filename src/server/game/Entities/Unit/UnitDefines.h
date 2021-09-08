@@ -98,54 +98,6 @@ enum UnitPetFlag : uint8
     UNIT_PET_FLAG_CAN_BE_ABANDONED  = 0x02
 };
 
-// high byte (3 from 0..3) of UNIT_FIELD_BYTES_2
-enum ShapeshiftForm
-{
-    FORM_NONE                       = 0,
-    FORM_CAT_FORM                   = 1,
-    FORM_TREE_OF_LIFE               = 2,
-    FORM_TRAVEL_FORM                = 3,
-    FORM_AQUATIC_FORM               = 4,
-    FORM_BEAR_FORM                  = 5,
-    FORM_AMBIENT                    = 6,
-    FORM_GHOUL                      = 7,
-    FORM_DIRE_BEAR_FORM             = 8,
-    FORM_CRANE_STANCE               = 9,
-    FORM_THARONJA_SKELETON          = 10,
-    FORM_DARKMOON_TEST_OF_STRENGTH  = 11,
-    FORM_BLB_PLAYER                 = 12,
-    FORM_SHADOW_DANCE               = 13,
-    FORM_CREATURE_BEAR              = 14,
-    FORM_CREATURE_CAT               = 15,
-    FORM_GHOST_WOLF                 = 16,
-    FORM_BATTLE_STANCE              = 17,
-    FORM_DEFENSIVE_STANCE           = 18,
-    FORM_BERSERKER_STANCE           = 19,
-    FORM_SERPENT_STANCE             = 20,
-    FORM_ZOMBIE                     = 21,
-    FORM_METAMORPHOSIS              = 22,
-    FORM_OX_STANCE                  = 23,
-    FORM_TIGER_STANCE               = 24,
-    FORM_UNDEAD                     = 25,
-    FORM_FRENZY                     = 26,
-    FORM_FLIGHT_FORM_EPIC           = 27,
-    FORM_SHADOWFORM                 = 28,
-    FORM_FLIGHT_FORM                = 29,
-    FORM_STEALTH                    = 30,
-    FORM_MOONKIN_FORM               = 31,
-    FORM_SPIRIT_OF_REDEMPTION       = 32,
-    FORM_GLADIATOR_STANCE           = 33,
-    FORM_METAMORPHOSIS_2            = 34,
-    FORM_MOONKIN_FORM_RESTORATION   = 35,
-    FORM_TREANT_FORM                = 36,
-    FORM_SPIRIT_OWL_FORM            = 37,
-    FORM_SPIRIT_OWL_FORM_2          = 38,
-    FORM_WISP_FORM                  = 39,
-    FORM_WISP_FORM_2                = 40,
-    FORM_SOULSHAPE                  = 41,
-    FORM_FORGEBORNE_REVERIES        = 42
-};
-
 enum UnitMoveType
 {
     MOVE_WALK           = 0,
@@ -172,8 +124,8 @@ enum UnitFlags : uint32
     UNIT_FLAG_PREPARATION           = 0x00000020,           // don't take reagents for spells with SPELL_ATTR5_NO_REAGENT_WHILE_PREP
     UNIT_FLAG_UNK_6                 = 0x00000040,
     UNIT_FLAG_NOT_ATTACKABLE_1      = 0x00000080,           // ?? (UNIT_FLAG_PVP_ATTACKABLE | UNIT_FLAG_NOT_ATTACKABLE_1) is NON_PVP_ATTACKABLE
-    UNIT_FLAG_IMMUNE_TO_PC          = 0x00000100,           // disables combat/assistance with PlayerCharacters (PC) - see Unit::_IsValidAttackTarget, Unit::_IsValidAssistTarget
-    UNIT_FLAG_IMMUNE_TO_NPC         = 0x00000200,           // disables combat/assistance with NonPlayerCharacters (NPC) - see Unit::_IsValidAttackTarget, Unit::_IsValidAssistTarget
+    UNIT_FLAG_IMMUNE_TO_PC          = 0x00000100,           // disables combat/assistance with PlayerCharacters (PC) - see Unit::IsValidAttackTarget, Unit::IsValidAssistTarget
+    UNIT_FLAG_IMMUNE_TO_NPC         = 0x00000200,           // disables combat/assistance with NonPlayerCharacters (NPC) - see Unit::IsValidAttackTarget, Unit::IsValidAssistTarget
     UNIT_FLAG_LOOTING               = 0x00000400,           // loot animation
     UNIT_FLAG_PET_IN_COMBAT         = 0x00000800,           // on player pets: whether the pet is chasing a target to attack || on other units: whether any of the unit's minions is in combat
     UNIT_FLAG_PVP                   = 0x00001000,           // changed in 3.0.3

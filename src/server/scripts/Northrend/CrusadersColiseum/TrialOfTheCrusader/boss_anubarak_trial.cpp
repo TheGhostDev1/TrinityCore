@@ -269,9 +269,9 @@ class boss_anubarak_trial : public CreatureScript
                 summons.Summon(summoned);
             }
 
-            void EnterCombat(Unit* /*who*/) override
+            void JustEngagedWith(Unit* /*who*/) override
             {
-                _EnterCombat();
+                _JustEngagedWith();
                 Talk(SAY_AGGRO);
                 me->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE));
 
@@ -308,12 +308,20 @@ class boss_anubarak_trial : public CreatureScript
                             events.ScheduleEvent(EVENT_FREEZE_SLASH, 15*IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
                         case EVENT_PENETRATING_COLD:
-                            me->CastCustomSpell(SPELL_PENETRATING_COLD, SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 5));
-                            events.ScheduleEvent(EVENT_PENETRATING_COLD, 20*IN_MILLISECONDS, 0, PHASE_MELEE);
+                        {
+                            CastSpellExtraArgs args;
+                            args.AddSpellMod(SPELLVALUE_MAX_TARGETS, RAID_MODE(2, 5, 2, 5));
+                            me->CastSpell(nullptr, SPELL_PENETRATING_COLD, args);
+                            events.ScheduleEvent(EVENT_PENETRATING_COLD, 20 * IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
+                        }
                         case EVENT_SUMMON_NERUBIAN:
                             if (IsHeroic() || !_reachedPhase3)
-                                me->CastCustomSpell(SPELL_SUMMON_BURROWER, SPELLVALUE_MAX_TARGETS, RAID_MODE(1, 2, 2, 4));
+                            {
+                                CastSpellExtraArgs args;
+                                args.AddSpellMod(SPELLVALUE_MAX_TARGETS, RAID_MODE(1, 2, 2, 4));
+                                me->CastSpell(nullptr, SPELL_SUMMON_BURROWER, args);
+                            }
                             events.ScheduleEvent(EVENT_SUMMON_NERUBIAN, 45*IN_MILLISECONDS, 0, PHASE_MELEE);
                             return;
                         case EVENT_NERUBIAN_SHADOW_STRIKE:
@@ -457,7 +465,7 @@ class npc_swarm_scarab : public CreatureScript
                 me->SetCorpseDelay(0);
                 Initialize();
                 DoCast(me, SPELL_ACID_MANDIBLE);
-                me->SetInCombatWithZone();
+                DoZoneInCombat();
                 if (me->IsInCombat())
                     if (Creature* anubarak = _instance->GetCreature(DATA_ANUBARAK))
                         anubarak->AI()->JustSummoned(me);
@@ -478,7 +486,8 @@ class npc_swarm_scarab : public CreatureScript
 
             void JustDied(Unit* killer) override
             {
-                DoCast(killer, SPELL_TRAITOR_KING);
+                if (killer)
+                    DoCast(killer, SPELL_TRAITOR_KING);
             }
 
             void UpdateAI(uint32 diff) override
@@ -537,7 +546,7 @@ class npc_nerubian_burrower : public CreatureScript
                 DoCast(me, SPELL_EXPOSE_WEAKNESS);
                 DoCast(me, SPELL_SPIDER_FRENZY);
                 DoCast(me, SPELL_AWAKENED);
-                me->SetInCombatWithZone();
+                DoZoneInCombat();
                 if (me->IsInCombat())
                     if (Creature* anubarak = _instance->GetCreature(DATA_ANUBARAK))
                         anubarak->AI()->JustSummoned(me);
@@ -700,7 +709,7 @@ class npc_anubarak_spike : public CreatureScript
             {
                 Initialize();
                 // make sure the spike has everyone on threat list
-                me->SetInCombatWithZone();
+                DoZoneInCombat();
             }
 
             bool CanAIAttack(Unit const* victim) const override
@@ -708,7 +717,7 @@ class npc_anubarak_spike : public CreatureScript
                 return victim->GetTypeId() == TYPEID_PLAYER;
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                 {
@@ -812,8 +821,8 @@ class npc_anubarak_spike : public CreatureScript
                 DoCast(who, SPELL_MARK);
                 me->SetSpeedRate(MOVE_RUN, 0.5f);
                 // make sure the Spine will really follow the one he should
-                ResetThreatList();
-                me->SetInCombatWithZone();
+                me->GetThreatManager().ResetAllThreat();
+                DoZoneInCombat();
                 AddThreat(who, 1000000.0f);
                 me->GetMotionMaster()->Clear(true);
                 me->GetMotionMaster()->MoveChase(who);
@@ -888,7 +897,7 @@ class spell_impale : public SpellScriptLoader
 
                 // make sure Impale doesnt do damage if we are standing on permafrost
                 if (target && target->HasAura(SPELL_PERMAFROST))
-                    SetHitDamage(0);
+                    PreventHitDamage();
             }
 
             void Register() override
@@ -925,10 +934,12 @@ class spell_anubarak_leeching_swarm : public SpellScriptLoader
                     int32 lifeLeeched = target->CountPctFromCurHealth(aurEff->GetAmount());
                     if (lifeLeeched < 250)
                         lifeLeeched = 250;
+                    CastSpellExtraArgs args(TRIGGERED_FULL_MASK);
+                    args.AddSpellMod(SPELLVALUE_BASE_POINT0, lifeLeeched);
                     // Damage
-                    caster->CastCustomSpell(target, SPELL_LEECHING_SWARM_DMG, &lifeLeeched, nullptr, nullptr, true);
+                    caster->CastSpell(target, SPELL_LEECHING_SWARM_DMG, args);
                     // Heal
-                    caster->CastCustomSpell(caster, SPELL_LEECHING_SWARM_HEAL, &lifeLeeched, nullptr, nullptr, true);
+                    caster->CastSpell(caster, SPELL_LEECHING_SWARM_HEAL, args);
                 }
             }
 

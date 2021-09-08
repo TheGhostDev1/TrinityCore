@@ -22,6 +22,7 @@
 #include "AuthenticationPackets.h"
 #include "ObjectGuid.h"
 #include "Group.h"
+#include "MythicPlusPacketsCommon.h"
 #include "Optional.h"
 
 namespace WorldPackets
@@ -208,9 +209,11 @@ namespace WorldPackets
             uint16 SpecID = 0;
             uint16 WmoGroupID = 0;
             uint32 WmoDoodadPlacementID = 0;
-            int8 PartyType[2];
+            int8 PartyType[2] = { };
 
             CTROptions ChromieTime;
+
+            MythicPlus::DungeonScoreSummary DungeonScore;
         };
 
         class PartyMemberFullState final : public ServerPacket
@@ -410,7 +413,7 @@ namespace WorldPackets
             int8 PartyIndex = 0;
             ObjectGuid PartyGUID;
             ObjectGuid InitiatorGUID;
-            uint32 Duration = 0u;
+            WorldPackets::Duration<Milliseconds> Duration;
         };
 
         class ReadyCheckResponseClient final : public ClientPacket

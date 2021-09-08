@@ -25,6 +25,7 @@
 #include "CreatureAI.h"
 #include "DynamicObject.h"
 #include "GameObject.h"
+#include "GameTime.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
@@ -144,14 +145,6 @@ void LoadHelper(CellGuidSet const& guid_set, CellCoord &cell, GridRefManager<T> 
                         delete obj;
                         continue;
                     }
-
-                // If script is blocking spawn, don't spawn but queue for a re-check in a little bit
-                if (!(group->flags & SPAWNGROUP_FLAG_COMPATIBILITY_MODE) && !sScriptMgr->CanSpawn(guid, cdata->id, cdata, map))
-                {
-                    map->SaveRespawnTime(SPAWN_TYPE_CREATURE, guid, cdata->id, time(nullptr) + urand(4,7), map->GetZoneId(PhasingHandler::GetEmptyPhaseShift(), cdata->spawnPoint), Trinity::ComputeGridCoord(cdata->spawnPoint.GetPositionX(), cdata->spawnPoint.GetPositionY()).GetId(), false);
-                    delete obj;
-                    continue;
-                }
             }
             else if (obj->GetTypeId() == TYPEID_GAMEOBJECT)
             {
@@ -273,7 +266,7 @@ void ObjectGridStoper::Visit(CreatureMapType &m)
     {
         iter->GetSource()->RemoveAllDynObjects();
         iter->GetSource()->RemoveAllAreaTriggers();
-        if (iter->GetSource()->IsInCombat() || !iter->GetSource()->GetThreatManager().areThreatListsEmpty())
+        if (iter->GetSource()->IsInCombat())
         {
             iter->GetSource()->CombatStop();
             iter->GetSource()->GetThreatManager().ClearAllThreat();
