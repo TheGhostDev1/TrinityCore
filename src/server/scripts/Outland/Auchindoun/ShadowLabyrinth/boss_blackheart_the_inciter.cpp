@@ -79,9 +79,9 @@ struct boss_blackheart_the_inciter : public BossAI
         _Reset();
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         events.ScheduleEvent(EVENT_INCITE_CHAOS, 20s);
         events.ScheduleEvent(EVENT_CHARGE_ATTACK, 5s);
         events.ScheduleEvent(EVENT_WAR_STOMP, 15000);
@@ -165,8 +165,11 @@ struct boss_blackheart_the_inciter_mc_dummy : public NullCreatureAI
     using NullCreatureAI::NullCreatureAI;
     void InitializeAI() override { me->SetReactState(REACT_PASSIVE); }
     static const uint32 FIRST_DUMMY = NPC_BLACKHEART_DUMMY1, LAST_DUMMY = NPC_BLACKHEART_DUMMY5;
-    void IsSummonedBy(Unit* who) override
+    void IsSummonedBy(WorldObject* whoWO) override
     {
+        Unit* who = whoWO->ToUnit();
+        if (!who)
+            return;
         me->CastSpell(who, SPELL_INCITE_CHAOS_B, true);
 
         // ensure everyone is in combat with everyone

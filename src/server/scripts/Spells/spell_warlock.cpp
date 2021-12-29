@@ -51,6 +51,7 @@ enum WarlockSpells
     SPELL_WARLOCK_RAIN_OF_FIRE_DAMAGE               = 42223,
     SPELL_WARLOCK_SEED_OF_CORRUPTION_DAMAGE         = 27285,
     SPELL_WARLOCK_SEED_OF_CORRUPTION_GENERIC        = 32865,
+    SPELL_WARLOCK_SHADOW_BOLT_ENERGIZE              = 194192,
     SPELL_WARLOCK_SOULSHATTER_EFFECT                = 32835,
     SPELL_WARLOCK_SOUL_SWAP_CD_MARKER               = 94229,
     SPELL_WARLOCK_SOUL_SWAP_OVERRIDE                = 86211,
@@ -318,7 +319,7 @@ class spell_warl_haunt : public SpellScriptLoader
             {
                 if (Aura* aura = GetHitAura())
                     if (AuraEffect* aurEff = aura->GetEffect(EFFECT_1))
-                        aurEff->SetAmount(CalculatePct(aurEff->GetAmount(), GetHitDamage()));
+                        aurEff->SetAmount(CalculatePct(GetHitDamage(), aurEff->GetAmount()));
             }
 
             void Register() override
@@ -609,6 +610,27 @@ class spell_warl_seed_of_corruption_generic : public SpellScriptLoader
         {
             return new spell_warl_seed_of_corruption_generic_AuraScript();
         }
+};
+
+// 686 - Shadow Bolt
+class spell_warl_shadow_bolt : public SpellScript
+{
+    PrepareSpellScript(spell_warl_shadow_bolt);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo ({ SPELL_WARLOCK_SHADOW_BOLT_ENERGIZE });
+    }
+
+    void HandleAfterCast()
+    {
+        GetCaster()->CastSpell(GetCaster(), SPELL_WARLOCK_SHADOW_BOLT_ENERGIZE, true);
+    }
+
+    void Register() override
+    {
+        AfterCast += SpellCastFn(spell_warl_shadow_bolt::HandleAfterCast);
+    }
 };
 
 // 86121 - Soul Swap
@@ -984,6 +1006,7 @@ void AddSC_warlock_spell_scripts()
     new spell_warl_seed_of_corruption();
     new spell_warl_seed_of_corruption_dummy();
     new spell_warl_seed_of_corruption_generic();
+    RegisterSpellScript(spell_warl_shadow_bolt);
     new spell_warl_soul_swap();
     new spell_warl_soul_swap_dot_marker();
     new spell_warl_soul_swap_exhale();

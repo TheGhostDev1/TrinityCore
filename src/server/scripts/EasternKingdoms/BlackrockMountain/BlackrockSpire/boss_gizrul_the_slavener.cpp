@@ -54,14 +54,14 @@ public:
             _Reset();
         }
 
-        void IsSummonedBy(Unit* /*summoner*/) override
+        void IsSummonedBy(WorldObject* /*summoner*/) override
         {
             me->GetMotionMaster()->MovePath(GIZRUL_PATH, false);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             events.ScheduleEvent(EVENT_FATAL_BITE, 17s, 20s);
             events.ScheduleEvent(EVENT_INFECTED_BITE, 10s, 12s);
         }

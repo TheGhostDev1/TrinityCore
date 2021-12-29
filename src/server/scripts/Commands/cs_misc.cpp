@@ -302,7 +302,7 @@ public:
         if (status)
             handler->PSendSysMessage(LANG_LIQUID_STATUS, liquidStatus.level, liquidStatus.depth_level, liquidStatus.entry, uint32(liquidStatus.type_flags.AsUnderlyingType()), status);
 
-        PhasingHandler::PrintToChat(handler, object->GetPhaseShift());
+        PhasingHandler::PrintToChat(handler, object);
 
         return true;
     }
@@ -1333,8 +1333,27 @@ public:
         // Subtract
         if (count < 0)
         {
-            playerTarget->DestroyItemCount(itemId, -count, true, false);
-            handler->PSendSysMessage(LANG_REMOVEITEM, itemId, -count, handler->GetNameLink(playerTarget).c_str());
+            uint32 destroyedItemCount = playerTarget->DestroyItemCount(itemId, -count, true, false);
+            
+            if (destroyedItemCount > 0)
+            {
+                // output the amount of items successfully destroyed
+                handler->PSendSysMessage(LANG_REMOVEITEM, itemId, destroyedItemCount, handler->GetNameLink(playerTarget).c_str());
+
+                // check to see if we were unable to destroy all of the amount requested.
+                uint32 unableToDestroyItemCount = -count - destroyedItemCount;
+                if (unableToDestroyItemCount > 0)
+                {
+                    // output message for the amount of items we couldn't destroy
+                    handler->PSendSysMessage(LANG_REMOVEITEM_FAILURE, itemId, unableToDestroyItemCount, handler->GetNameLink(playerTarget).c_str());
+                }
+            }
+            else
+            {
+                // failed to destroy items of the amount requested
+                handler->PSendSysMessage(LANG_REMOVEITEM_FAILURE, itemId, -count, handler->GetNameLink(playerTarget).c_str());
+            }
+
             return true;
         }
 
@@ -1698,15 +1717,15 @@ public:
             accId             = target->GetSession()->GetAccountId();
             money             = target->GetMoney();
             totalPlayerTime   = target->GetTotalPlayedTime();
-            level             = target->getLevel();
+            level             = target->GetLevel();
             latency           = target->GetSession()->GetLatency();
-            raceid            = target->getRace();
-            classid           = target->getClass();
+            raceid            = target->GetRace();
+            classid           = target->GetClass();
             muteTime          = target->GetSession()->m_muteTime;
             mapId             = target->GetMapId();
             areaId            = target->GetAreaId();
             alive             = target->IsAlive() ? handler->GetTrinityString(LANG_YES) : handler->GetTrinityString(LANG_NO);
-            gender            = target->GetNativeSex();
+            gender            = target->GetNativeGender();
         }
         // get additional information from DB
         else
@@ -1849,11 +1868,11 @@ public:
 
         // Output III. LANG_PINFO_BANNED if ban exists and is applied
         if (banTime >= 0)
-            handler->PSendSysMessage(LANG_PINFO_BANNED, banType.c_str(), banReason.c_str(), banTime > 0 ? secsToTimeString(banTime - GameTime::GetGameTime(), true).c_str() : handler->GetTrinityString(LANG_PERMANENTLY), bannedBy.c_str());
+            handler->PSendSysMessage(LANG_PINFO_BANNED, banType.c_str(), banReason.c_str(), banTime > 0 ? secsToTimeString(banTime - GameTime::GetGameTime(), TimeFormat::ShortText).c_str() : handler->GetTrinityString(LANG_PERMANENTLY), bannedBy.c_str());
 
         // Output IV. LANG_PINFO_MUTED if mute is applied
         if (muteTime > 0)
-            handler->PSendSysMessage(LANG_PINFO_MUTED, muteReason.c_str(), secsToTimeString(muteTime - GameTime::GetGameTime(), true).c_str(), muteBy.c_str());
+            handler->PSendSysMessage(LANG_PINFO_MUTED, muteReason.c_str(), secsToTimeString(muteTime - GameTime::GetGameTime(), TimeFormat::ShortText).c_str(), muteBy.c_str());
 
         // Output V. LANG_PINFO_ACC_ACCOUNT
         handler->PSendSysMessage(LANG_PINFO_ACC_ACCOUNT, userName.c_str(), accId, security);
@@ -1886,7 +1905,7 @@ public:
 
         // Output XIII. phases
         if (target)
-            PhasingHandler::PrintToChat(handler, target->GetPhaseShift());
+            PhasingHandler::PrintToChat(handler, target);
 
         // Output XIV. LANG_PINFO_CHR_MONEY
         uint32 gold                   = money / GOLD;
@@ -1929,7 +1948,7 @@ public:
         }
 
         // Output XX. LANG_PINFO_CHR_PLAYEDTIME
-        handler->PSendSysMessage(LANG_PINFO_CHR_PLAYEDTIME, (secsToTimeString(totalPlayerTime, true, true)).c_str());
+        handler->PSendSysMessage(LANG_PINFO_CHR_PLAYEDTIME, (secsToTimeString(totalPlayerTime, TimeFormat::ShortText, true)).c_str());
 
         // Mail Data - an own query, because it may or may not be useful.
         // SQL: "SELECT SUM(CASE WHEN (checked & 1) THEN 1 ELSE 0 END) AS 'readmail', COUNT(*) AS 'totalmail' FROM mail WHERE `receiver` = ?"
@@ -1977,13 +1996,13 @@ public:
 
         // Now handle any that had despawned, but had respawn time logged.
         std::vector<RespawnInfo*> data;
-        player->GetMap()->GetRespawnInfo(data, SPAWN_TYPEMASK_ALL, 0);
+        player->GetMap()->GetRespawnInfo(data, SPAWN_TYPEMASK_ALL);
         if (!data.empty())
         {
             uint32 const gridId = Trinity::ComputeGridCoord(player->GetPositionX(), player->GetPositionY()).GetId();
             for (RespawnInfo* info : data)
                 if (info->gridId == gridId)
-                    player->GetMap()->ForceRespawn(info->type, info->spawnId);
+                    player->GetMap()->Respawn(info->type, info->spawnId);
         }
 
         return true;
@@ -2199,8 +2218,8 @@ public:
         float x, y, z;
         unit->GetMotionMaster()->GetDestination(x, y, z);
 
-        std::vector<MovementGeneratorInformation> list = unit->GetMotionMaster()->GetMovementGeneratorsInformation();
-        for (MovementGeneratorInformation info : list)
+        std::vector<MovementGeneratorInformation> const list = unit->GetMotionMaster()->GetMovementGeneratorsInformation();
+        for (MovementGeneratorInformation const& info : list)
         {
             switch (info.Type)
             {

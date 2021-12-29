@@ -81,17 +81,6 @@ class boss_rajaxx : public CreatureScript
                 events.ScheduleEvent(EVENT_THUNDERCRASH, 12s);
             }
 
-            void JustDied(Unit* /*killer*/) override
-            {
-                //SAY_DEATH
-                _JustDied();
-            }
-
-            void JustEngagedWith(Unit* /*victim*/) override
-            {
-                _JustEngagedWith();
-            }
-
             void UpdateAI(uint32 diff) override
             {
                 if (!UpdateVictim())
@@ -144,12 +133,12 @@ class spell_rajaxx_thundercrash : public SpellScript
         if (damage < 200)
             damage = 200;
 
-        SetHitDamage(damage);
+        SetEffectValue(damage);
     }
 
     void Register() override
     {
-        OnEffectHitTarget += SpellEffectFn(spell_rajaxx_thundercrash::HandleDamageCalc, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
+        OnEffectLaunchTarget += SpellEffectFn(spell_rajaxx_thundercrash::HandleDamageCalc, EFFECT_0, SPELL_EFFECT_SCHOOL_DAMAGE);
     }
 };
 

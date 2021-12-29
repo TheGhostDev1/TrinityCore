@@ -712,7 +712,7 @@ class npc_jaina_or_sylvanas_intro_hor : public CreatureScript
                     case EVENT_INTRO_LK_9:
                         if (Creature* falric = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_FALRIC)))
                             falric->AI()->Talk(SAY_FALRIC_INTRO_2);
-                        _instance->ProcessEvent(nullptr, EVENT_SPAWN_WAVES);
+                        _instance->ProcessEvent(nullptr, EVENT_SPAWN_WAVES, nullptr);
                         _events.ScheduleEvent(EVENT_INTRO_LK_10, 4000);
                         break;
                     case EVENT_INTRO_LK_10:
@@ -1363,7 +1363,7 @@ class npc_the_lich_king_escape_hor : public CreatureScript
                 if (!me->HasReactState(REACT_PASSIVE))
                 {
                     if (Unit* victim = me->SelectVictim())
-                        if (!me->IsFocusing(nullptr, true) && victim != me->GetVictim())
+                        if (!me->HasSpellFocus() && victim != me->GetVictim())
                             AttackStart(victim);
                     return me->GetVictim() != nullptr;
                 }
@@ -2076,7 +2076,7 @@ class at_hor_waves_restarter : public AreaTriggerScript
 
             if (_instance->GetData(DATA_INTRO_EVENT) == DONE && _instance->GetBossState(DATA_MARWYN) != DONE)
             {
-                _instance->ProcessEvent(nullptr, EVENT_SPAWN_WAVES);
+                _instance->ProcessEvent(nullptr, EVENT_SPAWN_WAVES, nullptr);
 
                 if (Creature* falric = ObjectAccessor::GetCreature(*player, _instance->GetGuidData(DATA_FALRIC)))
                 {
@@ -2180,7 +2180,7 @@ struct npc_escape_event_trash : public ScriptedAI
             me->DespawnOrUnsummon();
     }
 
-    void IsSummonedBy(Unit* /*summoner*/) override
+    void IsSummonedBy(WorldObject* /*summoner*/) override
     {
         DoZoneInCombat(me);
         if (Creature* leader = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_ESCAPE_LEADER)))
@@ -2212,7 +2212,7 @@ class npc_raging_ghoul : public CreatureScript
                 _events.ScheduleEvent(EVENT_RAGING_GHOUL_JUMP, 5s);
             }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 me->CastSpell(me, SPELL_RAGING_GHOUL_SPAWN, true);
                 me->SetReactState(REACT_PASSIVE);
@@ -2278,7 +2278,7 @@ class npc_risen_witch_doctor : public CreatureScript
                 _events.ScheduleEvent(EVENT_RISEN_WITCH_DOCTOR_CURSE, 7s);
             }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 me->CastSpell(me, SPELL_RISEN_WITCH_DOCTOR_SPAWN, true);
                 me->SetReactState(REACT_PASSIVE);

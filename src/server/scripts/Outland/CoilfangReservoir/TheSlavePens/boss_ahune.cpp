@@ -176,9 +176,9 @@ struct boss_ahune : public BossAI
         me->SetControlled(true, UNIT_STATE_ROOT);
     }
 
-    void JustEngagedWith(Unit* /*who*/) override
+    void JustEngagedWith(Unit* who) override
     {
-        _JustEngagedWith();
+        BossAI::JustEngagedWith(who);
         events.ScheduleEvent(EVENT_INITIAL_EMERGE, 4ms);
         events.ScheduleEvent(EVENT_SYNCH_HEALTH, 3s);
     }
@@ -263,7 +263,6 @@ struct boss_ahune : public BossAI
         if (Creature* frozenCore = instance->GetCreature(DATA_FROZEN_CORE))
             frozenCore->AI()->DoAction(ACTION_AHUNE_RETREAT);
         me->RemoveAurasDueToSpell(SPELL_AHUNES_SHIELD);
-        me->AddUnitFlag(UNIT_FLAG_UNK_31);
         DoCastSelf(SPELL_SUBMERGED, true);
         DoCastSelf(SPELL_AHUNE_SELF_STUN, true);
         DoCastSelf(SPELL_STAY_SUBMERGED, true);

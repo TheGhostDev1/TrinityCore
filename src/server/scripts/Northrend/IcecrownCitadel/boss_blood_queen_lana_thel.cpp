@@ -69,6 +69,7 @@ enum Spells
     SPELL_INCITE_TERROR                     = 73070,
     SPELL_BLOODBOLT_WHIRL                   = 71772,
     SPELL_ANNIHILATE                        = 71322,
+    SPELL_CLEAR_ALL_STATUS_AILMENTS         = 70939,
 
     // Blood Infusion
     SPELL_BLOOD_INFUSION_CREDIT             = 72934
@@ -190,10 +191,11 @@ class boss_blood_queen_lana_thel : public CreatureScript
 
                 DoCast(me, SPELL_SHROUD_OF_SORROW, true);
                 DoCast(me, SPELL_FRENZIED_BLOODTHIRST_VISUAL, true);
+                DoCastSelf(SPELL_CLEAR_ALL_STATUS_AILMENTS, true);
                 _creditBloodQuickening = instance->GetData(DATA_BLOOD_QUICKENING_STATE) == IN_PROGRESS;
             }
 
-            void JustDied(Unit* killer) override
+            void JustDied(Unit* /*killer*/) override
             {
                 _JustDied();
                 Talk(SAY_DEATH);
@@ -203,14 +205,11 @@ class boss_blood_queen_lana_thel : public CreatureScript
 
                 CleanAuras();
 
-                if (!killer)
-                    return;
-
                 // Blah, credit the quest
                 if (_creditBloodQuickening)
                 {
                     instance->SetData(DATA_BLOOD_QUICKENING_STATE, DONE);
-                    if (Player* player = killer->ToPlayer())
+                    if (Player* player = me->GetLootRecipient())
                         player->RewardPlayerAndGroupAtEvent(Is25ManRaid() ? NPC_INFILTRATOR_MINCHAR_BQ_25 : NPC_INFILTRATOR_MINCHAR_BQ, player);
                     if (Creature* minchar = me->FindNearestCreature(NPC_INFILTRATOR_MINCHAR_BQ, 200.0f))
                     {

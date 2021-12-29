@@ -27,6 +27,7 @@
 #include "DB2Stores.h"
 #include "GameTime.h"
 #include "GridNotifiersImpl.h"
+#include "G3DPosition.hpp"
 #include "InstanceScenario.h"
 #include "Item.h"
 #include "Log.h"
@@ -36,11 +37,13 @@
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "OutdoorPvPMgr.h"
+#include "PathGenerator.h"
 #include "PhasingHandler.h"
 #include "Player.h"
 #include "ReputationMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
+#include "SpellPackets.h"
 #include "TemporarySummon.h"
 #include "Totem.h"
 #include "Transport.h"
@@ -162,8 +165,12 @@ void Object::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target) c
     }
 
     if (Unit const* unit = ToUnit())
+    {
+        flags.PlayHoverAnim = unit->IsPlayingHoverAnim();
+
         if (unit->GetVictim())
             flags.CombatVictim = true;
+    }
 
     ByteBuffer buf(0x400, ByteBuffer::Reserve{});
     buf << uint8(updateType);
@@ -393,7 +400,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags) const
     }
 
     if (flags.Rotation)
-        *data << uint64(ToGameObject()->GetPackedWorldRotation());      // Rotation
+        *data << uint64(ToGameObject()->GetPackedLocalRotation());      // Rotation
 
     if (PauseTimesCount)
         data->append(PauseTimes->data(), PauseTimes->size());
@@ -716,10 +723,7 @@ void Object::BuildValuesUpdateWithFlag(ByteBuffer* data, UF::UpdateFieldFlag /*f
 void Object::AddToObjectUpdateIfNeeded()
 {
     if (m_inWorld && !m_objectUpdated)
-    {
-        AddToObjectUpdate();
-        m_objectUpdated = true;
-    }
+        m_objectUpdated = AddToObjectUpdate();
 }
 
 void Object::ClearUpdateMask(bool remove)
@@ -792,7 +796,7 @@ void MovementInfo::OutDebug()
 
 WorldObject::WorldObject(bool isWorldObject) : Object(), WorldLocation(), LastUsedScriptID(0),
 m_movementInfo(), m_name(), m_isActive(false), m_isFarVisible(false), m_isWorldObject(isWorldObject), m_zoneScript(nullptr),
-m_transport(nullptr), m_zoneId(0), m_areaId(0), m_staticFloorZ(VMAP_INVALID_HEIGHT), m_currMap(nullptr), m_InstanceId(0),
+m_transport(nullptr), m_zoneId(0), m_areaId(0), m_staticFloorZ(VMAP_INVALID_HEIGHT), m_outdoors(false), m_currMap(nullptr), m_InstanceId(0),
 _dbPhase(0), m_notifyflags(0)
 {
     m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE | GHOST_VISIBILITY_GHOST);
@@ -828,7 +832,7 @@ void WorldObject::setActive(bool on)
 
     m_isActive = on;
 
-    if (!IsInWorld())
+    if (on && !IsInWorld())
         return;
 
     Map* map = FindMap();
@@ -880,7 +884,7 @@ void WorldObject::CleanupsBeforeDelete(bool /*finalCleanup*/)
 void WorldObject::UpdatePositionData()
 {
     PositionFullTerrainStatus data;
-    GetMap()->GetFullTerrainStatusForPosition(_phaseShift, GetPositionX(), GetPositionY(), GetPositionZ(), data, map_liquidHeaderTypeFlags::AllLiquids);
+    GetMap()->GetFullTerrainStatusForPosition(_phaseShift, GetPositionX(), GetPositionY(), GetPositionZ(), data, map_liquidHeaderTypeFlags::AllLiquids, GetCollisionHeight());
     ProcessPositionDataChanged(data);
 }
 
@@ -1204,7 +1208,7 @@ bool WorldObject::IsInBetween(Position const& pos1, Position const& pos2, float 
     return (size * size) >= GetExactDist2dSq(pos1.GetPositionX() + std::cos(angle) * dist, pos1.GetPositionY() + std::sin(angle) * dist);
 }
 
-bool WorldObject::isInFront(WorldObject const* target,  float arc) const
+bool WorldObject::isInFront(WorldObject const* target, float arc) const
 {
     return HasInArc(arc, target);
 }
@@ -1250,11 +1254,16 @@ void WorldObject::UpdateGroundPositionZ(float x, float y, float &z) const
         z = new_z + (isType(TYPEMASK_UNIT) ? static_cast<Unit const*>(this)->GetHoverOffset() : 0.0f);
 }
 
-void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
+void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z, float* groundZ) const
 {
     // TODO: Allow transports to be part of dynamic vmap tree
     if (GetTransport())
+    {
+        if (groundZ)
+            *groundZ = z;
+
         return;
+    }
 
     if (Unit const* unit = ToUnit())
     {
@@ -1280,12 +1289,18 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
                 else if (z < ground_z)
                     z = ground_z;
             }
+
+            if (groundZ)
+                *groundZ = ground_z;
         }
         else
         {
             float ground_z = GetMapHeight(x, y, z) + unit->GetHoverOffset();
             if (z < ground_z)
                 z = ground_z;
+
+            if (groundZ)
+               *groundZ = ground_z;
         }
     }
     else
@@ -1293,6 +1308,9 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
         float ground_z = GetMapHeight(x, y, z);
         if (ground_z > INVALID_HEIGHT)
             z = ground_z;
+
+        if (groundZ)
+            *groundZ = ground_z;
     }
 }
 
@@ -1672,7 +1690,7 @@ void WorldObject::AddObjectToRemoveList()
     map->AddObjectToRemoveList(this);
 }
 
-TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropertiesEntry const* properties /*= nullptr*/, uint32 duration /*= 0*/, Unit* summoner /*= nullptr*/, uint32 spellId /*= 0*/, uint32 vehId /*= 0*/, ObjectGuid privateObjectOwner /*= ObjectGuid::Empty*/)
+TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropertiesEntry const* properties /*= nullptr*/, uint32 duration /*= 0*/, WorldObject* summoner /*= nullptr*/, uint32 spellId /*= 0*/, uint32 vehId /*= 0*/, ObjectGuid privateObjectOwner /*= ObjectGuid::Empty*/)
 {
     uint32 mask = UNIT_MASK_SUMMON;
     if (properties)
@@ -1722,6 +1740,8 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
         }
     }
 
+    Unit* summonerUnit = summoner ? summoner->ToUnit() : nullptr;
+
     TempSummon* summon = nullptr;
     switch (mask)
     {
@@ -1729,16 +1749,16 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
             summon = new TempSummon(properties, summoner, false);
             break;
         case UNIT_MASK_GUARDIAN:
-            summon = new Guardian(properties, summoner, false);
+            summon = new Guardian(properties, summonerUnit, false);
             break;
         case UNIT_MASK_PUPPET:
-            summon = new Puppet(properties, summoner);
+            summon = new Puppet(properties, summonerUnit);
             break;
         case UNIT_MASK_TOTEM:
-            summon = new Totem(properties, summoner);
+            summon = new Totem(properties, summonerUnit);
             break;
         case UNIT_MASK_MINION:
-            summon = new Minion(properties, summoner, false);
+            summon = new Minion(properties, summonerUnit, false);
             break;
     }
 
@@ -1817,7 +1837,7 @@ TempSummon* WorldObject::SummonCreature(uint32 entry, Position const& pos, TempS
 {
     if (Map* map = FindMap())
     {
-        if (TempSummon* summon = map->SummonCreature(entry, pos, nullptr, despawnTime, ToUnit(), spellId, vehId, privateObjectOwner))
+        if (TempSummon* summon = map->SummonCreature(entry, pos, nullptr, despawnTime, this, spellId, vehId, privateObjectOwner))
         {
             summon->SetTempSummonType(despawnType);
             return summon;
@@ -1888,7 +1908,7 @@ Creature* WorldObject::SummonTrigger(float x, float y, float z, float ang, uint3
     if (GetTypeId() == TYPEID_PLAYER || GetTypeId() == TYPEID_UNIT)
     {
         summon->SetFaction(((Unit*)this)->GetFaction());
-        summon->SetLevel(((Unit*)this)->getLevel());
+        summon->SetLevel(((Unit*)this)->GetLevel());
     }
 
     if (GetAI)
@@ -2098,16 +2118,20 @@ float WorldObject::ApplyEffectModifiers(SpellInfo const* spellInfo, uint8 effInd
 
 int32 WorldObject::CalcSpellDuration(SpellInfo const* spellInfo) const
 {
-    uint8 comboPoints = 0;
+    int32 comboPoints = 0;
+    int32 maxComboPoints = 5;
     if (Unit const* unit = ToUnit())
+    {
         comboPoints = unit->GetPower(POWER_COMBO_POINTS);
+        maxComboPoints = unit->GetMaxPower(POWER_COMBO_POINTS);
+    }
 
     int32 minduration = spellInfo->GetDuration();
     int32 maxduration = spellInfo->GetMaxDuration();
 
     int32 duration;
     if (comboPoints && minduration != -1 && minduration != maxduration)
-        duration = minduration + int32((maxduration - minduration) * comboPoints / 5);
+        duration = minduration + int32((maxduration - minduration) * comboPoints / maxComboPoints);
     else
         duration = minduration;
 
@@ -2379,17 +2403,26 @@ void WorldObject::SendSpellMiss(Unit* target, uint32 spellID, SpellMissInfo miss
 
 FactionTemplateEntry const* WorldObject::GetFactionTemplateEntry() const
 {
-    FactionTemplateEntry const* entry = sFactionTemplateStore.LookupEntry(GetFaction());
+    uint32 factionId = GetFaction();
+    FactionTemplateEntry const* entry = sFactionTemplateStore.LookupEntry(factionId);
     if (!entry)
     {
-        if (Player const* player = ToPlayer())
-            TC_LOG_ERROR("entities", "Player %s has invalid faction (faction template id) #%u", player->GetName().c_str(), GetFaction());
-        else if (Creature const* creature = ToCreature())
-            TC_LOG_ERROR("entities", "Creature (template id: %u) has invalid faction (faction template id) #%u", creature->GetCreatureTemplate()->Entry, GetFaction());
-        else if (GameObject const* go = ToGameObject())
-            TC_LOG_ERROR("entities", "GameObject (template id: %u) has invalid faction (faction template id) #%u", go->GetGOInfo()->entry, GetFaction());
-        else
-            TC_LOG_ERROR("entities", "WorldObject (name: %s, type: %u) has invalid faction (faction template id) #%u", GetName().c_str(), uint32(GetTypeId()), GetFaction());
+        switch (GetTypeId())
+        {
+            case TYPEID_PLAYER:
+                TC_LOG_ERROR("entities.unit", "Player %s has invalid faction (faction template id) #%u", ToPlayer()->GetName().c_str(), factionId);
+                break;
+            case TYPEID_UNIT:
+                TC_LOG_ERROR("entities.unit", "Creature (template id: %u) has invalid faction (faction template Id) #%u", ToCreature()->GetCreatureTemplate()->Entry, factionId);
+                break;
+            case TYPEID_GAMEOBJECT:
+                if (factionId) // Gameobjects may have faction template id = 0
+                    TC_LOG_ERROR("entities.faction", "GameObject (template id: %u) has invalid faction (faction template Id) #%u", ToGameObject()->GetGOInfo()->entry, factionId);
+                break;
+            default:
+                TC_LOG_ERROR("entities.unit", "Object (name=%s, type=%u) has invalid faction (faction template Id) #%u", GetName().c_str(), uint32(GetTypeId()), factionId);
+                break;
+        }
     }
 
     return entry;
@@ -2566,19 +2599,19 @@ bool WorldObject::IsNeutralToAll() const
     return my_faction->IsNeutralToAll();
 }
 
-void WorldObject::CastSpell(CastSpellTargetArg const& targets, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
+SpellCastResult WorldObject::CastSpell(CastSpellTargetArg const& targets, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
 {
     SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId, args.CastDifficulty != DIFFICULTY_NONE ? args.CastDifficulty : GetMap()->GetDifficultyID());
     if (!info)
     {
         TC_LOG_ERROR("entities.unit", "CastSpell: unknown spell %u by caster %s", spellId, GetGUID().ToString().c_str());
-        return;
+        return SPELL_FAILED_SPELL_UNAVAILABLE;
     }
 
     if (!targets.Targets)
     {
         TC_LOG_ERROR("entities.unit", "CastSpell: Invalid target passed to spell cast %u by %s", spellId, GetGUID().ToString().c_str());
-        return;
+        return SPELL_FAILED_BAD_TARGETS;
     }
 
     Spell* spell = new Spell(this, info, args.TriggerFlags, args.OriginalCaster, args.OriginalCastId);
@@ -2586,7 +2619,118 @@ void WorldObject::CastSpell(CastSpellTargetArg const& targets, uint32 spellId, C
         spell->SetSpellValue(pair.first, pair.second);
 
     spell->m_CastItem = args.CastItem;
-    spell->prepare(*targets.Targets, args.TriggeringAura);
+    return spell->prepare(*targets.Targets, args.TriggeringAura);
+}
+
+void WorldObject::SendPlaySpellVisual(WorldObject* target, uint32 spellVisualId, uint16 missReason, uint16 reflectStatus, float travelSpeed, bool speedAsTime /*= false*/)
+{
+    WorldPackets::Spells::PlaySpellVisual playSpellVisual;
+    playSpellVisual.Source = GetGUID();
+    playSpellVisual.Target = target->GetGUID();
+    playSpellVisual.TargetPosition = target->GetPosition();
+    playSpellVisual.SpellVisualID = spellVisualId;
+    playSpellVisual.TravelSpeed = travelSpeed;
+    playSpellVisual.MissReason = missReason;
+    playSpellVisual.ReflectStatus = reflectStatus;
+    playSpellVisual.SpeedAsTime = speedAsTime;
+    SendMessageToSet(playSpellVisual.Write(), true);
+}
+
+void WorldObject::SendPlaySpellVisual(Position const& targetPosition, float launchDelay, uint32 spellVisualId, uint16 missReason, uint16 reflectStatus, float travelSpeed, bool speedAsTime /*= false*/)
+{
+    WorldPackets::Spells::PlaySpellVisual playSpellVisual;
+    playSpellVisual.Source = GetGUID();
+    playSpellVisual.TargetPosition = targetPosition;
+    playSpellVisual.LaunchDelay = launchDelay;
+    playSpellVisual.SpellVisualID = spellVisualId;
+    playSpellVisual.TravelSpeed = travelSpeed;
+    playSpellVisual.MissReason = missReason;
+    playSpellVisual.ReflectStatus = reflectStatus;
+    playSpellVisual.SpeedAsTime = speedAsTime;
+    SendMessageToSet(playSpellVisual.Write(), true);
+}
+
+void WorldObject::SendCancelSpellVisual(uint32 id)
+{
+    WorldPackets::Spells::CancelSpellVisual cancelSpellVisual;
+    cancelSpellVisual.Source = GetGUID();
+    cancelSpellVisual.SpellVisualID = id;
+    SendMessageToSet(cancelSpellVisual.Write(), true);
+}
+
+void WorldObject::SendPlayOrphanSpellVisual(ObjectGuid const& target, uint32 spellVisualId, float travelSpeed, bool speedAsTime /*= false*/, bool withSourceOrientation /*= false*/)
+{
+    WorldPackets::Spells::PlayOrphanSpellVisual playOrphanSpellVisual;
+    playOrphanSpellVisual.SourceLocation = GetPosition();
+    if (withSourceOrientation)
+    {
+        if (IsGameObject())
+        {
+            QuaternionData rotation = ToGameObject()->GetWorldRotation();
+            rotation.toEulerAnglesZYX(playOrphanSpellVisual.SourceRotation.Pos.m_positionZ,
+                playOrphanSpellVisual.SourceRotation.Pos.m_positionY,
+                playOrphanSpellVisual.SourceRotation.Pos.m_positionX);
+        }
+        else
+            playOrphanSpellVisual.SourceRotation = Position(0.0f, 0.0f, GetOrientation());
+    }
+
+    playOrphanSpellVisual.Target = target; // exclusive with TargetLocation
+    playOrphanSpellVisual.SpellVisualID = spellVisualId;
+    playOrphanSpellVisual.TravelSpeed = travelSpeed;
+    playOrphanSpellVisual.SpeedAsTime = speedAsTime;
+    playOrphanSpellVisual.LaunchDelay = 0.0f;
+    SendMessageToSet(playOrphanSpellVisual.Write(), true);
+}
+
+void WorldObject::SendPlayOrphanSpellVisual(Position const& targetLocation, uint32 spellVisualId, float travelSpeed, bool speedAsTime /*= false*/, bool withSourceOrientation /*= false*/)
+{
+    WorldPackets::Spells::PlayOrphanSpellVisual playOrphanSpellVisual;
+    playOrphanSpellVisual.SourceLocation = GetPosition();
+    if (withSourceOrientation)
+    {
+        if (IsGameObject())
+        {
+            QuaternionData rotation = ToGameObject()->GetWorldRotation();
+            rotation.toEulerAnglesZYX(playOrphanSpellVisual.SourceRotation.Pos.m_positionZ,
+                playOrphanSpellVisual.SourceRotation.Pos.m_positionY,
+                playOrphanSpellVisual.SourceRotation.Pos.m_positionX);
+        }
+        else
+            playOrphanSpellVisual.SourceRotation = Position(0.0f, 0.0f, GetOrientation());
+    }
+
+    playOrphanSpellVisual.TargetLocation = targetLocation; // exclusive with Target
+    playOrphanSpellVisual.SpellVisualID = spellVisualId;
+    playOrphanSpellVisual.TravelSpeed = travelSpeed;
+    playOrphanSpellVisual.SpeedAsTime = speedAsTime;
+    playOrphanSpellVisual.LaunchDelay = 0.0f;
+    SendMessageToSet(playOrphanSpellVisual.Write(), true);
+}
+
+void WorldObject::SendCancelOrphanSpellVisual(uint32 id)
+{
+    WorldPackets::Spells::CancelOrphanSpellVisual cancelOrphanSpellVisual;
+    cancelOrphanSpellVisual.SpellVisualID = id;
+    SendMessageToSet(cancelOrphanSpellVisual.Write(), true);
+}
+
+void WorldObject::SendPlaySpellVisualKit(uint32 id, uint32 type, uint32 duration) const
+{
+    WorldPackets::Spells::PlaySpellVisualKit playSpellVisualKit;
+    playSpellVisualKit.Unit = GetGUID();
+    playSpellVisualKit.KitRecID = id;
+    playSpellVisualKit.KitType = type;
+    playSpellVisualKit.Duration = duration;
+    SendMessageToSet(playSpellVisualKit.Write(), true);
+}
+
+void WorldObject::SendCancelSpellVisualKit(uint32 id)
+{
+    WorldPackets::Spells::CancelSpellVisualKit cancelSpellVisualKit;
+    cancelSpellVisualKit.Source = GetGUID();
+    cancelSpellVisualKit.SpellVisualKitID = id;
+    SendMessageToSet(cancelSpellVisualKit.Write(), true);
 }
 
 // function based on function Unit::CanAttack from 13850 client
@@ -2891,7 +3035,7 @@ void WorldObject::GetPlayerListInGrid(Container& playerContainer, float maxSearc
     Cell::VisitWorldObjects(this, searcher, maxSearchRange);
 }
 
-void WorldObject::GetNearPoint2D(WorldObject const* searcher, float &x, float &y, float distance2d, float absAngle) const
+void WorldObject::GetNearPoint2D(WorldObject const* searcher, float& x, float& y, float distance2d, float absAngle) const
 {
     float effectiveReach = GetCombatReach();
 
@@ -2920,7 +3064,7 @@ void WorldObject::GetNearPoint2D(WorldObject const* searcher, float &x, float &y
     Trinity::NormalizeMapCoord(y);
 }
 
-void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, float &z, float distance2d, float absAngle) const
+void WorldObject::GetNearPoint(WorldObject const* searcher, float& x, float& y, float& z, float distance2d, float absAngle) const
 {
     GetNearPoint2D(searcher, x, y, distance2d, absAngle);
     z = GetPositionZ();
@@ -2955,10 +3099,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     z = first_z;
 }
 
-void WorldObject::GetClosePoint(float &x, float &y, float &z, float size, float distance2d /*= 0*/, float relAngle /*= 0*/) const
+void WorldObject::GetClosePoint(float& x, float& y, float& z, float size, float distance2d /*= 0*/, float relAngle /*= 0*/) const
 {
     // angle calculated from current orientation
-    GetNearPoint(nullptr, x, y, z, distance2d+size, GetOrientation() + relAngle);
+    GetNearPoint(nullptr, x, y, z, distance2d + size, GetOrientation() + relAngle);
 }
 
 Position WorldObject::GetNearPosition(float dist, float angle)
@@ -3049,12 +3193,22 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
         return;
     }
 
+    // Use a detour raycast to get our first collision point
+    PathGenerator path(this);
+    path.CalculatePath(destx, desty, destz, false, true);
+    G3D::Vector3 result = path.GetPath().back();
+    destx = result.x;
+    desty = result.y;
+    destz = result.z;
+
     float halfHeight = GetCollisionHeight() * 0.5f;
     UpdateAllowedPositionZ(destx, desty, destz);
     bool col = VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(PhasingHandler::GetTerrainMapId(GetPhaseShift(), GetMap(), pos.m_positionX, pos.m_positionY),
         pos.m_positionX, pos.m_positionY, pos.m_positionZ + halfHeight,
         destx, desty, destz + halfHeight,
         destx, desty, destz, -0.5f);
+
+    destz -= halfHeight;
 
     // collision occured
     if (col)
@@ -3070,6 +3224,8 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
         pos.m_positionX, pos.m_positionY, pos.m_positionZ + halfHeight,
         destx, desty, destz + halfHeight,
         destx, desty, destz, -0.5f);
+
+    destz -= halfHeight;
 
     // Collided with a gameobject
     if (col)
@@ -3098,10 +3254,27 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
         }
     }
 
+    float groundZ = VMAP_INVALID_HEIGHT_VALUE;
     Trinity::NormalizeMapCoord(pos.m_positionX);
     Trinity::NormalizeMapCoord(pos.m_positionY);
-    UpdateAllowedPositionZ(destx, desty, pos.m_positionZ);
+    UpdateAllowedPositionZ(destx, desty, pos.m_positionZ, &groundZ);
     pos.SetOrientation(GetOrientation());
+
+    // position has no ground under it (or is too far away)
+    if (groundZ <= INVALID_HEIGHT)
+    {
+        if (Unit const* unit = ToUnit())
+        {
+            // unit can fly, ignore.
+            if (unit->CanFly())
+                return;
+
+            // fall back to gridHeight if any
+            float gridHeight = GetMap()->GetGridHeight(GetPhaseShift(), pos.m_positionX, pos.m_positionY);
+            if (gridHeight > INVALID_HEIGHT)
+                pos.m_positionZ = gridHeight + unit->GetHoverOffset();
+        }
+    }
 }
 
 void WorldObject::PlayDistanceSound(uint32 soundId, Player* target /*= nullptr*/)
@@ -3241,9 +3414,10 @@ void WorldObject::BuildUpdate(UpdateDataMapType& data_map)
     ClearUpdateMask(false);
 }
 
-void WorldObject::AddToObjectUpdate()
+bool WorldObject::AddToObjectUpdate()
 {
     GetMap()->AddUpdateObject(this);
+    return true;
 }
 
 void WorldObject::RemoveFromObjectUpdate()

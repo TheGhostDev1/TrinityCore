@@ -580,7 +580,7 @@ class boss_thorim : public CreatureScript
                 events.ScheduleEvent(EVENT_OUTRO_2, _hardMode ? 8000 : 11000);
                 events.ScheduleEvent(EVENT_OUTRO_3, _hardMode ? 19000 : 21000);
 
-                me->m_Events.AddEvent(new KeeperDespawnEvent(me), me->m_Events.CalculateTime(35000));
+                me->m_Events.AddEvent(new UlduarKeeperDespawnEvent(me), me->m_Events.CalculateTime(35000));
             }
 
             void MovementInform(uint32 type, uint32 id) override
@@ -592,9 +592,9 @@ class boss_thorim : public CreatureScript
                 SetBoundary(&ArenaBoundaries);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO_1);
 
                 events.SetPhase(PHASE_1);
@@ -769,7 +769,7 @@ class boss_thorim : public CreatureScript
                             for (auto itr = triggers.cbegin(); itr != triggers.cend();)
                             {
                                 auto prev = itr++;
-                                if (itr != triggers.end())
+                                if (itr != triggers.cend())
                                     (*prev)->CastSpell(*itr, SPELL_LIGHTNING_BEAM_CHANNEL);
                             }
                             break;
@@ -1711,12 +1711,18 @@ class spell_thorim_frostbolt_volley : public SpellScriptLoader
         {
             PrepareSpellScript(spell_thorim_frostbolt_volley_SpellScript);
 
-            void FilterTargets(std::list<WorldObject*>& unitList)
+            void FilterTargets(std::list<WorldObject*>& targets)
             {
-                unitList.remove_if([](WorldObject* target)
-                    {
-                        return target->GetTypeId() != TYPEID_PLAYER && (target->GetTypeId() != TYPEID_UNIT || !target->ToUnit()->IsPet());
-                    });
+                targets.remove_if([](WorldObject* object) -> bool
+                {
+                    if (object->GetTypeId() == TYPEID_PLAYER)
+                        return false;
+
+                    if (Creature* creature = object->ToCreature())
+                        return !creature->IsPet();
+
+                    return true;
+                });
             }
 
             void Register() override
@@ -1796,7 +1802,7 @@ class spell_thorim_lightning_charge : public SpellScriptLoader
             {
                 /// @workaround: focus target is not working because spell is triggered and instant
                 if (Creature* creature = GetCaster()->ToCreature())
-                    creature->FocusTarget(GetSpell(), GetExplTargetWorldObject());
+                    creature->SetSpellFocus(GetSpell(), GetExplTargetWorldObject());
             }
 
             void HandleCharge()

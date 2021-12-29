@@ -27,6 +27,7 @@
 #include "ObjectMgr.h"
 #include "Transport.h"
 #include "WaypointManager.h"
+#include <sstream>
 
 WaypointMovementGenerator<Creature>::WaypointMovementGenerator(uint32 pathId, bool repeating) : _nextMoveTime(0), _pathId(pathId), _repeating(repeating), _loadedFromDB(true)
 {
@@ -55,6 +56,10 @@ void WaypointMovementGenerator<Creature>::Pause(uint32 timer/* = 0*/)
 {
     if (timer)
     {
+        // Don't try to paused an already paused generator
+        if (HasFlag(MOVEMENTGENERATOR_FLAG_PAUSED))
+            return;
+
         AddFlag(MOVEMENTGENERATOR_FLAG_TIMED_PAUSED);
         _nextMoveTime.Reset(timer);
         RemoveFlag(MOVEMENTGENERATOR_FLAG_PAUSED);
@@ -388,4 +393,12 @@ bool WaypointMovementGenerator<Creature>::ComputeNextNode()
 
     _currentNode = (_currentNode + 1) % _path->nodes.size();
     return true;
+}
+
+std::string WaypointMovementGenerator<Creature>::GetDebugInfo() const
+{
+    std::stringstream sstr;
+    sstr << PathMovementBase::GetDebugInfo() << "\n"
+        << MovementGeneratorMedium::GetDebugInfo();
+    return sstr.str();
 }

@@ -18,7 +18,9 @@
 #include "WorldSession.h"
 #include "BattlePetMgr.h"
 #include "BattlePetPackets.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
+#include "TemporarySummon.h"
 
 void WorldSession::HandleBattlePetRequestJournal(WorldPackets::BattlePet::BattlePetRequestJournal& /*battlePetRequestJournal*/)
 {
@@ -35,14 +37,55 @@ void WorldSession::HandleBattlePetRequestJournalLock(WorldPackets::BattlePet::Ba
 
 void WorldSession::HandleBattlePetSetBattleSlot(WorldPackets::BattlePet::BattlePetSetBattleSlot& battlePetSetBattleSlot)
 {
-    if (BattlePetMgr::BattlePet* pet = GetBattlePetMgr()->GetPet(battlePetSetBattleSlot.PetGuid))
-        if (WorldPackets::BattlePet::BattlePetSlot* slot = GetBattlePetMgr()->GetSlot(battlePetSetBattleSlot.Slot))
+    if (BattlePets::BattlePet* pet = GetBattlePetMgr()->GetPet(battlePetSetBattleSlot.PetGuid))
+        if (WorldPackets::BattlePet::BattlePetSlot* slot = GetBattlePetMgr()->GetSlot(BattlePets::BattlePetSlot(battlePetSetBattleSlot.Slot)))
             slot->Pet = pet->PacketInfo;
 }
 
 void WorldSession::HandleBattlePetModifyName(WorldPackets::BattlePet::BattlePetModifyName& battlePetModifyName)
 {
-    GetBattlePetMgr()->ModifyName(battlePetModifyName.PetGuid, battlePetModifyName.Name, battlePetModifyName.DeclinedName.get_ptr());
+    GetBattlePetMgr()->ModifyName(battlePetModifyName.PetGuid, battlePetModifyName.Name, battlePetModifyName.DeclinedNames.get_ptr());
+}
+
+void WorldSession::HandleQueryBattlePetName(WorldPackets::BattlePet::QueryBattlePetName& queryBattlePetName)
+{
+    WorldPackets::BattlePet::QueryBattlePetNameResponse response;
+    response.BattlePetID = queryBattlePetName.BattlePetID;
+
+    Creature* summonedBattlePet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, queryBattlePetName.UnitGUID);
+    if (!summonedBattlePet || !summonedBattlePet->IsSummon())
+    {
+        SendPacket(response.Write());
+        return;
+    }
+
+    response.CreatureID = summonedBattlePet->GetEntry();
+    response.Timestamp = summonedBattlePet->GetBattlePetCompanionNameTimestamp();
+
+    Unit* petOwner = summonedBattlePet->ToTempSummon()->GetSummonerUnit();
+    if (!petOwner->IsPlayer())
+    {
+        SendPacket(response.Write());
+        return;
+    }
+
+    BattlePets::BattlePet const* battlePet = petOwner->ToPlayer()->GetSession()->GetBattlePetMgr()->GetPet(queryBattlePetName.BattlePetID);
+    if (!battlePet)
+    {
+        SendPacket(response.Write());
+        return;
+    }
+
+    response.Name = battlePet->PacketInfo.Name;
+    if (battlePet->DeclinedName)
+    {
+        response.HasDeclined = true;
+        response.DeclinedNames = *battlePet->DeclinedName;
+    }
+
+    response.Allow = !response.Name.empty();
+
+    SendPacket(response.Write());
 }
 
 void WorldSession::HandleBattlePetDeletePet(WorldPackets::BattlePet::BattlePetDeletePet& battlePetDeletePet)
@@ -55,15 +98,15 @@ void WorldSession::HandleBattlePetSetFlags(WorldPackets::BattlePet::BattlePetSet
     if (!GetBattlePetMgr()->HasJournalLock())
         return;
 
-    if (BattlePetMgr::BattlePet* pet = GetBattlePetMgr()->GetPet(battlePetSetFlags.PetGuid))
+    if (BattlePets::BattlePet* pet = GetBattlePetMgr()->GetPet(battlePetSetFlags.PetGuid))
     {
-        if (battlePetSetFlags.ControlType == FLAGS_CONTROL_TYPE_APPLY)
+        if (battlePetSetFlags.ControlType == BattlePets::FLAGS_CONTROL_TYPE_APPLY)
             pet->PacketInfo.Flags |= battlePetSetFlags.Flags;
         else // FLAGS_CONTROL_TYPE_REMOVE
             pet->PacketInfo.Flags &= ~battlePetSetFlags.Flags;
 
-        if (pet->SaveInfo != BATTLE_PET_NEW)
-            pet->SaveInfo = BATTLE_PET_CHANGED;
+        if (pet->SaveInfo != BattlePets::BATTLE_PET_NEW)
+            pet->SaveInfo = BattlePets::BATTLE_PET_CHANGED;
     }
 }
 

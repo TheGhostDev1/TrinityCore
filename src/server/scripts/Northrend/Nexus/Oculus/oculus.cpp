@@ -219,7 +219,7 @@ class npc_image_belgaristrasz : public CreatureScript
         {
             npc_image_belgaristraszAI(Creature* creature) : ScriptedAI(creature) { }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 if (summoner->GetEntry() == NPC_VAROS)
                 {
@@ -285,7 +285,7 @@ class npc_ruby_emerald_amber_drake : public CreatureScript
                     }
             }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 if (_instance->GetBossState(DATA_EREGOS) == IN_PROGRESS)
                     if (Creature* eregos = me->FindNearestCreature(NPC_EREGOS, 450.0f, true))
@@ -296,13 +296,13 @@ class npc_ruby_emerald_amber_drake : public CreatureScript
                 switch (me->GetEntry())
                 {
                     case NPC_RUBY_DRAKE_VEHICLE:
-                        me->CastSpell(summoner, SPELL_RIDE_RUBY_DRAKE_QUE);
+                        me->CastSpell(summoner, SPELL_RIDE_RUBY_DRAKE_QUE, true);
                         break;
                     case NPC_EMERALD_DRAKE_VEHICLE:
-                        me->CastSpell(summoner, SPELL_RIDE_EMERALD_DRAKE_QUE);
+                        me->CastSpell(summoner, SPELL_RIDE_EMERALD_DRAKE_QUE, true);
                         break;
                     case NPC_AMBER_DRAKE_VEHICLE:
-                        me->CastSpell(summoner, SPELL_RIDE_AMBER_DRAKE_QUE);
+                        me->CastSpell(summoner, SPELL_RIDE_AMBER_DRAKE_QUE, true);
                         break;
                     default:
                         return;

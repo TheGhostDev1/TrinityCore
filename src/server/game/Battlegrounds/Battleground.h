@@ -168,9 +168,9 @@ enum BattlegroundStatus
 
 struct BattlegroundPlayer
 {
-    time_t  OfflineRemoveTime;                              // for tracking and removing offline players from queue after 5 minutes
-    uint32  Team;                                           // Player's team
-    int32   ActiveSpec;                                     // Player's active spec
+    time_t OfflineRemoveTime;                              // for tracking and removing offline players from queue after 5 minutes
+    uint32 Team;                                           // Player's team
+    int32 ActiveSpec;                                      // Player's active spec
 };
 
 struct BattlegroundObjectInfo
@@ -378,7 +378,7 @@ class TC_GAME_API Battleground
 
         // Packet Transfer
         // method that should fill worldpacket with actual world states (not yet implemented for all battlegrounds!)
-        virtual void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& /*data*/) { }
+        virtual void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& /*packet*/) { }
         void SendPacketToTeam(uint32 teamId, WorldPacket const* packet, Player* except = nullptr) const;
         void SendPacketToAll(WorldPacket const* packet) const;
 
@@ -569,7 +569,7 @@ class TC_GAME_API Battleground
 
         // these are important variables used for starting messages
         uint8 m_Events;
-        BattlegroundStartTimeIntervals  StartDelayTimes[BG_STARTING_EVENT_COUNT];
+        BattlegroundStartTimeIntervals StartDelayTimes[BG_STARTING_EVENT_COUNT];
         // this must be filled in constructors!
         uint32 StartMessageIds[BG_STARTING_EVENT_COUNT];
 

@@ -83,6 +83,12 @@ enum class AuraTriggerOnPowerChangeDirection : int32
     Loss    = 1
 };
 
+enum class AuraTriggerOnHealthChangeDirection : int32
+{
+    Above   = 0,
+    Below   = 1,
+};
+
 enum AuraType : uint32
 {
     SPELL_AURA_NONE                                         = 0,
@@ -133,7 +139,7 @@ enum AuraType : uint32
     SPELL_AURA_TRACK_RESOURCES                              = 45,
     SPELL_AURA_46                                           = 46,   // Ignore all Gear test spells
     SPELL_AURA_MOD_PARRY_PERCENT                            = 47,
-    SPELL_AURA_48                                           = 48,   // One periodic spell
+    SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT           = 48,   // One periodic spell
     SPELL_AURA_MOD_DODGE_PERCENT                            = 49,
     SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT                  = 50,
     SPELL_AURA_MOD_BLOCK_PERCENT                            = 51,
@@ -459,7 +465,7 @@ enum AuraType : uint32
     SPELL_AURA_371                                          = 371,
     SPELL_AURA_372                                          = 372,
     SPELL_AURA_MOD_SPEED_NO_CONTROL                         = 373,  // NYI
-    SPELL_AURA_MODIFY_FALL_DAMAGE_PCT                       = 374,  // NYI
+    SPELL_AURA_MODIFY_FALL_DAMAGE_PCT                       = 374,
     SPELL_AURA_HIDE_MODEL_AND_EQUIPEMENT_SLOTS              = 375,
     SPELL_AURA_MOD_CURRENCY_GAIN_FROM_SOURCE                = 376,  // NYI
     SPELL_AURA_CAST_WHILE_WALKING_ALL                       = 377,  // Enables casting all spells while moving
@@ -580,7 +586,7 @@ enum AuraType : uint32
     SPELL_AURA_492                                          = 492,
     SPELL_AURA_493                                          = 493, // 1 spell, 267116 - Animal Companion (modifies Call Pet)
     SPELL_AURA_SET_POWER_POINT_CHARGE                       = 494, // NYI
-    SPELL_AURA_TRIGGER_SPELL_ON_EXPIRE                      = 495, // NYI
+    SPELL_AURA_TRIGGER_SPELL_ON_EXPIRE                      = 495,
     SPELL_AURA_ALLOW_CHANGING_EQUIPMENT_IN_TORGHAST         = 496, // NYI
     SPELL_AURA_MOD_ANIMA_GAIN                               = 497, // NYI
     SPELL_AURA_CURRENCY_LOSS_PCT_ON_DEATH                   = 498, // NYI

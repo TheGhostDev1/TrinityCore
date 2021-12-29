@@ -20,15 +20,28 @@
 #include "Containers.h"
 #include "Creature.h"
 #include "DatabaseEnv.h"
+#include "GameTime.h"
 #include "Item.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Player.h"
+#include "Realm.h"
+#include "Util.h"
 #include "World.h"
 #include "WorldSession.h"
 
-void BattlePetMgr::BattlePet::CalculateStats()
+namespace BattlePets
+{
+namespace
+{
+std::unordered_map<uint16 /*BreedID*/, std::unordered_map<BattlePetState /*state*/, int32 /*value*/, std::hash<std::underlying_type<BattlePetState>::type> >> _battlePetBreedStates;
+std::unordered_map<uint32 /*SpeciesID*/, std::unordered_map<BattlePetState /*state*/, int32 /*value*/, std::hash<std::underlying_type<BattlePetState>::type> >> _battlePetSpeciesStates;
+std::unordered_map<uint32 /*SpeciesID*/, std::unordered_set<uint8 /*breed*/>> _availableBreedsPerSpecies;
+std::unordered_map<uint32 /*SpeciesID*/, uint8 /*quality*/> _defaultQualityPerSpecies;
+}
+
+void BattlePet::CalculateStats()
 {
     float health = 0.0f;
     float power = 0.0f;
@@ -76,11 +89,6 @@ void BattlePetMgr::BattlePet::CalculateStats()
     PacketInfo.Power = uint32(round(power / 100));
     PacketInfo.Speed = uint32(round(speed / 100));
 }
-
-std::unordered_map<uint16 /*BreedID*/, std::unordered_map<BattlePetState /*state*/, int32 /*value*/, std::hash<std::underlying_type<BattlePetState>::type> >> BattlePetMgr::_battlePetBreedStates;
-std::unordered_map<uint32 /*SpeciesID*/, std::unordered_map<BattlePetState /*state*/, int32 /*value*/, std::hash<std::underlying_type<BattlePetState>::type> >> BattlePetMgr::_battlePetSpeciesStates;
-std::unordered_map<uint32 /*SpeciesID*/, std::unordered_set<uint8 /*breed*/>> BattlePetMgr::_availableBreedsPerSpecies;
-std::unordered_map<uint32 /*SpeciesID*/, uint8 /*quality*/> BattlePetMgr::_defaultQualityPerSpecies;
 
 void BattlePetMgr::Initialize()
 {
@@ -199,7 +207,7 @@ uint32 BattlePetMgr::SelectPetDisplay(BattlePetSpeciesEntry const* speciesEntry)
 BattlePetMgr::BattlePetMgr(WorldSession* owner)
 {
     _owner = owner;
-    for (uint8 i = 0; i < MAX_PET_BATTLE_SLOTS; ++i)
+    for (uint8 i = 0; i < AsUnderlyingType(BattlePetSlot::Count); ++i)
     {
         WorldPackets::BattlePet::BattlePetSlot slot;
         slot.Index = i;
@@ -215,12 +223,34 @@ void BattlePetMgr::LoadFromDB(PreparedQueryResult pets, PreparedQueryResult slot
         {
             Field* fields = pets->Fetch();
             uint32 species = fields[1].GetUInt32();
+            ObjectGuid ownerGuid = !fields[11].IsNull() ? ObjectGuid::Create<HighGuid::Player>(fields[11].GetInt64()) : ObjectGuid::Empty;
 
             if (BattlePetSpeciesEntry const* speciesEntry = sBattlePetSpeciesStore.LookupEntry(species))
             {
-                if (HasMaxPetCount(speciesEntry))
+                if (speciesEntry->GetFlags().HasFlag(BattlePetSpeciesFlags::NotAccountWide))
                 {
-                    TC_LOG_ERROR("misc", "Battlenet account with id %u has more than maximum battle pets of species %u", _owner->GetBattlenetAccountId(), species);
+                    if (ownerGuid.IsEmpty())
+                    {
+                        TC_LOG_ERROR("misc", "Battlenet account with id %u has battle pet of species %u with BattlePetSpeciesFlags::NotAccountWide but no owner", _owner->GetBattlenetAccountId(), species);
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (!ownerGuid.IsEmpty())
+                    {
+                        TC_LOG_ERROR("misc", "Battlenet account with id %u has battle pet of species %u without BattlePetSpeciesFlags::NotAccountWide but with owner", _owner->GetBattlenetAccountId(), species);
+                        continue;
+                    }
+                }
+
+                if (HasMaxPetCount(speciesEntry, ownerGuid))
+                {
+                    if (ownerGuid.IsEmpty())
+                        TC_LOG_ERROR("misc", "Battlenet account with id %u has more than maximum battle pets of species %u", _owner->GetBattlenetAccountId(), species);
+                    else
+                        TC_LOG_ERROR("misc", "Battlenet account with id %u has more than maximum battle pets of species %u for player %s", _owner->GetBattlenetAccountId(), species, ownerGuid.ToString().c_str());
+
                     continue;
                 }
 
@@ -235,13 +265,21 @@ void BattlePetMgr::LoadFromDB(PreparedQueryResult pets, PreparedQueryResult slot
                 pet.PacketInfo.Quality = fields[7].GetUInt8();
                 pet.PacketInfo.Flags = fields[8].GetUInt16();
                 pet.PacketInfo.Name = fields[9].GetString();
+                pet.NameTimestamp = fields[10].GetInt64();
                 pet.PacketInfo.CreatureID = speciesEntry->CreatureID;
 
-                if (!fields[10].IsNull())
+                if (!fields[12].IsNull())
                 {
-                    pet.DeclinedName.reset(new DeclinedName);
+                    pet.DeclinedName = std::make_unique<DeclinedName>();
                     for (uint8 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
-                        pet.DeclinedName->name[i] = fields[10 + i].GetString();
+                        pet.DeclinedName->name[i] = fields[12 + i].GetString();
+                }
+
+                if (!ownerGuid.IsEmpty())
+                {
+                    pet.PacketInfo.OwnerInfo.emplace();
+                    pet.PacketInfo.OwnerInfo->Guid = ownerGuid;
+                    pet.PacketInfo.OwnerInfo->PlayerVirtualRealm = pet.PacketInfo.OwnerInfo->PlayerNativeRealm = GetVirtualRealmAddress();
                 }
 
                 pet.SaveInfo = BATTLE_PET_UNCHANGED;
@@ -289,6 +327,18 @@ void BattlePetMgr::SaveToDB(LoginDatabaseTransaction& trans)
                 stmt->setUInt8(8, itr->second.PacketInfo.Quality);
                 stmt->setUInt16(9, itr->second.PacketInfo.Flags);
                 stmt->setString(10, itr->second.PacketInfo.Name);
+                stmt->setInt64(11, itr->second.NameTimestamp);
+                if (itr->second.PacketInfo.OwnerInfo)
+                {
+                    stmt->setInt64(12, itr->second.PacketInfo.OwnerInfo->Guid.GetCounter());
+                    stmt->setInt32(13, realm.Id.Realm);
+                }
+                else
+                {
+                    stmt->setNull(12);
+                    stmt->setNull(13);
+                }
+
                 trans->Append(stmt);
 
                 if (itr->second.DeclinedName)
@@ -313,8 +363,9 @@ void BattlePetMgr::SaveToDB(LoginDatabaseTransaction& trans)
                 stmt->setUInt8(3, itr->second.PacketInfo.Quality);
                 stmt->setUInt16(4, itr->second.PacketInfo.Flags);
                 stmt->setString(5, itr->second.PacketInfo.Name);
-                stmt->setUInt32(6, _owner->GetBattlenetAccountId());
-                stmt->setUInt64(7, itr->first);
+                stmt->setInt64(6, itr->second.NameTimestamp);
+                stmt->setUInt32(7, _owner->GetBattlenetAccountId());
+                stmt->setUInt64(8, itr->first);
                 trans->Append(stmt);
 
                 stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_BATTLE_PET_DECLINED_NAME);
@@ -368,7 +419,7 @@ void BattlePetMgr::SaveToDB(LoginDatabaseTransaction& trans)
     }
 }
 
-BattlePetMgr::BattlePet* BattlePetMgr::GetPet(ObjectGuid guid)
+BattlePet* BattlePetMgr::GetPet(ObjectGuid guid)
 {
     return Trinity::Containers::MapGetValuePtr(_pets, guid.GetCounter());
 }
@@ -395,6 +446,15 @@ void BattlePetMgr::AddPet(uint32 species, uint32 display, uint16 breed, BattlePe
     pet.PacketInfo.Name = "";
     pet.CalculateStats();
     pet.PacketInfo.Health = pet.PacketInfo.MaxHealth;
+
+    Player* player = _owner->GetPlayer();
+    if (battlePetSpecies->GetFlags().HasFlag(BattlePetSpeciesFlags::NotAccountWide))
+    {
+        pet.PacketInfo.OwnerInfo.emplace();
+        pet.PacketInfo.OwnerInfo->Guid = player->GetGUID();
+        pet.PacketInfo.OwnerInfo->PlayerVirtualRealm = pet.PacketInfo.OwnerInfo->PlayerNativeRealm = GetVirtualRealmAddress();
+    }
+
     pet.SaveInfo = BATTLE_PET_NEW;
 
     _pets[pet.PacketInfo.Guid.GetCounter()] = std::move(pet);
@@ -403,8 +463,8 @@ void BattlePetMgr::AddPet(uint32 species, uint32 display, uint16 breed, BattlePe
     updates.push_back(std::ref(pet));
     SendUpdates(std::move(updates), true);
 
-    _owner->GetPlayer()->UpdateCriteria(CriteriaType::UniquePetsOwned);
-    _owner->GetPlayer()->UpdateCriteria(CriteriaType::LearnedNewPet, species);
+    player->UpdateCriteria(CriteriaType::UniquePetsOwned);
+    player->UpdateCriteria(CriteriaType::LearnedNewPet, species);
 }
 
 void BattlePetMgr::RemovePet(ObjectGuid guid)
@@ -441,6 +501,7 @@ void BattlePetMgr::ModifyName(ObjectGuid guid, std::string const& name, Declined
         return;
 
     pet->PacketInfo.Name = name;
+    pet->NameTimestamp = GameTime::GetGameTime();
 
     pet->DeclinedName.reset();
     if (declinedName)
@@ -448,6 +509,11 @@ void BattlePetMgr::ModifyName(ObjectGuid guid, std::string const& name, Declined
 
     if (pet->SaveInfo != BATTLE_PET_NEW)
         pet->SaveInfo = BATTLE_PET_CHANGED;
+
+    // Update the timestamp if the battle pet is summoned
+    if (Creature* summonedBattlePet = _owner->GetPlayer()->GetSummonedBattlePet())
+        if (summonedBattlePet->GetBattlePetCompanionGUID() == guid)
+            summonedBattlePet->SetBattlePetCompanionNameTimestamp(pet->NameTimestamp);
 }
 
 bool BattlePetMgr::IsPetInSlot(ObjectGuid guid)
@@ -459,19 +525,30 @@ bool BattlePetMgr::IsPetInSlot(ObjectGuid guid)
     return false;
 }
 
-uint8 BattlePetMgr::GetPetCount(uint32 species) const
+uint8 BattlePetMgr::GetPetCount(BattlePetSpeciesEntry const* battlePetSpecies, ObjectGuid ownerGuid) const
 {
-    return uint8(std::count_if(_pets.begin(), _pets.end(), [species](std::pair<uint64 const, BattlePet> const& pet)
+    return uint8(std::count_if(_pets.begin(), _pets.end(), [battlePetSpecies, ownerGuid](std::pair<uint64 const, BattlePet> const& pet)
     {
-        return pet.second.PacketInfo.Species == species && pet.second.SaveInfo != BATTLE_PET_REMOVED;
+        if (pet.second.PacketInfo.Species != battlePetSpecies->ID)
+            return false;
+
+        if (pet.second.SaveInfo == BATTLE_PET_REMOVED)
+            return false;
+
+        if (battlePetSpecies->GetFlags().HasFlag(BattlePetSpeciesFlags::NotAccountWide))
+            if (!ownerGuid.IsEmpty() && pet.second.PacketInfo.OwnerInfo)
+                if (pet.second.PacketInfo.OwnerInfo->Guid != ownerGuid)
+                    return false;
+
+        return true;
     }));
 }
 
-bool BattlePetMgr::HasMaxPetCount(BattlePetSpeciesEntry const* speciesEntry) const
+bool BattlePetMgr::HasMaxPetCount(BattlePetSpeciesEntry const* battlePetSpecies, ObjectGuid ownerGuid) const
 {
-    uint8 maxPetsPerSpecies = speciesEntry->GetFlags().HasFlag(BattlePetSpeciesFlags::LegacyAccountUnique) ? 1 : DEFAULT_MAX_BATTLE_PETS_PER_SPECIES;
+    uint8 maxPetsPerSpecies = battlePetSpecies->GetFlags().HasFlag(BattlePetSpeciesFlags::LegacyAccountUnique) ? 1 : DEFAULT_MAX_BATTLE_PETS_PER_SPECIES;
 
-    return GetPetCount(speciesEntry->ID) >= maxPetsPerSpecies;
+    return GetPetCount(battlePetSpecies, ownerGuid) >= maxPetsPerSpecies;
 }
 
 uint32 BattlePetMgr::GetPetUniqueSpeciesCount() const
@@ -484,15 +561,19 @@ uint32 BattlePetMgr::GetPetUniqueSpeciesCount() const
     return speciesIds.size();
 }
 
-void BattlePetMgr::UnlockSlot(uint8 slot)
+void BattlePetMgr::UnlockSlot(BattlePetSlot slot)
 {
-    if (!_slots[slot].Locked)
+    if (slot >= BattlePetSlot::Count)
         return;
 
-    _slots[slot].Locked = false;
+    uint8 slotIndex = AsUnderlyingType(slot);
+    if (!_slots[slotIndex].Locked)
+        return;
+
+    _slots[slotIndex].Locked = false;
 
     WorldPackets::BattlePet::PetBattleSlotUpdates updates;
-    updates.Slots.push_back(_slots[slot]);
+    updates.Slots.push_back(_slots[slotIndex]);
     updates.AutoSlotted = false; // what's this?
     updates.NewSlot = true; // causes the "new slot unlocked" bubble to appear
     _owner->SendPacket(updates.Write());
@@ -548,6 +629,52 @@ void BattlePetMgr::CageBattlePet(ObjectGuid guid)
     WorldPackets::BattlePet::BattlePetDeleted deletePet;
     deletePet.PetGuid = guid;
     _owner->SendPacket(deletePet.Write());
+
+    // Battle pet despawns if it's summoned
+    Player* player = _owner->GetPlayer();
+    if (Creature* summonedBattlePet = player->GetSummonedBattlePet())
+    {
+        if (summonedBattlePet->GetBattlePetCompanionGUID() == guid)
+        {
+            summonedBattlePet->DespawnOrUnsummon();
+            player->SetBattlePetData(nullptr);
+        }
+    }
+}
+
+void BattlePetMgr::ChangeBattlePetQuality(ObjectGuid guid, BattlePetBreedQuality quality)
+{
+    if (!HasJournalLock())
+        return;
+
+    BattlePet* pet = GetPet(guid);
+    if (!pet)
+        return;
+
+    if (quality > BattlePetBreedQuality::Rare)
+        return;
+
+    if (BattlePetSpeciesEntry const* battlePetSpecies = sBattlePetSpeciesStore.LookupEntry(pet->PacketInfo.Species))
+        if (battlePetSpecies->GetFlags().HasFlag(BattlePetSpeciesFlags::CantBattle))
+            return;
+
+    uint8 qualityValue = AsUnderlyingType(quality);
+    if (pet->PacketInfo.Quality >= qualityValue)
+        return;
+
+    pet->PacketInfo.Quality = qualityValue;
+    pet->CalculateStats();
+    pet->PacketInfo.Health = pet->PacketInfo.MaxHealth;
+
+    if (pet->SaveInfo != BATTLE_PET_NEW)
+        pet->SaveInfo = BATTLE_PET_CHANGED;
+
+    std::vector<std::reference_wrapper<BattlePet>> updates;
+    updates.push_back(std::ref(*pet));
+    SendUpdates(std::move(updates), false);
+
+    // UF::PlayerData::CurrentBattlePetBreedQuality isn't updated (Intended)
+    // _owner->GetPlayer()->SetCurrentBattlePetBreedQuality(qualityValue);
 }
 
 void BattlePetMgr::HealBattlePetsPct(uint8 pct)
@@ -580,21 +707,26 @@ void BattlePetMgr::SummonPet(ObjectGuid guid)
     if (!speciesEntry)
         return;
 
-    // TODO: set proper CreatureID for spell DEFAULT_SUMMON_BATTLE_PET_SPELL (default EffectMiscValueA is 40721 - Murkimus the Gladiator)
-    _owner->GetPlayer()->SetSummonedBattlePetGUID(guid);
-    _owner->GetPlayer()->SetCurrentBattlePetBreedQuality(pet->PacketInfo.Quality);
-    _owner->GetPlayer()->CastSpell(_owner->GetPlayer(), speciesEntry->SummonSpellID ? speciesEntry->SummonSpellID : uint32(DEFAULT_SUMMON_BATTLE_PET_SPELL));
+    Player* player = _owner->GetPlayer();
+    player->SetBattlePetData(pet);
+
+    CastSpellExtraArgs args;
+    uint32 summonSpellId = speciesEntry->SummonSpellID;
+    if (!summonSpellId)
+    {
+        summonSpellId = uint32(SPELL_SUMMON_BATTLE_PET);
+        args.AddSpellBP0(speciesEntry->CreatureID);
+    }
+    player->CastSpell(_owner->GetPlayer(), summonSpellId, args);
 }
 
 void BattlePetMgr::DismissPet()
 {
-    Player* ownerPlayer = _owner->GetPlayer();
-    Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*ownerPlayer, ownerPlayer->GetCritterGUID());
-    if (pet && *ownerPlayer->m_activePlayerData->SummonedBattlePetGUID == pet->GetBattlePetCompanionGUID())
+    Player* player = _owner->GetPlayer();
+    if (Creature* summonedBattlePet = player->GetSummonedBattlePet())
     {
-        pet->DespawnOrUnsummon();
-        ownerPlayer->SetSummonedBattlePetGUID(ObjectGuid::Empty);
-        ownerPlayer->SetCurrentBattlePetBreedQuality(AsUnderlyingType(BattlePetBreedQuality::Poor));
+        summonedBattlePet->DespawnOrUnsummon();
+        player->SetBattlePetData(nullptr);
     }
 }
 
@@ -609,7 +741,8 @@ void BattlePetMgr::SendJournal()
 
     for (auto& pet : _pets)
         if (pet.second.SaveInfo != BATTLE_PET_REMOVED)
-            battlePetJournal.Pets.push_back(std::ref(pet.second.PacketInfo));
+            if (!pet.second.PacketInfo.OwnerInfo || pet.second.PacketInfo.OwnerInfo->Guid == _owner->GetPlayer()->GetGUID())
+                battlePetJournal.Pets.push_back(std::ref(pet.second.PacketInfo));
 
     battlePetJournal.Slots.reserve(_slots.size());
     std::transform(_slots.begin(), _slots.end(), std::back_inserter(battlePetJournal.Slots), [](WorldPackets::BattlePet::BattlePetSlot& slot) { return std::ref(slot); });
@@ -654,4 +787,5 @@ void BattlePetMgr::SendJournalLockStatus()
 bool BattlePetMgr::IsJournalLockAcquired() const
 {
     return sWorld->IsBattlePetJournalLockAcquired(_owner->GetBattlenetAccountGUID());
+}
 }

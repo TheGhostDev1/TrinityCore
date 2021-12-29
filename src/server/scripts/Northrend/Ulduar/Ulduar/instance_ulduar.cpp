@@ -15,7 +15,7 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ScriptMgr.h"
+#include "ulduar.h"
 #include "AreaBoundary.h"
 #include "CreatureAI.h"
 #include "GameObject.h"
@@ -23,10 +23,10 @@
 #include "Item.h"
 #include "Map.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellScript.h"
 #include "TemporarySummon.h"
-#include "ulduar.h"
 #include "Vehicle.h"
 #include "WorldStatePackets.h"
 #include <sstream>
@@ -143,6 +143,17 @@ ObjectData const objectData[] =
     { 0,                               0                         }
 };
 
+UlduarKeeperDespawnEvent::UlduarKeeperDespawnEvent(Creature* owner, uint32 despawnTimerOffset) : _owner(owner), _despawnTimer(despawnTimerOffset)
+{
+}
+
+bool UlduarKeeperDespawnEvent::Execute(uint64 /*eventTime*/, uint32 /*updateTime*/)
+{
+    _owner->CastSpell(_owner, SPELL_TELEPORT_KEEPER_VISUAL);
+    _owner->DespawnOrUnsummon(1000 + _despawnTimer);
+    return true;
+}
+
 class instance_ulduar : public InstanceMapScript
 {
     public:
@@ -218,8 +229,8 @@ class instance_ulduar : public InstanceMapScript
 
             void FillInitialWorldStates(WorldPackets::WorldState::InitWorldStates& packet) override
             {
-                packet.Worldstates.emplace_back(uint32(WORLD_STATE_ALGALON_TIMER_ENABLED), int32(_algalonTimer && _algalonTimer <= 60));
-                packet.Worldstates.emplace_back(uint32(WORLD_STATE_ALGALON_DESPAWN_TIMER), int32(std::min<uint32>(_algalonTimer, 60)));
+                packet.Worldstates.emplace_back(WORLD_STATE_ALGALON_TIMER_ENABLED, (_algalonTimer && _algalonTimer <= 60) ? 1 : 0);
+                packet.Worldstates.emplace_back(WORLD_STATE_ALGALON_DESPAWN_TIMER, std::min<int32>(_algalonTimer, 60));
             }
 
             void OnPlayerEnter(Player* player) override
@@ -491,7 +502,7 @@ class instance_ulduar : public InstanceMapScript
                     case GO_LEVIATHAN_GATE:
                         LeviathanGateGUID = gameObject->GetGUID();
                         if (GetBossState(BOSS_LEVIATHAN) == DONE)
-                            gameObject->SetGoState(GO_STATE_ACTIVE_ALTERNATIVE);
+                            gameObject->SetGoState(GO_STATE_DESTROYED);
                         break;
                     case GO_BRAIN_ROOM_DOOR_1:
                         BrainRoomDoorGUIDs[0] = gameObject->GetGUID();
@@ -566,7 +577,7 @@ class instance_ulduar : public InstanceMapScript
                 }
             }
 
-            void ProcessEvent(WorldObject* /*gameObject*/, uint32 eventId) override
+            void ProcessEvent(WorldObject* /*gameObject*/, uint32 eventId, WorldObject* /*invoker*/) override
             {
                 switch (eventId)
                 {
@@ -1013,7 +1024,7 @@ class instance_ulduar : public InstanceMapScript
                             if (Creature* leviathan = GetCreature(BOSS_LEVIATHAN))
                                 leviathan->AI()->DoAction(ACTION_MOVE_TO_CENTER_POSITION);
                             if (GameObject* gameObject = instance->GetGameObject(LeviathanGateGUID))
-                                gameObject->SetGoState(GO_STATE_ACTIVE_ALTERNATIVE);
+                                gameObject->SetGoState(GO_STATE_DESTROYED);
                             break;
                     }
                 }

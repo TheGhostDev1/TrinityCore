@@ -117,7 +117,7 @@ class boss_kologarn : public CreatureScript
             bool left, right;
             ObjectGuid eyebeamTarget;
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_AGGRO);
 
@@ -133,7 +133,7 @@ class boss_kologarn : public CreatureScript
                         if (Unit* arm = vehicle->GetPassenger(i))
                             DoZoneInCombat(arm->ToCreature());
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
             }
 
             void Reset() override
@@ -150,6 +150,7 @@ class boss_kologarn : public CreatureScript
                 me->GetMotionMaster()->MoveTargetedHome();
                 me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
                 me->SetCorpseDelay(604800); // Prevent corpse from despawning.
+                ForceCombatStopForCreatureEntry(NPC_ARM_SWEEP_STALKER, 500.f);
                 _JustDied();
             }
 
@@ -210,6 +211,7 @@ class boss_kologarn : public CreatureScript
 
             void JustSummoned(Creature* summon) override
             {
+                BossAI::JustSummoned(summon);
                 switch (summon->GetEntry())
                 {
                     case NPC_FOCUSED_EYEBEAM:
@@ -360,7 +362,7 @@ class spell_ulduar_rubble_summon : public SpellScriptLoader
 };
 
 // predicate function to select non main tank target
-class StoneGripTargetSelector : public std::unary_function<Unit*, bool>
+class StoneGripTargetSelector
 {
     public:
         StoneGripTargetSelector(Creature* me, Unit const* victim) : _me(me), _victim(victim) { }
@@ -615,11 +617,17 @@ class spell_kologarn_stone_shout : public SpellScriptLoader
         {
             PrepareSpellScript(spell_kologarn_stone_shout_SpellScript);
 
-            void FilterTargets(std::list<WorldObject*>& unitList)
+            void FilterTargets(std::list<WorldObject*>& targets)
             {
-                unitList.remove_if([](WorldObject* target)
+                targets.remove_if([](WorldObject* object) -> bool
                 {
-                    return target->GetTypeId() != TYPEID_PLAYER && (target->GetTypeId() != TYPEID_UNIT || !target->ToUnit()->IsPet());
+                    if (object->GetTypeId() == TYPEID_PLAYER)
+                        return false;
+
+                    if (Creature* creature = object->ToCreature())
+                        return !creature->IsPet();
+
+                    return true;
                 });
             }
 

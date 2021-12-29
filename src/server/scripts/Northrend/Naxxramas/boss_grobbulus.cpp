@@ -56,9 +56,9 @@ class boss_grobbulus : public CreatureScript
         {
             boss_grobbulusAI(Creature* creature) : BossAI(creature, BOSS_GROBBULUS) { }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 events.ScheduleEvent(EVENT_CLOUD, 15s);
                 events.ScheduleEvent(EVENT_INJECT, 20s);
                 events.ScheduleEvent(EVENT_SPRAY, randtime(Seconds(15), Seconds(30))); // not sure
@@ -126,7 +126,7 @@ class npc_grobbulus_poison_cloud : public CreatureScript
                 creature->SetReactState(REACT_PASSIVE);
             }
 
-            void IsSummonedBy(Unit* /*summoner*/) override
+            void IsSummonedBy(WorldObject* /*summoner*/) override
             {
                 // no visual when casting in ctor or Reset()
                 DoCast(me, SPELL_POISON_CLOUD_PASSIVE, true);

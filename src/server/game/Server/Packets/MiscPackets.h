@@ -183,6 +183,8 @@ namespace WorldPackets
 
             void Read() override;
 
+            std::chrono::steady_clock::time_point GetReceivedTime() const { return _worldPacket.GetReceivedTime(); }
+
             uint32 ClientTime = 0; // Client ticks in ms
             uint32 SequenceIndex = 0; // Same index as in request
         };
@@ -797,6 +799,16 @@ namespace WorldPackets
             void Read() override;
 
             bool EnablePVP = false;
+        };
+
+        class SetWarMode final : public ClientPacket
+        {
+        public:
+            SetWarMode(WorldPacket&& packet) : ClientPacket(CMSG_SET_WAR_MODE, std::move(packet)) { }
+
+            void Read() override;
+
+            bool Enable = false;
         };
 
         class AccountHeirloomUpdate final : public ServerPacket

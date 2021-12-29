@@ -39,7 +39,7 @@
 #include "Unit.h"
 #include "UpdateData.h"
 
-AreaTrigger::AreaTrigger() : WorldObject(false), MapObject(), _aurEff(nullptr), _maxSearchRadius(0.0f),
+AreaTrigger::AreaTrigger() : WorldObject(false), MapObject(), _spawnId(0), _aurEff(nullptr), _maxSearchRadius(0.0f),
     _duration(0), _totalDuration(0), _timeSinceCreated(0), _previousCheckOrientation(std::numeric_limits<float>::infinity()),
     _isRemoved(false), _reachedDestination(true), _lastSplineIndex(0), _movementTime(0),
     _areaTriggerCreateProperties(nullptr), _areaTriggerTemplate(nullptr)
@@ -61,6 +61,9 @@ void AreaTrigger::AddToWorld()
     if (!IsInWorld())
     {
         GetMap()->GetObjectsStore().Insert<AreaTrigger>(GetGUID(), this);
+        if (_spawnId)
+            GetMap()->GetAreaTriggerBySpawnIdStore().insert(std::make_pair(_spawnId, this));
+
         WorldObject::AddToWorld();
     }
 }
@@ -81,6 +84,9 @@ void AreaTrigger::RemoveFromWorld()
         _ai->OnRemove();
 
         WorldObject::RemoveFromWorld();
+
+        if (_spawnId)
+            Trinity::Containers::MultimapErasePair(GetMap()->GetAreaTriggerBySpawnIdStore(), _spawnId, this);
         GetMap()->GetObjectsStore().Remove<AreaTrigger>(GetGUID());
     }
 }
@@ -225,8 +231,15 @@ AreaTrigger* AreaTrigger::CreateAreaTrigger(uint32 areaTriggerCreatePropertiesId
     return at;
 }
 
+ObjectGuid AreaTrigger::CreateNewMovementForceId(Map* map, uint32 areaTriggerId)
+{
+    return ObjectGuid::Create<HighGuid::AreaTrigger>(map->GetId(), areaTriggerId, map->GenerateLowGuid<HighGuid::AreaTrigger>());
+}
+
 bool AreaTrigger::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool /*addToMap*/, bool /*allowDuplicate*/)
 {
+    _spawnId = spawnId;
+
     AreaTriggerSpawn const* position = sAreaTriggerDataStore->GetAreaTriggerSpawn(spawnId);
     if (!position)
         return false;
@@ -241,7 +254,7 @@ bool AreaTrigger::LoadFromDB(ObjectGuid::LowType spawnId, Map* map, bool /*addTo
 bool AreaTrigger::CreateServer(Map* map, AreaTriggerTemplate const* areaTriggerTemplate, AreaTriggerSpawn const& position)
 {
     SetMap(map);
-    Relocate(position.Location);
+    Relocate(position.spawnPoint);
     if (!IsPositionValid())
     {
         TC_LOG_ERROR("entities.areatrigger", "AreaTriggerServer (id %u) not created. Invalid coordinates (X: %f Y: %f)",
@@ -260,8 +273,8 @@ bool AreaTrigger::CreateServer(Map* map, AreaTriggerTemplate const* areaTriggerT
     _shape = position.Shape;
     _maxSearchRadius = _shape.GetMaxSearchRadius();
 
-    if (position.PhaseUseFlags || position.PhaseId || position.PhaseGroup)
-        PhasingHandler::InitDbPhaseShift(GetPhaseShift(), position.PhaseUseFlags, position.PhaseId, position.PhaseGroup);
+    if (position.phaseUseFlags || position.phaseId || position.phaseGroup)
+        PhasingHandler::InitDbPhaseShift(GetPhaseShift(), position.phaseUseFlags, position.phaseId, position.phaseGroup);
 
     UpdateShape();
 
@@ -512,7 +525,13 @@ AreaTriggerTemplate const* AreaTrigger::GetTemplate() const
 
 uint32 AreaTrigger::GetScriptId() const
 {
-    return GetTemplate() ? GetTemplate()->ScriptId : 0;
+    if (_spawnId)
+        return ASSERT_NOTNULL(sAreaTriggerDataStore->GetAreaTriggerSpawn(_spawnId))->scriptId;
+
+    if (GetCreateProperties())
+        return GetCreateProperties()->ScriptId;
+
+    return 0;
 }
 
 Unit* AreaTrigger::GetCaster() const

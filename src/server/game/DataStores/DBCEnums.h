@@ -668,25 +668,6 @@ enum DifficultyFlags
     DIFFICULTY_FLAG_DISPLAY_MYTHIC  = 0x80  // Controls icon displayed on minimap when inside the instance
 };
 
-enum SpawnMask
-{
-    SPAWNMASK_CONTINENT = (1 << DIFFICULTY_NONE), // any maps without spawn modes
-
-    SPAWNMASK_DUNGEON_NORMAL    = (1 << DIFFICULTY_NORMAL),
-    SPAWNMASK_DUNGEON_HEROIC    = (1 << DIFFICULTY_HEROIC),
-    SPAWNMASK_DUNGEON_ALL       = (SPAWNMASK_DUNGEON_NORMAL | SPAWNMASK_DUNGEON_HEROIC),
-
-    SPAWNMASK_RAID_10MAN_NORMAL = (1 << DIFFICULTY_10_N),
-    SPAWNMASK_RAID_25MAN_NORMAL = (1 << DIFFICULTY_25_N),
-    SPAWNMASK_RAID_NORMAL_ALL   = (SPAWNMASK_RAID_10MAN_NORMAL | SPAWNMASK_RAID_25MAN_NORMAL),
-
-    SPAWNMASK_RAID_10MAN_HEROIC = (1 << DIFFICULTY_10_HC),
-    SPAWNMASK_RAID_25MAN_HEROIC = (1 << DIFFICULTY_25_HC),
-    SPAWNMASK_RAID_HEROIC_ALL   = (SPAWNMASK_RAID_10MAN_HEROIC | SPAWNMASK_RAID_25MAN_HEROIC),
-
-    SPAWNMASK_RAID_ALL          = (SPAWNMASK_RAID_NORMAL_ALL | SPAWNMASK_RAID_HEROIC_ALL)
-};
-
 enum class ExpectedStatType : uint8
 {
     CreatureHealth          = 0,
@@ -1365,12 +1346,21 @@ enum MountFlags
     MOUNT_FLAG_HIDE_IF_UNKNOWN          = 0x40
 };
 
-enum PhaseEntryFlags : uint16
+enum class PhaseEntryFlags : uint16
 {
-    PHASE_FLAG_NORMAL   = 0x08,
-    PHASE_FLAG_COSMETIC = 0x10,
-    PHASE_FLAG_PERSONAL = 0x20
+    ReadOnly                = 0x001,
+    InternalPhase           = 0x002,
+    Normal                  = 0x008,
+    Cosmetic                = 0x010,
+    Personal                = 0x020,
+    Expensive               = 0x040,
+    EventsAreObservable     = 0x080,
+    UsesPreloadConditions   = 0x100,
+    UnshareablePersonal     = 0x200,
+    ObjectsAreVisible       = 0x400,
 };
+
+DEFINE_ENUM_FLAG(PhaseEntryFlags);
 
 // PhaseUseFlags fields in different db2s
 enum PhaseUseFlagsValues : uint8
@@ -1562,7 +1552,7 @@ enum class SummonPropertiesFlags : uint32
     CannotDismissPet                  = 0x00000020, // NYI
     UseDemonTimeout                   = 0x00000040, // NYI
     UnlimitedSummons                  = 0x00000080, // NYI
-    UseCreatureLevel                  = 0x00000100, // NYI
+    UseCreatureLevel                  = 0x00000100,
     JoinSummonerSpawnGroup            = 0x00000200, // NYI
     DoNotToggle                       = 0x00000400, // NYI
     DespawnWhenExpired                = 0x00000800, // NYI
@@ -1575,7 +1565,7 @@ enum class SummonPropertiesFlags : uint32
     CastRideVehicleSpellOnSummoner    = 0x00040000, // NYI
     GuardianActsLikePet               = 0x00080000, // NYI
     DontSnapSessileToGround           = 0x00100000, // NYI
-    SummonFromBattlePetJournal        = 0x00200000, // NYI
+    SummonFromBattlePetJournal        = 0x00200000,
     UnitClutter                       = 0x00400000, // NYI
     DefaultNameColor                  = 0x00800000, // NYI
     UseOwnInvisibilityDetection       = 0x01000000, // NYI. Ignore Owner's Invisibility Detection

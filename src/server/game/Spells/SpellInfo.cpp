@@ -186,7 +186,7 @@ uint32 SpellImplicitTargetInfo::GetExplicitTargetMask(bool& srcSet, bool& dstSet
                                 targetMask = TARGET_FLAG_UNIT_PASSENGER;
                                 break;
                             case TARGET_CHECK_RAID_CLASS:
-                                // nobreak;
+                                /* fallthrough */
                             default:
                                 targetMask = TARGET_FLAG_UNIT;
                                 break;
@@ -216,7 +216,7 @@ uint32 SpellImplicitTargetInfo::GetExplicitTargetMask(bool& srcSet, bool& dstSet
     return targetMask;
 }
 
-SpellImplicitTargetInfo::StaticData  SpellImplicitTargetInfo::_data[TOTAL_SPELL_TARGETS] =
+SpellImplicitTargetInfo::StaticData SpellImplicitTargetInfo::_data[TOTAL_SPELL_TARGETS] =
 {
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        //
     {TARGET_OBJECT_TYPE_UNIT, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_DEFAULT, TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 1 TARGET_UNIT_CASTER
@@ -356,7 +356,7 @@ SpellImplicitTargetInfo::StaticData  SpellImplicitTargetInfo::_data[TOTAL_SPELL_
     {TARGET_OBJECT_TYPE_UNIT, TARGET_REFERENCE_TYPE_DEST,   TARGET_SELECT_CATEGORY_LINE,    TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 135 TARGET_UNIT_LINE_CASTER_TO_DEST
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 136
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 137
-    {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 138
+    {TARGET_OBJECT_TYPE_DEST, TARGET_REFERENCE_TYPE_DEST,   TARGET_SELECT_CATEGORY_DEFAULT, TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 138 TARGET_DEST_DEST_GROUND
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 139
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 140
     {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 141
@@ -485,7 +485,7 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster /*= nullptr*/, int32 
     {
         if (casterUnit && basePointsPerLevel != 0.0f)
         {
-            int32 level = int32(casterUnit->getLevel());
+            int32 level = int32(casterUnit->GetLevel());
             if (level > int32(_spellInfo->MaxLevel) && _spellInfo->MaxLevel > 0)
                 level = int32(_spellInfo->MaxLevel);
 
@@ -518,9 +518,9 @@ int32 SpellEffectInfo::CalcBaseValue(WorldObject const* caster, Unit const* targ
     {
         uint32 level = _spellInfo->SpellLevel;
         if (target && _spellInfo->IsPositiveEffect(EffectIndex) && (Effect == SPELL_EFFECT_APPLY_AURA))
-            level = target->getLevel();
+            level = target->GetLevel();
         else if (caster && caster->IsUnit())
-            level = caster->ToUnit()->getLevel();
+            level = caster->ToUnit()->GetLevel();
 
         if (_spellInfo->BaseLevel && !_spellInfo->HasAttribute(SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL) && _spellInfo->HasAttribute(SPELL_ATTR10_USE_SPELL_BASE_LEVEL_FOR_SCALING))
             level = _spellInfo->BaseLevel;
@@ -589,7 +589,7 @@ int32 SpellEffectInfo::CalcBaseValue(WorldObject const* caster, Unit const* targ
             if (ContentTuningEntry const* contentTuning = sContentTuningStore.LookupEntry(contentTuningId))
                 expansion = contentTuning->ExpansionID;
 
-            int32 level = caster && caster->IsUnit() ? int32(caster->ToUnit()->getLevel()) : 1;
+            int32 level = caster && caster->IsUnit() ? int32(caster->ToUnit()->GetLevel()) : 1;
             value = sDB2Manager.EvaluateExpectedStat(stat, level, expansion, 0, CLASS_NONE) * BasePoints / 100.0f;
         }
 
@@ -641,7 +641,7 @@ float SpellEffectInfo::CalcRadius(WorldObject* caster /*= nullptr*/, Spell* spel
     if (caster)
     {
         if (Unit* casterUnit = caster->ToUnit())
-            radius += entry->RadiusPerLevel * casterUnit->getLevel();
+            radius += entry->RadiusPerLevel * casterUnit->GetLevel();
 
         radius = std::min(radius, entry->RadiusMax);
 
@@ -1086,6 +1086,10 @@ SpellInfo::SpellInfo(SpellNameEntry const* spellName, ::Difficulty difficulty, S
         Trinity::Containers::EnsureWritableVectorIndex(_effects, spellEffect->EffectIndex, SpellEffectInfo(this)) = SpellEffectInfo(this, *spellEffect);
     }
 
+    // Correct EffectIndex for blank effects
+    for (size_t i = 0; i < _effects.size(); ++i)
+        _effects[i].EffectIndex = SpellEffIndex(i);
+
     _effects.shrink_to_fit();
 
     SpellName = &spellName->Name;
@@ -1268,6 +1272,10 @@ SpellInfo::SpellInfo(SpellNameEntry const* spellName, ::Difficulty difficulty, s
     _effects.reserve(32);
     for (SpellEffectEntry const& spellEffect : effects)
          Trinity::Containers::EnsureWritableVectorIndex(_effects, spellEffect.EffectIndex, SpellEffectInfo(this)) = SpellEffectInfo(this, spellEffect);
+
+    // Correct EffectIndex for blank effects
+    for (size_t i = 0; i < _effects.size(); ++i)
+        _effects[i].EffectIndex = SpellEffIndex(i);
 
     _effects.shrink_to_fit();
 }
@@ -1993,7 +2001,6 @@ SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 a
         case 2584:                                          // Waiting to Resurrect
         case 22011:                                         // Spirit Heal Channel
         case 22012:                                         // Spirit Heal
-        case 24171:                                         // Resurrection Impact Visual
         case 42792:                                         // Recently Dropped Flag
         case 43681:                                         // Inactive
         case 44535:                                         // Spirit Heal (mana)
@@ -2685,7 +2692,7 @@ void SpellInfo::_LoadSpellSpecific()
                         /// @workaround For non-stacking tracking spells (We need generic solution)
                         if (Id == 30645) // Gas Cloud Tracking
                             return SPELL_SPECIFIC_NORMAL;
-                    /* fallthrough */
+                        /* fallthrough */
                     case SPELL_AURA_TRACK_RESOURCES:
                     case SPELL_AURA_TRACK_STEALTHED:
                         return SPELL_SPECIFIC_TRACKER;
@@ -3752,7 +3759,7 @@ uint32 SpellInfo::GetMaxTicks() const
                 case SPELL_AURA_PERIODIC_HEAL:
                 case SPELL_AURA_OBS_MOD_HEALTH:
                 case SPELL_AURA_OBS_MOD_POWER:
-                case SPELL_AURA_48:
+                case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
                 case SPELL_AURA_POWER_BURN:
                 case SPELL_AURA_PERIODIC_LEECH:
                 case SPELL_AURA_PERIODIC_MANA_LEECH:
@@ -3970,7 +3977,7 @@ Optional<SpellPowerCost> SpellInfo::CalcPowerCost(SpellPowerEntry const* power, 
         if (HasAttribute(SPELL_ATTR0_LEVEL_DAMAGE_CALCULATION))
         {
             GtNpcManaCostScalerEntry const* spellScaler = sNpcManaCostScalerGameTable.GetRow(SpellLevel);
-            GtNpcManaCostScalerEntry const* casterScaler = sNpcManaCostScalerGameTable.GetRow(unitCaster->getLevel());
+            GtNpcManaCostScalerEntry const* casterScaler = sNpcManaCostScalerGameTable.GetRow(unitCaster->GetLevel());
             if (spellScaler && casterScaler)
                 powerCost *= casterScaler->Scaler / spellScaler->Scaler;
         }
@@ -4121,7 +4128,7 @@ float SpellInfo::CalcProcPPM(Unit* caster, int32 itemLevel) const
             }
             case SPELL_PPM_MOD_CLASS:
             {
-                if (caster->getClassMask() & mod->Param)
+                if (caster->GetClassMask() & mod->Param)
                     ppm *= 1.0f + mod->Coeff;
                 break;
             }
@@ -4134,7 +4141,7 @@ float SpellInfo::CalcProcPPM(Unit* caster, int32 itemLevel) const
             }
             case SPELL_PPM_MOD_RACE:
             {
-                if (caster->getRaceMask() & mod->Param)
+                if (caster->GetRaceMask() & mod->Param)
                     ppm *= 1.0f + mod->Coeff;
                 break;
             }
@@ -4204,7 +4211,7 @@ SpellInfo const* SpellInfo::GetAuraRankForLevel(uint8 level) const
         return this;
 
     // Client ignores spell with these attributes (sub_53D9D0)
-    if (HasAttribute(SPELL_ATTR0_NEGATIVE_1) || HasAttribute(SPELL_ATTR2_UNK3))
+    if (HasAttribute(SPELL_ATTR0_NEGATIVE_1) || HasAttribute(SPELL_ATTR2_UNK3) || HasAttribute(SPELL_ATTR3_DRAIN_SOUL))
         return this;
 
     bool needRankSelection = false;
@@ -4364,6 +4371,7 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
                 case 61716: // Rabbit Costume
                 case 61734: // Noblegarden Bunny
                 case 62344: // Fists of Stone
+                case 50344: // Dream Funnel
                 case 61819: // Manabonked! (item)
                 case 61834: // Manabonked! (minigob)
                 case 73523: // Rigor Mortis
@@ -4418,7 +4426,6 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             case SPELL_EFFECT_LEARN_SPELL:
             case SPELL_EFFECT_SKILL_STEP:
             case SPELL_EFFECT_HEAL_PCT:
-            case SPELL_EFFECT_ENERGIZE_PCT:
                 return true;
             case SPELL_EFFECT_INSTAKILL:
                 if (otherEffect.EffectIndex != effect.EffectIndex && // for spells like 38044: instakill effect is negative but auras on target must count as buff
@@ -4437,7 +4444,6 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
                 case SPELL_AURA_MOD_UNATTACKABLE:
                     return true;
                 case SPELL_AURA_SCHOOL_HEAL_ABSORB:
-                case SPELL_AURA_CHANNEL_DEATH_ITEM:
                 case SPELL_AURA_EMPATHY:
                 case SPELL_AURA_MOD_SPELL_DAMAGE_FROM_CASTER:
                 case SPELL_AURA_PREVENTS_FLEEING:
@@ -4586,6 +4592,7 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             case SPELL_AURA_ADD_TARGET_TRIGGER:
                 return true;
             case SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE:
+            case SPELL_AURA_PERIODIC_TRIGGER_SPELL_FROM_CLIENT:
             case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
                 if (!_isPositiveTarget(effect))
                 {
@@ -4633,11 +4640,13 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
             case SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE:
             case SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE:
             case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:
-                // have positive and negative spells, check target
+            case SPELL_AURA_DUMMY:
+                // check target for positive and negative spells
                 if (!_isPositiveTarget(effect))
                     return false;
                 break;
             case SPELL_AURA_MOD_CONFUSE:
+            case SPELL_AURA_CHANNEL_DEATH_ITEM:
             case SPELL_AURA_MOD_ROOT:
             case SPELL_AURA_MOD_ROOT_2:
             case SPELL_AURA_MOD_SILENCE:

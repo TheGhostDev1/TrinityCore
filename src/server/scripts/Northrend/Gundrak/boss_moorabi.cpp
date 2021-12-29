@@ -86,9 +86,9 @@ class boss_moorabi : public CreatureScript
                 events.ScheduleEvent(EVENT_PHANTOM, Seconds(21), 0, PHASE_INTRO);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
                 DoCastSelf(SPELL_MOJO_FRENZY, true);
 
@@ -122,8 +122,8 @@ class boss_moorabi : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 _JustDied();
-                Talk(SAY_DEATH);
                 Talk(EMOTE_ACTIVATE_ALTAR);
+                Talk(SAY_DEATH);
             }
 
             void SpellHit(Unit* /*caster*/, SpellInfo const* spellInfo) override

@@ -373,6 +373,8 @@ public:
                 }
                 _phase = 0;
             }
+            if (!UpdateVictim())
+                return;
             DoMeleeAttackIfReady();
         }
         private:
@@ -499,7 +501,7 @@ public:
                 && caster->ToPlayer()->GetQuestStatus(QUEST_OVERWHELMED) == QUEST_STATUS_INCOMPLETE)
             {
                 DoCast(caster, SPELL_KILL_CREDIT);
-                Talk(SAY_RANDOM);
+                Talk(SAY_RANDOM, caster);
                 if (me->IsStandState())
                     me->GetMotionMaster()->MovePoint(1, me->GetPositionX()+7, me->GetPositionY()+7, me->GetPositionZ());
                 else

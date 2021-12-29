@@ -359,7 +359,7 @@ struct boss_algalon_the_observer : public BossAI
         return type == DATA_HAS_FED_ON_TEARS ? _fedOnTears : 1;
     }
 
-    void JustEngagedWith(Unit* /*target*/) override
+    void JustEngagedWith(Unit* who) override
     {
         uint32 introDelay = 0;
         me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
@@ -371,7 +371,7 @@ struct boss_algalon_the_observer : public BossAI
         {
             Talk(SAY_ALGALON_AGGRO);
             me->PlayDirectMusic(ENGAGE_MUSIC_ID);
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             introDelay = 8000;
         }
         else
@@ -1159,7 +1159,7 @@ class spell_algalon_big_bang : public SpellScript
         AfterCast += SpellCastFn(spell_algalon_big_bang::CheckTargets);
     }
 private:
-    uint32 _targetCount;
+    uint32 _targetCount = 0;
 };
 
 // 64445 - Remove Player from Phase

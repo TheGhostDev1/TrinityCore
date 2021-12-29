@@ -86,9 +86,9 @@ public:
             events.ScheduleEvent(EVENT_ENRAGE, 10min);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
         }
 
@@ -210,7 +210,7 @@ public:
     {
         npc_demon_chainAI(Creature* creature) : PassiveAI(creature) { }
 
-        void IsSummonedBy(Unit* summoner) override
+        void IsSummonedBy(WorldObject* summoner) override
         {
             _sacrificeGUID = summoner->GetGUID();
             DoCastSelf(SPELL_DEMON_CHAINS, true);

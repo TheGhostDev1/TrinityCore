@@ -133,21 +133,22 @@ enum Gender
 };
 
 // Class value is index in ChrClasses.db2
+// EnumUtils: DESCRIBE THIS
 enum Classes : uint8
 {
-    CLASS_NONE          = 0,
-    CLASS_WARRIOR       = 1,
-    CLASS_PALADIN       = 2,
-    CLASS_HUNTER        = 3,
-    CLASS_ROGUE         = 4,
-    CLASS_PRIEST        = 5,
-    CLASS_DEATH_KNIGHT  = 6,
-    CLASS_SHAMAN        = 7,
-    CLASS_MAGE          = 8,
-    CLASS_WARLOCK       = 9,
-    CLASS_MONK          = 10,
-    CLASS_DRUID         = 11,
-    CLASS_DEMON_HUNTER  = 12
+    CLASS_NONE          = 0,  // SKIP
+    CLASS_WARRIOR       = 1,  // TITLE Warrior
+    CLASS_PALADIN       = 2,  // TITLE Paladin
+    CLASS_HUNTER        = 3,  // TITLE Hunter
+    CLASS_ROGUE         = 4,  // TITLE Rogue
+    CLASS_PRIEST        = 5,  // TITLE Priest
+    CLASS_DEATH_KNIGHT  = 6,  // TITLE Death Knight
+    CLASS_SHAMAN        = 7,  // TITLE Shaman
+    CLASS_MAGE          = 8,  // TITLE Mage
+    CLASS_WARLOCK       = 9,  // TITLE Warlock
+    CLASS_MONK          = 10, // TITLE Monk
+    CLASS_DRUID         = 11, // TITLE Druid
+    CLASS_DEMON_HUNTER  = 12  // TITLE Demon Hunter
 };
 
 // max+1 for player class
@@ -205,6 +206,7 @@ enum FactionTemplates
     FACTION_PREY                        = 31,
     FACTION_ESCORTEE_H_NEUTRAL_PASSIVE  = 33,
     FACTION_FRIENDLY                    = 35,
+    FACTION_TROLL_FROSTMANE             = 37,
     FACTION_OGRE                        = 45,
     FACTION_ORC_DRAGONMAW               = 62,
     FACTION_HORDE_GENERIC               = 83,
@@ -220,6 +222,7 @@ enum FactionTemplates
     FACTION_ESCORTEE_N_FRIEND_PASSIVE   = 290,
     FACTION_TITAN                       = 415,
     FACTION_ESCORTEE_N_FRIEND_ACTIVE    = 495,
+    FACTION_RATCHET                     = 637,
     FACTION_GOBLIN_DARK_IRON_BAR_PATRON = 736,
     FACTION_DARK_IRON_DWARVES           = 754,
     FACTION_ESCORTEE_A_PASSIVE          = 774,
@@ -236,7 +239,8 @@ enum FactionTemplates
     FACTION_ESCORTEE_H_ACTIVE           = 2046,
     FACTION_UNDEAD_SCOURGE_2            = 2068,
     FACTION_UNDEAD_SCOURGE_3            = 2084,
-    FACTION_SCARLET_CRUSADE             = 2089
+    FACTION_SCARLET_CRUSADE             = 2089,
+    FACTION_SCARLET_CRUSADE_2           = 2096
 };
 
 #define MIN_REPUTATION_RANK (REP_HATED)
@@ -465,7 +469,7 @@ enum SpellAttr1 : uint32
     SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR         = 0x10000000, // TITLE Hide in aura bar (client only)
     SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME       = 0x20000000, // TITLE Show spell name during channel (client only)
     SPELL_ATTR1_ENABLE_AT_DODGE                  = 0x40000000, // TITLE Enable at dodge
-    SPELL_ATTR1_UNK31                            = 0x80000000  // TITLE Unknown attribute 31@Attr1
+    SPELL_ATTR1_CAST_WHEN_LEARNED                = 0x80000000  // TITLE Cast When Learned
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -722,7 +726,7 @@ enum SpellAttr8 : uint32
     SPELL_ATTR8_RAID_MARKER                      = 0x04000000, // TITLE Skip Is Known Check
     SPELL_ATTR8_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr8
     SPELL_ATTR8_NOT_IN_BG_OR_ARENA               = 0x10000000, // TITLE Not in Battleground
-    SPELL_ATTR8_MASTERY_SPECIALIZATION           = 0x20000000, // TITLE Mastery Affects Points
+    SPELL_ATTR8_MASTERY_AFFECTS_POINTS           = 0x20000000, // TITLE Mastery Affects Points
     SPELL_ATTR8_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr8
     SPELL_ATTR8_ATTACK_IGNORE_IMMUNE_TO_PC_FLAG  = 0x80000000  // TITLE Can Attack ImmunePC DESCRIPTION Do not check UNIT_FLAG_IMMUNE_TO_PC in IsValidAttackTarget
 };
@@ -2632,7 +2636,7 @@ enum Targets
     TARGET_UNIT_LINE_CASTER_TO_DEST         = 135,
     TARGET_UNK_136                          = 136,
     TARGET_UNK_137                          = 137,
-    TARGET_UNK_138                          = 138,
+    TARGET_DEST_DEST_GROUND                 = 138,
     TARGET_UNK_139                          = 139,
     TARGET_UNK_140                          = 140,
     TARGET_UNK_141                          = 141,
@@ -2765,29 +2769,39 @@ enum GameobjectTypes : uint8
 
 enum GameObjectFlags
 {
-    GO_FLAG_IN_USE          = 0x00000001,                   // disables interaction while animated
-    GO_FLAG_LOCKED          = 0x00000002,                   // require key, spell, event, etc to be opened. Makes "Locked" appear in tooltip
-    GO_FLAG_INTERACT_COND   = 0x00000004,                   // cannot interact (condition to interact - requires GO_DYNFLAG_LO_ACTIVATE to enable interaction clientside)
-    GO_FLAG_TRANSPORT       = 0x00000008,                   // any kind of transport? Object can transport (elevator, boat, car)
-    GO_FLAG_NOT_SELECTABLE  = 0x00000010,                   // not selectable even in GM mode
-    GO_FLAG_NODESPAWN       = 0x00000020,                   // never despawn, typically for doors, they just change state
-    GO_FLAG_AI_OBSTACLE     = 0x00000040,                   // makes the client register the object in something called AIObstacleMgr, unknown what it does
-    GO_FLAG_FREEZE_ANIMATION = 0x00000080,
+    GO_FLAG_IN_USE                                  = 0x00000001, // disables interaction while animated
+    GO_FLAG_LOCKED                                  = 0x00000002, // require key, spell, event, etc to be opened. Makes "Locked" appear in tooltip
+    GO_FLAG_INTERACT_COND                           = 0x00000004, // cannot interact (condition to interact - requires GO_DYNFLAG_LO_ACTIVATE to enable interaction clientside)
+    GO_FLAG_TRANSPORT                               = 0x00000008, // any kind of transport? Object can transport (elevator, boat, car)
+    GO_FLAG_NOT_SELECTABLE                          = 0x00000010, // not selectable even in GM mode
+    GO_FLAG_NODESPAWN                               = 0x00000020, // never despawn, typically for doors, they just change state
+    GO_FLAG_AI_OBSTACLE                             = 0x00000040, // makes the client register the object in something called AIObstacleMgr, unknown what it does
+    GO_FLAG_FREEZE_ANIMATION                        = 0x00000080,
+
     // for object types GAMEOBJECT_TYPE_GARRISON_BUILDING, GAMEOBJECT_TYPE_GARRISON_PLOT and GAMEOBJECT_TYPE_PHASEABLE_MO flag bits 8 to 12 are used as WMOAreaTable::NameSetID
-    GO_FLAG_DAMAGED         = 0x00000200,
-    GO_FLAG_DESTROYED       = 0x00000400,
-    GO_FLAG_INTERACT_DISTANCE_USES_TEMPLATE_MODEL = 0x00080000, // client checks interaction distance from model sent in SMSG_QUERY_GAMEOBJECT_RESPONSE instead of GAMEOBJECT_DISPLAYID
-    GO_FLAG_MAP_OBJECT      = 0x00100000                    // pre-7.0 model loading used to be controlled by file extension (wmo vs m2)
+    GO_FLAG_DAMAGED                                 = 0x00000200,
+    GO_FLAG_DESTROYED                               = 0x00000400,
+
+    GO_FLAG_IGNORE_CURRENT_STATE_FOR_USE_SPELL      = 0x00004000, // Allows casting use spell without checking current state (opening open gameobjects, unlocking unlocked gameobjects and closing closed gameobjects)
+    GO_FLAG_INTERACT_DISTANCE_IGNORES_MODEL         = 0x00008000, // Client completely ignores model bounds for interaction distance check
+    GO_FLAG_IGNORE_CURRENT_STATE_FOR_USE_SPELL_EXCEPT_UNLOCKED = 0x00040000, // Allows casting use spell without checking current state except unlocking unlocked gamobjets (opening open gameobjects and closing closed gameobjects)
+    GO_FLAG_INTERACT_DISTANCE_USES_TEMPLATE_MODEL   = 0x00080000, // client checks interaction distance from model sent in SMSG_QUERY_GAMEOBJECT_RESPONSE instead of GAMEOBJECT_DISPLAYID
+    GO_FLAG_MAP_OBJECT                              = 0x00100000, // pre-7.0 model loading used to be controlled by file extension (wmo vs m2)
+    GO_FLAG_IN_MULTI_USE                            = 0x00200000, // GO_FLAG_IN_USE equivalent for objects usable by multiple players
+    GO_FLAG_LOW_PRIORITY_SELECTION                  = 0x04000000, // client will give lower cursor priority to this object when multiple objects overlap
 };
 
 enum GameObjectDynamicLowFlags
 {
-    GO_DYNFLAG_LO_HIDE_MODEL        = 0x02,                 // Object model is not shown with this flag
-    GO_DYNFLAG_LO_ACTIVATE          = 0x04,                 // enables interaction with GO
-    GO_DYNFLAG_LO_ANIMATE           = 0x08,                 // possibly more distinct animation of GO
-    GO_DYNFLAG_LO_NO_INTERACT       = 0x10,                 // appears to disable interaction (not fully verified)
-    GO_DYNFLAG_LO_SPARKLE           = 0x20,                 // makes GO sparkle
-    GO_DYNFLAG_LO_STOPPED           = 0x40                  // Transport is stopped
+    GO_DYNFLAG_LO_HIDE_MODEL        = 0x0002,               // Object model is not shown with this flag
+    GO_DYNFLAG_LO_ACTIVATE          = 0x0004,               // enables interaction with GO
+    GO_DYNFLAG_LO_ANIMATE           = 0x0008,               // possibly more distinct animation of GO
+    GO_DYNFLAG_LO_DEPLETED          = 0x0010,               // can no longer be interacted with (and for gathering nodes it forces "open" visual state)
+    GO_DYNFLAG_LO_SPARKLE           = 0x0020,               // makes GO sparkle
+    GO_DYNFLAG_LO_STOPPED           = 0x0040,               // Transport is stopped
+    GO_DYNFLAG_LO_NO_INTERACT       = 0x0080,
+    GO_DYNFLAG_LO_INVERTED_MOVEMENT = 0x0100,               // GAMEOBJECT_TYPE_TRANSPORT only
+    GO_DYNFLAG_LO_HIGHLIGHT         = 0x0200,               // Allows object highlight when GO_DYNFLAG_LO_ACTIVATE or GO_DYNFLAG_LO_SPARKLE are set, not only when player is on quest determined by Data fields
 };
 
 // client side GO show states
@@ -2795,7 +2809,7 @@ enum GOState : uint8
 {
     GO_STATE_ACTIVE             = 0,                        // show in world as used and not reset (closed door open)
     GO_STATE_READY              = 1,                        // show in world as ready (closed door close)
-    GO_STATE_ACTIVE_ALTERNATIVE = 2,                        // show in world as used in alt way and not reset (closed door open by cannon fire)
+    GO_STATE_DESTROYED          = 2,                        // show the object in-game as already used and not yet reset (e.g. door opened by a cannon blast)
     GO_STATE_TRANSPORT_ACTIVE   = 24,
     GO_STATE_TRANSPORT_STOPPED  = 25
 };
@@ -4316,7 +4330,8 @@ enum LockKeyType
 {
     LOCK_KEY_NONE  = 0,
     LOCK_KEY_ITEM  = 1,
-    LOCK_KEY_SKILL = 2
+    LOCK_KEY_SKILL = 2,
+    LOCK_KEY_SPELL = 3,
 };
 
 // LockType.dbc (9.0.2.37176)
@@ -5839,6 +5854,23 @@ enum class SummonTitle : int32
     LostMind            = 41,
     ServantOfNZoth      = 44
 };
+
+enum SummonSlot : int32
+{
+    SUMMON_SLOT_ANY_TOTEM           = -1,
+    SUMMON_SLOT_PET                 = 0,
+    SUMMON_SLOT_TOTEM               = 1,
+    SUMMON_SLOT_TOTEM_2             = 2,
+    SUMMON_SLOT_TOTEM_3             = 3,
+    SUMMON_SLOT_TOTEM_4             = 4,
+    SUMMON_SLOT_MINIPET             = 5,
+    SUMMON_SLOT_QUEST               = 6,
+
+    MAX_SUMMON_SLOT
+};
+
+#define MAX_TOTEM_SLOT      5
+#define MAX_GAMEOBJECT_SLOT 4
 
 enum EventId
 {

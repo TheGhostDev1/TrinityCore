@@ -80,7 +80,7 @@ enum Says
 
 enum Gossip
 {
-   GOSSIP_ID                   = 21332,
+   GOSSIP_ID                   = 6045,
    GOSSIP_OPTION_ID            = 0
 };
 
@@ -203,7 +203,7 @@ public:
 
         void BeginEvent(Player* target)
         {
-            _JustEngagedWith();
+            _JustEngagedWith(target);
 
             Talk(SAY_GAMESBEGIN_2);
 
@@ -513,7 +513,7 @@ public:
                         break;
                     case EVENT_CLASSCALL:
                         if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-                            switch (target->getClass())
+                            switch (target->GetClass())
                         {
                             case CLASS_MAGE:
                                 Talk(SAY_MAGE);

@@ -239,14 +239,14 @@ class boss_halion : public CreatureScript
                         controller->AI()->EnterEvadeMode(why);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_AGGRO);
 
                 events.Reset();
                 events.SetPhase(PHASE_ONE);
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->AddAura(SPELL_TWILIGHT_PRECISION, me);
                 events.ScheduleEvent(EVENT_ACTIVATE_FIREWALL, 5s);
                 events.ScheduleEvent(EVENT_BREATH, randtime(Seconds(5), Seconds(15)));
@@ -423,11 +423,11 @@ class boss_twilight_halion : public CreatureScript
                 events.ScheduleEvent(EVENT_SOUL_CONSUMPTION, 15s);
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
                 events.SetPhase(PHASE_TWO);
 
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 me->AddAura(SPELL_TWILIGHT_PRECISION, me);
                 events.ScheduleEvent(EVENT_CLEAVE, 3s);
                 events.ScheduleEvent(EVENT_BREATH, 12s);
@@ -1013,7 +1013,7 @@ class npc_meteor_strike_initial : public CreatureScript
                 }
             }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 Creature* owner = summoner->ToCreature();
                 if (!owner)
@@ -1085,7 +1085,7 @@ class npc_meteor_strike : public CreatureScript
                 }
             }
 
-            void IsSummonedBy(Unit* /*summoner*/) override
+            void IsSummonedBy(WorldObject* /*summoner*/) override
             {
                 // Let Halion Controller count as summoner.
                 if (Creature* controller = _instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -1148,7 +1148,7 @@ class npc_meteor_strike_flame : public CreatureScript
                 _events.ScheduleEvent(EVENT_SPAWN_METEOR_FLAME, Milliseconds(800));
             }
 
-            void IsSummonedBy(Unit* /*summoner*/) override
+            void IsSummonedBy(WorldObject* /*summoner*/) override
             {
                 // Let Halion Controller count as summoner.
                 if (Creature* controller = _instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -1225,7 +1225,7 @@ class npc_combustion_consumption : public CreatureScript
                 }
             }
 
-            void IsSummonedBy(Unit* summoner) override
+            void IsSummonedBy(WorldObject* summoner) override
             {
                 // Let Halion Controller count as summoner
                 if (Creature* controller = _instance->GetCreature(DATA_HALION_CONTROLLER))
@@ -1276,7 +1276,7 @@ class npc_living_inferno : public CreatureScript
         {
             npc_living_infernoAI(Creature* creature) : ScriptedAI(creature) { }
 
-            void IsSummonedBy(Unit* /*summoner*/) override
+            void IsSummonedBy(WorldObject* /*summoner*/) override
             {
                 DoZoneInCombat();
                 me->CastSpell(me, SPELL_BLAZING_AURA, true);
@@ -1325,7 +1325,7 @@ class npc_living_ember : public CreatureScript
         {
             npc_living_emberAI(Creature* creature) : ScriptedAI(creature) { }
 
-            void IsSummonedBy(Unit* /*summoner*/) override
+            void IsSummonedBy(WorldObject* /*summoner*/) override
             {
                 if (InstanceScript* instance = me->GetInstanceScript())
                     if (Creature* controller = instance->GetCreature(DATA_HALION_CONTROLLER))

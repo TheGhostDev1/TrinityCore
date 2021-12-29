@@ -15,16 +15,16 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ScriptMgr.h"
+#include "zulgurub.h"
 #include "GridNotifiers.h"
 #include "InstanceScript.h"
 #include "ObjectAccessor.h"
 #include "MotionMaster.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
+#include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
-#include "zulgurub.h"
 
 enum Yells
 {
@@ -130,9 +130,9 @@ class boss_mandokir : public CreatureScript
                 _reviveGUID.Clear();
             }
 
-            void JustEngagedWith(Unit* /*who*/) override
+            void JustEngagedWith(Unit* who) override
             {
-                _JustEngagedWith();
+                BossAI::JustEngagedWith(who);
                 Talk(SAY_AGGRO);
 
                 DoCastAOE(SPELL_BLOODLORD_AURA);
@@ -548,7 +548,7 @@ class spell_mandokir_spirit_vengeance_cancel : public SpellScriptLoader
         }
 };
 
-class DevastatingSlamTargetSelector : public std::unary_function<Unit *, bool>
+class DevastatingSlamTargetSelector
 {
     public:
         DevastatingSlamTargetSelector(Creature* me, const Unit* victim) : _me(me), _victim(victim) {}
@@ -682,7 +682,7 @@ class spell_mandokir_ohgan_orders_trigger : public SpellScriptLoader
                     // HACK: research better way
                     caster->ClearUnitState(UNIT_STATE_CASTING);
                     caster->GetMotionMaster()->Clear();
-                    caster->GetThreatManager().ClearAllThreat();
+                    caster->GetThreatManager().ResetAllThreat();
                     caster->GetThreatManager().AddThreat(target, 50000000.0f);
                     // TODO: Fixate mechanic
                 }
