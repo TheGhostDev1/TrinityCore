@@ -54,7 +54,7 @@ enum blySpells
     SPELL_REVENGE              = 12170
 };
 
-#define GOSSIP_BLY                  "[PH] In that case, I will take my reward!"
+#define GOSSIP_BLY                  "That's it!  I'm tired of helping you out.  It's time we settled things on the battlefield!"
 
 class npc_sergeant_bly : public CreatureScript
 {
@@ -177,7 +177,7 @@ public:
         {
             if (instance->GetData(EVENT_PYRAMID) == PYRAMID_KILLED_ALL_TROLLS)
             {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_BLY, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GossipOptionIcon::None, GOSSIP_BLY, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
                 SendGossipMenuFor(player, 1517, me->GetGUID());
             }
             else
@@ -260,7 +260,7 @@ enum weegliSays
     SAY_WEEGLI_OK_I_GO          = 1
 };
 
-#define GOSSIP_WEEGLI               "[PH] Please blow up the door."
+#define GOSSIP_WEEGLI               "Will you blow up that door now?"
 
 class npc_weegli_blastfuse : public CreatureScript
 {
@@ -369,7 +369,7 @@ public:
             switch (instance->GetData(EVENT_PYRAMID))
             {
                 case PYRAMID_KILLED_ALL_TROLLS:
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_WEEGLI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GossipOptionIcon::None, GOSSIP_WEEGLI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
                     SendGossipMenuFor(player, 1514, me->GetGUID());  //if event can proceed to end
                     break;
                 case PYRAMID_NOT_STARTED:
@@ -438,8 +438,7 @@ public:
 
 enum zumrahConsts
 {
-    ZUMRAH_ID = 7271,
-    ZUMRAH_HOSTILE_FACTION = 37
+    ZUMRAH_ID = 7271
 };
 
 class at_zumrah : public AreaTriggerScript
@@ -447,14 +446,14 @@ class at_zumrah : public AreaTriggerScript
 public:
     at_zumrah() : AreaTriggerScript("at_zumrah") { }
 
-    bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/, bool /*entered*/) override
+    bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
     {
         Creature* pZumrah = player->FindNearestCreature(ZUMRAH_ID, 30.0f);
 
         if (!pZumrah)
             return false;
 
-        pZumrah->SetFaction(ZUMRAH_HOSTILE_FACTION);
+        pZumrah->SetFaction(FACTION_TROLL_FROSTMANE);
         return true;
     }
 

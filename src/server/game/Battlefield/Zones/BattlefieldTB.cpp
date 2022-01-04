@@ -382,7 +382,7 @@ void BattlefieldTB::SendInitWorldStatesToAll()
     sWorld->setWorldState(TB_WS_TIME_NEXT_BATTLE_SHOW, uint32(!IsWarTime() ? 1 : 0));
 
     // Tol Barad
-    for (uint8 team = 0; team < BG_TEAMS_COUNT; team++)
+    for (uint8 team = 0; team < PVP_TEAMS_COUNT; team++)
         for (ObjectGuid const& guid : m_players[team])
             if (Player* player = ObjectAccessor::FindPlayer(guid))
                 SendInitWorldStatesTo(player);
@@ -402,7 +402,7 @@ void BattlefieldTB::OnStartGrouping()
     SendUpdateWorldState(TB_WS_STATE_PREPARATIONS, uint32(1));
 
     // Teleport players out of questing area
-    for (uint8 team = 0; team < BG_TEAMS_COUNT; ++team)
+    for (uint8 team = 0; team < PVP_TEAMS_COUNT; ++team)
         for (ObjectGuid const& guid : m_players[team])
             if (Player* player = ObjectAccessor::FindPlayer(guid))
                 if (player->GetAreaId() == TBQuestAreas[m_iCellblockRandom].entry)
@@ -683,7 +683,7 @@ void BattlefieldTB::OnGameObjectCreate(GameObject* go)
     }
 };
 
-void BattlefieldTB::ProcessEvent(WorldObject* obj, uint32 eventId)
+void BattlefieldTB::ProcessEvent(WorldObject* obj, uint32 eventId, WorldObject* /*invoker*/)
 {
     if (!IsWarTime())
         return;
@@ -868,5 +868,5 @@ void TolBaradCapturePoint::ChangeTeam(TeamId /*oldTeam*/)
     }
 
     // Update counter
-    m_Bf->ProcessEvent(nullptr, EVENT_COUNT_CAPTURED_BASE);
+    m_Bf->ProcessEvent(nullptr, EVENT_COUNT_CAPTURED_BASE, nullptr);
 }

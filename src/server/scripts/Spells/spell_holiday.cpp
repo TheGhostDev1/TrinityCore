@@ -189,13 +189,13 @@ class spell_hallow_end_candy_pirate : public SpellScriptLoader
 
             void HandleApply(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                uint32 spell = GetTarget()->getGender() == GENDER_FEMALE ? SPELL_HALLOWS_END_CANDY_FEMALE_DEFIAS_PIRATE : SPELL_HALLOWS_END_CANDY_MALE_DEFIAS_PIRATE;
+                uint32 spell = GetTarget()->GetNativeGender() == GENDER_FEMALE ? SPELL_HALLOWS_END_CANDY_FEMALE_DEFIAS_PIRATE : SPELL_HALLOWS_END_CANDY_MALE_DEFIAS_PIRATE;
                 GetTarget()->CastSpell(GetTarget(), spell, true);
             }
 
             void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                uint32 spell = GetTarget()->getGender() == GENDER_FEMALE ? SPELL_HALLOWS_END_CANDY_FEMALE_DEFIAS_PIRATE : SPELL_HALLOWS_END_CANDY_MALE_DEFIAS_PIRATE;
+                uint32 spell = GetTarget()->GetNativeGender() == GENDER_FEMALE ? SPELL_HALLOWS_END_CANDY_FEMALE_DEFIAS_PIRATE : SPELL_HALLOWS_END_CANDY_MALE_DEFIAS_PIRATE;
                 GetTarget()->RemoveAurasDueToSpell(spell);
             }
 
@@ -258,7 +258,7 @@ class spell_hallow_end_trick : public SpellScriptLoader
                 Unit* caster = GetCaster();
                 if (Player* target = GetHitPlayer())
                 {
-                    uint8 gender = target->getGender();
+                    uint8 gender = target->GetNativeGender();
                     uint32 spellId = SPELL_TRICK_BUFF;
                     switch (urand(0, 5))
                     {
@@ -426,7 +426,7 @@ public:
             Unit* target = GetHitUnit();
 
             uint32 spellId = 0;
-            uint8 gender = target->getGender();
+            uint8 gender = target->GetNativeGender();
 
             switch (GetSpellInfo()->Id)
             {
@@ -578,7 +578,8 @@ class spell_pilgrims_bounty_feast_on : public SpellScriptLoader
                         if (Player* player = target->ToPlayer())
                         {
                             player->CastSpell(player, SPELL_ON_PLATE_EAT_VISUAL, true);
-                            caster->CastSpell(player, _spellId, player->GetGUID());
+                            caster->CastSpell(player, _spellId, CastSpellExtraArgs(TRIGGERED_FULL_MASK)
+                                .SetOriginalCaster(player->GetGUID()));
                         }
 
                 if (Aura* aura = caster->GetAura(GetEffectValue()))

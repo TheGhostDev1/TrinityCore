@@ -97,7 +97,7 @@ class at_ring_of_law : public AreaTriggerScript
 public:
     at_ring_of_law() : AreaTriggerScript("at_ring_of_law") { }
 
-    bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/, bool /*entered*/) override
+    bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
     {
         if (InstanceScript* instance = player->GetInstanceScript())
         {
@@ -317,14 +317,14 @@ public:
                         break;
                     case 6:
                         SummonRingMob();
-                        Event_Timer = 0;
+                        Event_Timer = 5000;
                         break;
                     case 7:
                         me->SetVisible(true);
                         HandleGameObject(DATA_ARENA1, false);
                         Talk(SAY_TEXT6);
                         CanWalk = true;
-                        Event_Timer = 0;
+                        Event_Timer = 5000;
                         break;
                     case 8:
                         HandleGameObject(DATA_ARENA2, true);
@@ -473,13 +473,13 @@ class npc_lokhtos_darkbargainer : public CreatureScript
                     player->PrepareQuestMenu(me->GetGUID());
 
                 if (me->IsVendor() && player->GetReputationRank(59) >= REP_FRIENDLY)
-                    AddGossipItemFor(player, GOSSIP_ICON_VENDOR, GOSSIP_ITEM_SHOW_ACCESS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+                    AddGossipItemFor(player, GossipOptionIcon::Vendor, GOSSIP_ITEM_SHOW_ACCESS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
 
                 if (!player->GetQuestRewardStatus(QUEST_A_BINDING_CONTRACT) &&
                     !player->HasItemCount(ITEM_THRORIUM_BROTHERHOOD_CONTRACT, 1, true) &&
                     player->HasItemCount(ITEM_SULFURON_INGOT))
                 {
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_ITEM_GET_CONTRACT, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GossipOptionIcon::None, GOSSIP_ITEM_GET_CONTRACT, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
                 }
 
                 if (player->GetReputationRank(59) < REP_FRIENDLY)

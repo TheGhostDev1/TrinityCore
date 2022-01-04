@@ -151,11 +151,25 @@ class TC_GAME_API _SpellScript
         template <class T>
         static bool ValidateSpellInfo(T const& spellIds)
         {
-            return _ValidateSpellInfo(std::begin(spellIds), std::end(spellIds));
+            return _ValidateSpellInfo(std::cbegin(spellIds), std::cend(spellIds));
         }
 
     private:
-        static bool _ValidateSpellInfo(uint32 const* begin, uint32 const* end);
+        template <class InputIt>
+        static bool _ValidateSpellInfo(InputIt first, InputIt last)
+        {
+            bool allValid = true;
+            while (first != last)
+            {
+                if (!_ValidateSpellInfo(*first))
+                    allValid = false;
+
+                ++first;
+            }
+            return allValid;
+        }
+
+        static bool _ValidateSpellInfo(uint32 spellId);
 };
 
 // SpellScript interface - enum used for runtime checks of script function calls
@@ -504,7 +518,7 @@ class TC_GAME_API SpellScript : public _SpellScript
         SpellInfo const* GetTriggeringSpell() const;
 
         // finishes spellcast prematurely with selected error message
-        void FinishCast(SpellCastResult result, uint32* param1 = nullptr, uint32* param2 = nullptr);
+        void FinishCast(SpellCastResult result, int32* param1 = nullptr, int32* param2 = nullptr);
 
         void SetCustomCastResultMessage(SpellCustomErrors result);
 
@@ -801,7 +815,7 @@ class TC_GAME_API AuraScript : public _SpellScript
         #define AuraEffectApplyFn(F, I, N, M) EffectApplyHandlerFunction(&F, I, N, M)
 
         // executed after aura effect is removed with specified mode from target
-        // should be used when when effect handler preventing/replacing is needed, do not use this hook for triggering spellcasts/removing auras etc - may be unsafe
+        // should be used when effect handler preventing/replacing is needed, do not use this hook for triggering spellcasts/removing auras etc - may be unsafe
         // example: OnEffectRemove += AuraEffectRemoveFn(class::function, EffectIndexSpecifier, EffectAuraNameSpecifier, AuraEffectHandleModes);
         // where function is: void function (AuraEffect const* aurEff, AuraEffectHandleModes mode);
         HookList<EffectApplyHandler> OnEffectRemove;

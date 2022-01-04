@@ -59,6 +59,7 @@ namespace Movement
     struct MoveSplineInitArgs
     {
         explicit MoveSplineInitArgs(size_t path_capacity = 16);
+        MoveSplineInitArgs(MoveSplineInitArgs&& args);
         ~MoveSplineInitArgs();
 
         PointsArray path;
@@ -67,6 +68,7 @@ namespace Movement
         int32 path_Idx_offset;
         float velocity;
         float parabolic_amplitude;
+        float vertical_acceleration;
         float time_perc;
         uint32 splineId;
         float initialOrientation;

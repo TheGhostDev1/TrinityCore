@@ -23,6 +23,7 @@
 #include "VehicleDefines.h"
 
 struct CreatureData;
+struct SummonPropertiesEntry;
 
 class TC_GAME_API Transport : public GameObject, public TransportBase
 {
@@ -98,6 +99,8 @@ class TC_GAME_API Transport : public GameObject, public TransportBase
         void SetDelayedAddModelToMap() { _delayedAddModel = true; }
 
         TransportTemplate const* GetTransportTemplate() const { return _transportInfo; }
+
+        std::string GetDebugInfo() const override;
 
     private:
         void MoveToNextWaypoint();

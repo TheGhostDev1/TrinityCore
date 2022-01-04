@@ -143,7 +143,8 @@ public:
         void KilledUnit(Unit* victim) override
         {
             if (victim->GetTypeId() == TYPEID_PLAYER)
-                victim->CastSpell(victim, SPELL_SUMMON_CORPSE_SCARABS_PLR, me->GetGUID());
+                victim->CastSpell(victim, SPELL_SUMMON_CORPSE_SCARABS_PLR, CastSpellExtraArgs(TRIGGERED_FULL_MASK)
+                    .SetOriginalCaster(me->GetGUID()));
 
             Talk(SAY_SLAY);
         }
@@ -156,9 +157,9 @@ public:
             instance->DoStartCriteriaTimer(CriteriaStartEvent::SendEvent, ACHIEV_TIMED_START_EVENT);
         }
 
-        void JustEngagedWith(Unit* /*who*/) override
+        void JustEngagedWith(Unit* who) override
         {
-            _JustEngagedWith();
+            BossAI::JustEngagedWith(who);
             Talk(SAY_AGGRO);
 
             summons.DoZoneInCombat();
@@ -167,7 +168,7 @@ public:
             events.ScheduleEvent(EVENT_IMPALE, randtime(Seconds(10), Seconds(20)), 0, PHASE_NORMAL);
             events.ScheduleEvent(EVENT_SCARABS, randtime(Seconds(20), Seconds(30)), 0, PHASE_NORMAL);
             events.ScheduleEvent(EVENT_LOCUST, Minutes(1)+randtime(Seconds(40), Seconds(60)), 0, PHASE_NORMAL);
-            events.ScheduleEvent(EVENT_BERSERK, Minutes(10));
+            events.ScheduleEvent(EVENT_BERSERK, 10min);
 
             if (!Is25ManRaid())
                 events.ScheduleEvent(EVENT_SPAWN_GUARD, randtime(Seconds(15), Seconds(20)));
@@ -198,7 +199,8 @@ public:
                         {
                             if (Creature* creatureTarget = ObjectAccessor::GetCreature(*me, Trinity::Containers::SelectRandomContainerElement(guardCorpses)))
                             {
-                                creatureTarget->CastSpell(creatureTarget, SPELL_SUMMON_CORPSE_SCARABS_MOB, me->GetGUID());
+                                creatureTarget->CastSpell(creatureTarget, SPELL_SUMMON_CORPSE_SCARABS_MOB, CastSpellExtraArgs(TRIGGERED_FULL_MASK)
+                                    .SetOriginalCaster(me->GetGUID()));
                                 creatureTarget->AI()->Talk(EMOTE_SCARAB);
                                 creatureTarget->DespawnOrUnsummon();
                             }
@@ -210,7 +212,7 @@ public:
                         events.SetPhase(PHASE_SWARM);
                         DoCast(me, SPELL_LOCUST_SWARM);
 
-                        events.ScheduleEvent(EVENT_SPAWN_GUARD, Seconds(3));
+                        events.ScheduleEvent(EVENT_SPAWN_GUARD, 3s);
                         events.ScheduleEvent(EVENT_LOCUST_ENDS, RAID_MODE(Seconds(19), Seconds(23)));
                         events.Repeat(Minutes(1)+Seconds(30));
                         break;
@@ -224,7 +226,7 @@ public:
                         break;
                     case EVENT_BERSERK:
                         DoCast(me, SPELL_BERSERK, true);
-                        events.ScheduleEvent(EVENT_BERSERK, Minutes(10));
+                        events.ScheduleEvent(EVENT_BERSERK, 10min);
                         break;
                 }
             }
@@ -243,7 +245,7 @@ class at_anubrekhan_entrance : public OnlyOnceAreaTriggerScript
     public:
         at_anubrekhan_entrance() : OnlyOnceAreaTriggerScript("at_anubrekhan_entrance") { }
 
-        bool _OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/, bool /*entered*/) override
+        bool _OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
         {
             InstanceScript* instance = player->GetInstanceScript();
             if (!instance || instance->GetBossState(BOSS_ANUBREKHAN) != NOT_STARTED)

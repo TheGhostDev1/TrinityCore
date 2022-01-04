@@ -59,6 +59,8 @@ enum GuildMisc
     GUILD_OLD_MAX_LEVEL                 = 25
 };
 
+constexpr uint64 GUILD_BANK_MONEY_LIMIT = UI64LIT(100000000000);
+
 enum GuildMemberData
 {
     GUILD_MEMBER_DATA_ZONEID,
@@ -294,7 +296,7 @@ class GuildBankRightsAndSlots
 
     private:
         uint8 tabId;
-        int8  rights;
+        int8 rights;
         int32 slots;
 };
 
@@ -337,7 +339,7 @@ class TC_GAME_API Guild
                 std::string GetPublicNote() const { return m_publicNote; }
                 std::string GetOfficerNote() const { return m_officerNote; }
                 uint8 GetClass() const { return m_class; }
-                uint8 GetGender() const { return _gender; }
+                uint8 GetGender() const { return m_gender; }
                 uint8 GetLevel() const { return m_level; }
                 uint8 GetFlags() const { return m_flags; }
                 uint32 GetZoneId() const { return m_zoneId; }
@@ -377,7 +379,7 @@ class TC_GAME_API Guild
                 uint32 m_zoneId;
                 uint8 m_level;
                 uint8 m_class;
-                uint8 _gender;
+                uint8 m_gender;
                 uint8 m_flags;
                 uint64 m_logoutTime;
                 uint32 m_accountId;
@@ -435,7 +437,7 @@ class TC_GAME_API Guild
                 GuildEventLogTypes m_eventType;
                 ObjectGuid::LowType m_playerGuid1;
                 ObjectGuid::LowType m_playerGuid2;
-                uint8  m_newRank;
+                uint8 m_newRank;
         };
 
         // Bank event log entry
@@ -841,7 +843,7 @@ class TC_GAME_API Guild
         void ResetTimes(bool weekly);
 
         bool HasAchieved(uint32 achievementId) const;
-        void UpdateCriteria(CriteriaTypes type, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, WorldObject* ref, Player* player);
+        void UpdateCriteria(CriteriaType type, uint64 miscValue1, uint64 miscValue2, uint64 miscValue3, WorldObject* ref, Player* player);
 
     protected:
         ObjectGuid::LowType m_id;

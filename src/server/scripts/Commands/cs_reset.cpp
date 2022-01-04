@@ -84,17 +84,17 @@ public:
             return false;
 
         target->ResetHonorStats();
-        target->UpdateCriteria(CRITERIA_TYPE_EARN_HONORABLE_KILL);
+        target->UpdateCriteria(CriteriaType::HonorableKills);
 
         return true;
     }
 
     static bool HandleResetStatsOrLevelHelper(Player* player)
     {
-        ChrClassesEntry const* classEntry = sChrClassesStore.LookupEntry(player->getClass());
+        ChrClassesEntry const* classEntry = sChrClassesStore.LookupEntry(player->GetClass());
         if (!classEntry)
         {
-            TC_LOG_ERROR("misc", "Class %u not found in DBC (Wrong DBC files?)", player->getClass());
+            TC_LOG_ERROR("misc", "Class %u not found in DBC (Wrong DBC files?)", player->GetClass());
             return false;
         }
 
@@ -104,7 +104,7 @@ public:
         if (!player->HasAuraType(SPELL_AURA_MOD_SHAPESHIFT))
             player->SetShapeshiftForm(FORM_NONE);
 
-        player->setFactionForRace(player->getRace());
+        player->SetFactionForRace(player->GetRace());
         player->SetPowerType(Powers(powerType));
 
         // reset only if player not in some form;
@@ -113,7 +113,7 @@ public:
 
         player->SetPvpFlags(UNIT_BYTE2_FLAG_PVP);
 
-        player->SetUnitFlags(UNIT_FLAG_PVP_ATTACKABLE);
+        player->SetUnitFlags(UNIT_FLAG_PLAYER_CONTROLLED);
 
         //-1 is default value
         player->SetWatchedFactionIndex(-1);
@@ -129,10 +129,10 @@ public:
         if (!HandleResetStatsOrLevelHelper(target))
             return false;
 
-        uint8 oldLevel = target->getLevel();
+        uint8 oldLevel = target->GetLevel();
 
         // set starting level
-        uint8 startLevel = target->GetStartLevel(target->getRace(), target->getClass(), {});
+        uint8 startLevel = target->GetStartLevel(target->GetRace(), target->GetClass(), {});
 
         target->_ApplyAllLevelScaleItemMods(false);
         target->SetLevel(startLevel);

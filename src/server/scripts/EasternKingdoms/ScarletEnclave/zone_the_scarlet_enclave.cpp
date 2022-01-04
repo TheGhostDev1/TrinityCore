@@ -78,7 +78,7 @@ public:
             z += 4.0f;
             x -= 3.5f;
             y -= 5.0f;
-            me->GetMotionMaster()->Clear(false);
+            me->GetMotionMaster()->Clear();
             me->UpdatePosition(x, y, z, 0.0f);
         }
 
@@ -88,7 +88,7 @@ public:
             {
                 Player* player = nullptr;
                 if (me->IsSummon())
-                    if (Unit* summoner = me->ToTempSummon()->GetSummoner())
+                    if (Unit* summoner = me->ToTempSummon()->GetSummonerUnit())
                         player = summoner->ToPlayer();
 
                 if (!player)

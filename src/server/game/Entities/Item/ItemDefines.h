@@ -133,6 +133,7 @@ enum InventoryResult : uint8
     EQUIP_ERR_CANT_DO_THAT_RIGHT_NOW_2                     = 108,// You can't do that right now.
     EQUIP_ERR_NOT_IN_NPE                                   = 109,// Not available during the tutorial
     EQUIP_ERR_ITEM_COOLDOWN                                = 110,// Item is not ready yet.
+    EQUIP_ERR_NOT_IN_RATED_BATTLEGROUND                    = 111,// You can't do that in a rated battleground.
 };
 
 enum BuyResult
@@ -150,12 +151,13 @@ enum BuyResult
 
 enum SellResult
 {
-    SELL_ERR_CANT_FIND_ITEM                      = 1,
-    SELL_ERR_CANT_SELL_ITEM                      = 2,       // merchant doesn't like that item
-    SELL_ERR_CANT_FIND_VENDOR                    = 3,       // merchant doesn't like you
-    SELL_ERR_YOU_DONT_OWN_THAT_ITEM              = 4,       // you don't own that item
+    SELL_ERR_CANT_FIND_ITEM                      = 1,       // The item was not found.
+    SELL_ERR_CANT_SELL_ITEM                      = 2,       // The merchant doesn't want that item.
+    SELL_ERR_CANT_FIND_VENDOR                    = 3,       // The merchant doesn't like you.
+    SELL_ERR_YOU_DONT_OWN_THAT_ITEM              = 4,       // You don't own that item.
     SELL_ERR_UNK                                 = 5,       // nothing appears...
-    SELL_ERR_ONLY_EMPTY_BAG                      = 6        // can only do with empty bags
+    SELL_ERR_ONLY_EMPTY_BAG                      = 6,       // You can only do that with empty bags.
+    SELL_ERR_CANT_SELL_TO_THIS_MERCHANT          = 7        // You cannot sell items to this merchant.
 };
 
 // -1 from client enchantment slot number
