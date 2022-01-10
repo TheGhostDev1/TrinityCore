@@ -45,7 +45,7 @@ namespace fs = boost::filesystem;
 # define _TRINITY_BNET_CONFIG  "bnetserver.conf"
 #endif
 
-#if PLATFORM == PLATFORM_WINDOWS
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
 #include "ServiceWin32.h"
 char serviceName[] = "bnetserver";
 char serviceLongName[] = "TrinityCore bnet service";
@@ -81,8 +81,7 @@ int main(int argc, char** argv)
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-#if PLATFORM == PLATFORM_WINDOWS
-
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
     if (configService.compare("install") == 0)
         return WinServiceInstall() ? 0 : 1;
     else if (configService.compare("uninstall") == 0)
@@ -180,8 +179,8 @@ int main(int argc, char** argv)
     std::shared_ptr<void> sSessionMgrHandle(nullptr, [](void*) { sSessionMgr.StopNetwork(); });
 
     // Set signal handlers
-    boost::asio::signal_set signals(*ioService, SIGINT, SIGTERM);
-#if PLATFORM == PLATFORM_WINDOWS
+    boost::asio::signal_set signals(*_ioService, SIGINT, SIGTERM);
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
     signals.add(SIGBREAK);
 #endif
     signals.async_wait(std::bind(&SignalHandler, std::weak_ptr<boost::asio::io_service>(ioService), std::placeholders::_1, std::placeholders::_2));
@@ -200,8 +199,7 @@ int main(int argc, char** argv)
     banExpiryCheckTimer->expires_from_now(boost::posix_time::seconds(banExpiryCheckInterval));
     banExpiryCheckTimer->async_wait(std::bind(&BanExpiryHandler, std::weak_ptr<boost::asio::deadline_timer>(banExpiryCheckTimer), banExpiryCheckInterval, std::placeholders::_1));
 
-#if PLATFORM == PLATFORM_WINDOWS
-    std::shared_ptr<boost::asio::deadline_timer> serviceStatusWatchTimer;
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
     if (m_ServiceStatus != -1)
     {
         serviceStatusWatchTimer = std::make_shared<boost::asio::deadline_timer>(*ioService);
@@ -289,8 +287,8 @@ void BanExpiryHandler(std::weak_ptr<boost::asio::deadline_timer> banExpiryCheckT
     }
 }
 
-#if PLATFORM == PLATFORM_WINDOWS
-void ServiceStatusWatcher(std::weak_ptr<boost::asio::deadline_timer> serviceStatusWatchTimerRef, std::weak_ptr<boost::asio::io_service> ioServiceRef, boost::system::error_code const& error)
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
+void ServiceStatusWatcher(boost::system::error_code const& error)
 {
     if (!error)
     {
@@ -321,7 +319,7 @@ variables_map GetConsoleArguments(int argc, char** argv, fs::path& configFile, s
         ("config,c", value<fs::path>(&configFile)->default_value(fs::absolute(_TRINITY_BNET_CONFIG)),
                      "use <arg> as configuration file")
         ;
-#if PLATFORM == PLATFORM_WINDOWS
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_WINDOWS
     options_description win("Windows platform specific options");
     win.add_options()
         ("service,s", value<std::string>(&configService)->default_value(""), "Windows service options: [install | uninstall]")
