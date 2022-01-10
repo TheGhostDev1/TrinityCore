@@ -65,7 +65,7 @@ target_link_libraries(common
     process
   PUBLIC
     boost
-    cppformat
+    fmt
     g3dlib
     Detour
     sfmt
