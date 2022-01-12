@@ -25,6 +25,9 @@
 
 # http://www.slproweb.com/products/Win32OpenSSL.html
 
+set(OPENSSL_EXPECTED_VERSION "1.0")
+set(OPENSSL_MAX_VERSION "1.2")
+
 SET(_OPENSSL_ROOT_HINTS
   "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OpenSSL (32-bit)_is1;Inno Setup: App Path]"
   "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OpenSSL (64-bit)_is1;Inno Setup: App Path]"
