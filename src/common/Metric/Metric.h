@@ -20,6 +20,7 @@
 
 #include "Common.h"
 #include "Threading/MPSCQueue.h"
+#include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/algorithm/string.hpp>
 #include <type_traits>

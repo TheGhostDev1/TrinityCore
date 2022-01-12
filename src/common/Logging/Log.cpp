@@ -332,7 +332,7 @@ void Log::Initialize(boost::asio::io_service* ioService)
     if (ioService)
     {
         _ioService = ioService;
-        _strand = new boost::asio::strand(*ioService);
+        _strand = new boost::asio::io_service::strand(*ioService);
     }
 
     LoadFromConfig();

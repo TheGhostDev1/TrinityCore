@@ -18,7 +18,7 @@
 #include "Metric.h"
 #include "Log.h"
 #include "Config.h"
-#include "Util.h"
+#include "Util.h"         
 
 void Metric::Initialize(std::string const& realmName, boost::asio::io_service& ioService, std::function<void()> overallStatusLogger)
 {
