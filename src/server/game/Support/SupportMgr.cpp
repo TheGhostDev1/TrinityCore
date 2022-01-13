@@ -408,7 +408,7 @@ TC_GAME_API SuggestionTicket* SupportMgr::GetTicket<SuggestionTicket>(uint32 sug
     return nullptr;
 
 }
-
+/*
 ComplaintTicketList SupportMgr::GetComplaintsByPlayerGuid(ObjectGuid playerGuid) const
 {
     ComplaintTicketList ret;
@@ -418,7 +418,9 @@ ComplaintTicketList SupportMgr::GetComplaintsByPlayerGuid(ObjectGuid playerGuid)
 
     return ret;
 }
+*/
 
+/*
 void SupportMgr::Initialize()
 {
     SetSupportSystemStatus(sWorld->getBoolConfig(CONFIG_SUPPORT_ENABLED));
@@ -427,6 +429,7 @@ void SupportMgr::Initialize()
     SetComplaintSystemStatus(sWorld->getBoolConfig(CONFIG_SUPPORT_COMPLAINTS_ENABLED));
     SetSuggestionSystemStatus(sWorld->getBoolConfig(CONFIG_SUPPORT_SUGGESTIONS_ENABLED));
 }
+*/
 
 template<>
 TC_GAME_API uint32 SupportMgr::GetOpenTicketCount<BugTicket>() const { return _openBugTicketCount; }
@@ -762,8 +765,9 @@ TC_GAME_API void SupportMgr::ShowClosedList<SuggestionTicket>(ChatHandler& handl
         if (itr->second->IsClosed())
             handler.SendSysMessage(itr->second->FormatViewMessageString(handler).c_str());
 }
-
+/*
 void SupportMgr::UpdateLastChange()
 {
     _lastChange = uint64(time(nullptr));
 }
+*/
