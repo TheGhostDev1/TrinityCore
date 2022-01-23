@@ -2009,7 +2009,7 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType, bool extr
     if (attType != BASE_ATTACK && attType != OFF_ATTACK)
         return;                                             // ignore ranged case
 
-    if (GetTypeId() == TYPEID_UNIT && !HasUnitFlag(UNIT_FLAG_POSSESSED) && !HasUnitFlag2(UNIT_FLAG2_DISABLE_TURN))
+    if (GetTypeId() == TYPEID_UNIT && !HasUnitFlag(UNIT_FLAG_POSSESSED) && !HasUnitFlag2(UNIT_FLAG2_CANNOT_TURN))
         SetFacingToObject(victim, false); // update client side facing to face the target (prevents visual glitches when casting untargeted spells)
 
     // melee attack spell cast at main hand attack only - no normal melee dmg dealt
@@ -3063,14 +3063,6 @@ Aura* Unit::_TryStackingOrRefreshingExistingAura(AuraCreateInfo& createInfo)
     // Check if these can stack anyway
     if (!createInfo.CasterGUID && !createInfo.GetSpellInfo()->IsStackableOnOneSlotWithDifferentCasters())
         createInfo.CasterGUID = createInfo.Caster->GetGUID();
-
-    // world gameobjects can't own auras and they send empty casterguid
-    // checked on sniffs with spell 22247
-    if (createInfo.CasterGUID.IsGameObject())
-    {
-        createInfo.Caster = nullptr;
-        createInfo.CasterGUID.Clear();
-    }
 
     // passive and Incanter's Absorption and auras with different type can stack with themselves any number of times
     if (!createInfo.GetSpellInfo()->IsMultiSlotAura())
@@ -5883,7 +5875,7 @@ void Unit::SetMinion(Minion *minion, bool apply)
                 minion->SetSpeedRate(UnitMoveType(i), m_speed_rate[i]);
 
         // Send infinity cooldown - client does that automatically but after relog cooldown needs to be set again
-        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(minion->m_unitData->CreatedBySpell, GetMap()->GetDifficultyID());
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(minion->m_unitData->CreatedBySpell, DIFFICULTY_NONE);
 
         if (spellInfo && (spellInfo->IsCooldownStartedOnEvent()))
             GetSpellHistory()->StartCooldown(spellInfo, 0, nullptr, true);
@@ -5910,7 +5902,7 @@ void Unit::SetMinion(Minion *minion, bool apply)
         else if (minion->IsTotem())
         {
             // All summoned by totem minions must disappear when it is removed.
-            if (SpellInfo const* spInfo = sSpellMgr->GetSpellInfo(minion->ToTotem()->GetSpell(), GetMap()->GetDifficultyID()))
+            if (SpellInfo const* spInfo = sSpellMgr->GetSpellInfo(minion->ToTotem()->GetSpell(), DIFFICULTY_NONE))
             {
                 for (SpellEffectInfo const& spellEffectInfo : spInfo->GetEffects())
                 {
@@ -5922,7 +5914,7 @@ void Unit::SetMinion(Minion *minion, bool apply)
             }
         }
 
-        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(minion->m_unitData->CreatedBySpell, GetMap()->GetDifficultyID());
+        SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(minion->m_unitData->CreatedBySpell, DIFFICULTY_NONE);
         // Remove infinity cooldown
         if (spellInfo && (spellInfo->IsCooldownStartedOnEvent()))
             GetSpellHistory()->SendCooldownEvent(spellInfo);
@@ -7887,7 +7879,11 @@ int64 Unit::GetHealthGain(int64 dVal)
 
 void Unit::TriggerOnHealthChangeAuras(uint64 oldVal, uint64 newVal)
 {
-    for (AuraEffect const* effect : GetAuraEffectsByType(SPELL_AURA_TRIGGER_SPELL_ON_HEALTH_PCT))
+    if (!HasAuraType(SPELL_AURA_TRIGGER_SPELL_ON_HEALTH_PCT))
+        return;
+
+    AuraEffectList effects = GetAuraEffectsByType(SPELL_AURA_TRIGGER_SPELL_ON_HEALTH_PCT);
+    for (AuraEffect const* effect : effects)
     {
         uint32 triggerHealthPct = effect->GetAmount();
         uint32 triggerSpell = effect->GetSpellEffectInfo().TriggerSpell;
@@ -8705,7 +8701,7 @@ void Unit::UpdateUnitMod(UnitMods unitMod)
         case UNIT_MOD_DAMAGE_RANGED:       UpdateDamagePhysical(RANGED_ATTACK);  break;
 
         default:
-            ASSERT(false, "Not implemented UnitMod %u", unitMod);
+            ABORT_MSG("Not implemented UnitMod %u", unitMod);
             break;
     }
 }
@@ -12038,7 +12034,7 @@ bool Unit::IsFalling() const
 bool Unit::CanSwim() const
 {
     // Mirror client behavior, if this method returns false then client will not use swimming animation and for players will apply gravity as if there was no water
-    if (HasUnitFlag(UNIT_FLAG_CANNOT_SWIM))
+    if (HasUnitFlag(UNIT_FLAG_CANT_SWIM))
         return false;
     if (HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED)) // is player
         return true;
@@ -12046,7 +12042,7 @@ bool Unit::CanSwim() const
         return false;
     if (IsPet() && HasUnitFlag(UNIT_FLAG_PET_IN_COMBAT))
         return true;
-    return HasUnitFlag(UnitFlags(UNIT_FLAG_RENAME | UNIT_FLAG_SWIMMING));
+    return HasUnitFlag(UnitFlags(UNIT_FLAG_RENAME | UNIT_FLAG_CAN_SWIM));
 }
 
 void Unit::NearTeleportTo(Position const& pos, bool casting /*= false*/)

@@ -1295,12 +1295,10 @@ uint32 Item::GetEnchantRequiredLevel() const
 
     // Check all enchants for required level
     for (uint32 enchant_slot = PERM_ENCHANTMENT_SLOT; enchant_slot < MAX_ENCHANTMENT_SLOT; ++enchant_slot)
-    {
         if (uint32 enchant_id = GetEnchantmentId(EnchantmentSlot(enchant_slot)))
             if (SpellItemEnchantmentEntry const* enchantEntry = sSpellItemEnchantmentStore.LookupEntry(enchant_id))
                 if (enchantEntry->MinLevel > level)
                     level = enchantEntry->MinLevel;
-    }
 
     return level;
 }
@@ -2444,7 +2442,7 @@ uint16 Item::GetVisibleItemVisual(Player const* owner) const
 
 void Item::AddBonuses(uint32 bonusListID)
 {
-    if (std::find(m_itemData->BonusListIDs->begin(), m_itemData->BonusListIDs->end(), bonusListID) != m_itemData->BonusListIDs->end())
+    if (std::find(m_itemData->BonusListIDs->begin(), m_itemData->BonusListIDs->end(), int32(bonusListID)) != m_itemData->BonusListIDs->end())
         return;
 
     if (DB2Manager::ItemBonusList const* bonuses = sDB2Manager.GetItemBonusList(bonusListID))

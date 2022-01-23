@@ -3070,7 +3070,7 @@ std::string Creature::GetNameForLocaleIdx(LocaleConstant locale) const
 
 uint32 Creature::GetPetAutoSpellOnPos(uint8 pos) const
 {
-    if (pos >= MAX_SPELL_CHARM || m_charmInfo->GetCharmSpell(pos)->GetType() != ACT_ENABLED)
+    if (pos >= MAX_SPELL_CHARM || !m_charmInfo || m_charmInfo->GetCharmSpell(pos)->GetType() != ACT_ENABLED)
         return 0;
     else
         return m_charmInfo->GetCharmSpell(pos)->GetAction();
@@ -3278,7 +3278,7 @@ void Creature::SetSpellFocus(Spell const* focusSpell, WorldObject const* target)
         }
     }
 
-    if (!HasUnitFlag2(UNIT_FLAG2_DISABLE_TURN))
+    if (!HasUnitFlag2(UNIT_FLAG2_CANNOT_TURN))
     {
         // Face the target - we need to do this before the unit state is modified for no-turn spells
         if (target)
@@ -3324,7 +3324,7 @@ void Creature::ReleaseSpellFocus(Spell const* focusSpell, bool withDelay)
 
     if (IsPet()) // player pets do not use delay system
     {
-        if (!HasUnitFlag2(UNIT_FLAG2_DISABLE_TURN))
+        if (!HasUnitFlag2(UNIT_FLAG2_CANNOT_TURN))
             ReacquireSpellFocusTarget();
     }
     else // don't allow re-target right away to prevent visual bugs
@@ -3343,7 +3343,7 @@ void Creature::ReacquireSpellFocusTarget()
 
     SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::Target), _spellFocusInfo.Target);
 
-    if (!HasUnitFlag2(UNIT_FLAG2_DISABLE_TURN))
+    if (!HasUnitFlag2(UNIT_FLAG2_CANNOT_TURN))
     {
         if (!_spellFocusInfo.Target.IsEmpty())
         {
