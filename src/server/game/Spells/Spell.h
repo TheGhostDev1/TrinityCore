@@ -61,6 +61,7 @@ struct SummonPropertiesEntry;
 enum AuraType : uint32;
 enum CurrentSpellTypes : uint8;
 enum LootType : uint8;
+enum ProcFlagsHit : uint32;
 enum SpellTargetCheckTypes : uint8;
 enum SpellTargetObjectTypes : uint8;
 enum SpellValueMod : uint8;
@@ -120,7 +121,7 @@ enum SpellCastFlagsEx
     CAST_FLAG_EX_UNKNOWN_7       = 0x00040,
     CAST_FLAG_EX_UNKNOWN_8       = 0x00080,
     CAST_FLAG_EX_UNKNOWN_9       = 0x00100,
-    CAST_FLAG_EX_UNKNOWN_10      = 0x00200,
+    CAST_FLAG_EX_IGNORE_COOLDOWN = 0x00200, // makes client not automatically start cooldown after SPELL_GO
     CAST_FLAG_EX_UNKNOWN_11      = 0x00400,
     CAST_FLAG_EX_UNKNOWN_12      = 0x00800,
     CAST_FLAG_EX_UNKNOWN_13      = 0x01000,
@@ -149,6 +150,13 @@ enum SpellRangeFlag
     SPELL_RANGE_DEFAULT             = 0,
     SPELL_RANGE_MELEE               = 1,     //melee
     SPELL_RANGE_RANGED              = 2      //hunter range and ranged weapon
+};
+
+enum SpellFinishReason : uint8
+{
+    SPELL_FINISHED_SUCCESSFUL_CAST      = 0, // spell has sucessfully launched
+    SPELL_FINISHED_CANCELED             = 1, // spell has been canceled (interrupts)
+    SPELL_FINISHED_CHANNELING_COMPLETE  = 2  // spell channeling has been finished
 };
 
 struct SpellLogEffectPowerDrainParams
@@ -607,6 +615,7 @@ class TC_GAME_API Spell
         CurrentSpellTypes GetCurrentContainer() const;
 
         WorldObject* GetCaster() const { return m_caster; }
+        ObjectGuid GetOriginalCasterGUID() const { return m_originalCasterGUID; }
         Unit* GetOriginalCaster() const { return m_originalCaster; }
         SpellInfo const* GetSpellInfo() const { return m_spellInfo; }
         Difficulty GetCastDifficulty() const;
@@ -689,7 +698,7 @@ class TC_GAME_API Spell
         Unit* unitTarget;
         Item* itemTarget;
         GameObject* gameObjTarget;
-        Corpse* corpseTarget;
+        Corpse* m_corpseTarget;
         WorldLocation* destTarget;
         int32 damage;
         SpellMissInfo targetMissInfo;
@@ -697,7 +706,7 @@ class TC_GAME_API Spell
         SpellEffectHandleMode effectHandleMode;
         SpellEffectInfo const* effectInfo;
         // used in effects handlers
-        Unit* unitCaster;
+        Unit* GetUnitCasterForEffectHandlers() const;
         UnitAura* _spellAura;
         DynObjAura* _dynObjAura;
 
@@ -711,9 +720,9 @@ class TC_GAME_API Spell
         // ******************************************
         // Spell trigger system
         // ******************************************
-        uint32 m_procAttacker;                // Attacker trigger flags
-        uint32 m_procVictim;                  // Victim   trigger flags
-        uint32 m_hitMask;
+        ProcFlagsInit m_procAttacker;         // Attacker trigger flags
+        ProcFlagsInit m_procVictim;           // Victim   trigger flags
+        ProcFlagsHit m_hitMask;
         void prepareDataForTriggerSystem();
 
         // *****************************************

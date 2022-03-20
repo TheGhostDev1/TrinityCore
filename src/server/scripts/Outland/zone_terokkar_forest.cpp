@@ -18,24 +18,20 @@
 /* ScriptData
 SDName: Terokkar_Forest
 SD%Complete: 85
-SDComment: Quest support: 9889, 10051, 10052.
+SDComment: Quest support: 9889
 SDCategory: Terokkar Forest
 EndScriptData */
 
 /* ContentData
 npc_unkor_the_ruthless
-npc_isla_starmane
 EndContentData */
 
 #include "ScriptMgr.h"
-#include "GameObject.h"
 #include "Group.h"
 #include "Map.h"
 #include "Player.h"
-#include "ScriptedEscortAI.h"
-#include "Spell.h"
+#include "ScriptedCreature.h"
 #include "SpellScript.h"
-#include "WorldSession.h"
 
 /*######
 ## npc_unkor_the_ruthless
@@ -98,7 +94,7 @@ public:
             UnkorUnfriendly_Timer = 60000;
         }
 
-        void DamageTaken(Unit* done_by, uint32 &damage) override
+        void DamageTaken(Unit* done_by, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
         {
             if (!done_by || !me->HealthBelowPctDamaged(30, damage))
                 return;
@@ -162,102 +158,6 @@ public:
     };
 };
 
-/*######
-## npc_isla_starmane
-######*/
-enum IslaStarmaneData
-{
-    SAY_PROGRESS_1               = 0,
-    SAY_PROGRESS_2               = 1,
-    SAY_PROGRESS_3               = 2,
-    SAY_PROGRESS_4               = 3,
-    GO_DISTANCE                  = 10,
-    ESCAPE_FROM_FIREWING_POINT_A = 10051,
-    ESCAPE_FROM_FIREWING_POINT_H = 10052,
-    SPELL_TRAVEL_FORM_CAT        = 32447,
-    GO_CAGE                      = 182794
-};
-
-class npc_isla_starmane : public CreatureScript
-{
-public:
-    npc_isla_starmane() : CreatureScript("npc_isla_starmane") { }
-
-    struct npc_isla_starmaneAI : public EscortAI
-    {
-        npc_isla_starmaneAI(Creature* creature) : EscortAI(creature) { }
-
-        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
-        {
-            Player* player = GetPlayerForEscort();
-            if (!player)
-                return;
-
-            switch (waypointId)
-            {
-                case 0:
-                    if (GameObject* Cage = me->FindNearestGameObject(GO_CAGE, GO_DISTANCE))
-                        Cage->SetGoState(GO_STATE_ACTIVE);
-                    break;
-                case 2:
-                    Talk(SAY_PROGRESS_1, player);
-                    break;
-                case 5:
-                    Talk(SAY_PROGRESS_2, player);
-                    break;
-                case 6:
-                    Talk(SAY_PROGRESS_3, player);
-                    break;
-                case 29:
-                    Talk(SAY_PROGRESS_4, player);
-                    if (player->GetTeam() == ALLIANCE)
-                        player->GroupEventHappens(ESCAPE_FROM_FIREWING_POINT_A, me);
-                    else if (player->GetTeam() == HORDE)
-                        player->GroupEventHappens(ESCAPE_FROM_FIREWING_POINT_H, me);
-                    me->SetFacingToObject(player);
-                    break;
-                case 30:
-                    me->HandleEmoteCommand(EMOTE_ONESHOT_WAVE);
-                    break;
-                case 31:
-                    DoCast(me, SPELL_TRAVEL_FORM_CAT);
-                    me->SetWalk(false);
-                    break;
-            }
-        }
-
-        void Reset() override
-        {
-            me->RestoreFaction();
-        }
-
-        void JustDied(Unit* /*killer*/) override
-        {
-            if (Player* player = GetPlayerForEscort())
-            {
-                if (player->GetTeam() == ALLIANCE)
-                    player->FailQuest(ESCAPE_FROM_FIREWING_POINT_A);
-                else if (player->GetTeam() == HORDE)
-                    player->FailQuest(ESCAPE_FROM_FIREWING_POINT_H);
-            }
-        }
-
-        void QuestAccept(Player* player, Quest const* quest) override
-        {
-            if (quest->GetQuestId() == ESCAPE_FROM_FIREWING_POINT_H || quest->GetQuestId() == ESCAPE_FROM_FIREWING_POINT_A)
-            {
-                Start(true, false, player->GetGUID());
-                me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_PASSIVE);
-            }
-        }
-    };
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_isla_starmaneAI(creature);
-    }
-};
-
 // 40655 - Skyguard Flare
 class spell_skyguard_flare : public SpellScript
 {
@@ -274,9 +174,77 @@ class spell_skyguard_flare : public SpellScript
     }
 };
 
+/*######
+## Quest 10873: Taken in the Night
+######*/
+
+enum FreeWebbedTerokkar
+{
+    SPELL_FREE_WEBBED_1      = 38953,
+    SPELL_FREE_WEBBED_2      = 38955,
+    SPELL_FREE_WEBBED_3      = 38956,
+    SPELL_FREE_WEBBED_4      = 38957,
+    SPELL_FREE_WEBBED_5      = 38958,
+    SPELL_FREE_WEBBED_6      = 38978
+};
+
+uint32 const CocoonSummonSpells[5] =
+{
+    SPELL_FREE_WEBBED_1, SPELL_FREE_WEBBED_2, SPELL_FREE_WEBBED_3, SPELL_FREE_WEBBED_4, SPELL_FREE_WEBBED_5
+};
+
+// 38949 - Terrokar Free Webbed Creature
+class spell_free_webbed_terokkar : public SpellScript
+{
+    PrepareSpellScript(spell_free_webbed_terokkar);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(CocoonSummonSpells);
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        GetCaster()->CastSpell(GetCaster(), Trinity::Containers::SelectRandomContainerElement(CocoonSummonSpells), true);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_free_webbed_terokkar::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
+// 38950 - Terokkar Free Webbed Creature ON QUEST
+class spell_free_webbed_terokkar_on_quest : public SpellScript
+{
+    PrepareSpellScript(spell_free_webbed_terokkar_on_quest);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo(CocoonSummonSpells) && ValidateSpellInfo({ SPELL_FREE_WEBBED_6 });
+    }
+
+    void HandleDummy(SpellEffIndex /*effIndex*/)
+    {
+        Unit* caster = GetCaster();
+        Unit* target = GetHitUnit();
+
+        if (roll_chance_i(66))
+            caster->CastSpell(caster, Trinity::Containers::SelectRandomContainerElement(CocoonSummonSpells), true);
+        else
+            target->CastSpell(caster, SPELL_FREE_WEBBED_6, true);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_free_webbed_terokkar_on_quest::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 void AddSC_terokkar_forest()
 {
     new npc_unkor_the_ruthless();
-    new npc_isla_starmane();
     RegisterSpellScript(spell_skyguard_flare);
+    RegisterSpellScript(spell_free_webbed_terokkar);
+    RegisterSpellScript(spell_free_webbed_terokkar_on_quest);
 }

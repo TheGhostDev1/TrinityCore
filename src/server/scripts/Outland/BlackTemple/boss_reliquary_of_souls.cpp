@@ -19,10 +19,8 @@
 #include "black_temple.h"
 #include "InstanceScript.h"
 #include "MotionMaster.h"
-#include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
-#include "Spell.h"
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
 #include "TemporarySummon.h"
@@ -313,7 +311,7 @@ struct boss_essence_of_suffering : public BossAI
         }
     }
 
-    void DamageTaken(Unit* /*done_by*/, uint32 &damage) override
+    void DamageTaken(Unit* /*done_by*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (damage >= me->GetHealth())
         {
@@ -424,7 +422,7 @@ struct boss_essence_of_desire : public BossAI
         }
     }
 
-    void DamageTaken(Unit* /*done_by*/, uint32 &damage) override
+    void DamageTaken(Unit* /*done_by*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (damage >= me->GetHealth())
         {
@@ -623,7 +621,7 @@ struct npc_enslaved_soul : public ScriptedAI
         me->m_Events.AddEventAtOffset([this]() { me->KillSelf(); }, 500ms);
     }
 
-    void DamageTaken(Unit* /*done_by*/, uint32& damage) override
+    void DamageTaken(Unit* /*done_by*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (damage >= me->GetHealth())
         {
@@ -658,6 +656,12 @@ struct npc_reliquary_combat_trigger : public ScriptedAI
     {
         SetCombatMovement(false);
         creature->m_SightDistance = 70.0f;
+        SetBoundary(_instance->GetBossBoundary(DATA_RELIQUARY_OF_SOULS));
+    }
+
+    bool CanAIAttack(Unit const* who) const override
+    {
+        return ScriptedAI::CanAIAttack(who) && IsInBoundary(who);
     }
 
     void Reset() override
@@ -679,7 +683,7 @@ struct npc_reliquary_combat_trigger : public ScriptedAI
         }
     }
 
-    void DamageTaken(Unit* /*done_by*/, uint32& damage) override
+    void DamageTaken(Unit* /*done_by*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         damage = 0;
     }
@@ -810,8 +814,8 @@ void AddSC_boss_reliquary_of_souls()
     RegisterBlackTempleCreatureAI(boss_essence_of_anger);
     RegisterBlackTempleCreatureAI(npc_enslaved_soul);
     RegisterBlackTempleCreatureAI(npc_reliquary_combat_trigger);
-    RegisterAuraScript(spell_reliquary_of_souls_aura_of_desire);
-    RegisterAuraScript(spell_reliquary_of_souls_submerge);
-    RegisterAuraScript(spell_reliquary_of_souls_spite);
+    RegisterSpellScript(spell_reliquary_of_souls_aura_of_desire);
+    RegisterSpellScript(spell_reliquary_of_souls_submerge);
+    RegisterSpellScript(spell_reliquary_of_souls_spite);
     RegisterSpellScript(spell_reliquary_of_souls_frenzy);
 }

@@ -29,9 +29,8 @@ EndContentData */
 #include "CombatAI.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
-#include "ObjectMgr.h"
 #include "Player.h"
-#include "ScriptedEscortAI.h"
+#include "ScriptedCreature.h"
 #include "ScriptedGossip.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
@@ -382,6 +381,7 @@ enum StrengthenAncientsMisc
     NPC_LOTHALOR                = 26321
 };
 
+// 47575 - Strengthen the Ancients: On Interact Dummy to Woodlands Walker
 class spell_q12096_q12092_dummy : public SpellScriptLoader // Strengthen the Ancients: On Interact Dummy to Woodlands Walker
 {
 public:
@@ -429,7 +429,8 @@ public:
     }
 };
 
-class spell_q12096_q12092_bark : public SpellScriptLoader // Bark of the Walkers
+// 47530 - Bark of the Walkers
+class spell_q12096_q12092_bark : public SpellScriptLoader
 {
 public:
     spell_q12096_q12092_bark() : SpellScriptLoader("spell_q12096_q12092_bark") { }
@@ -560,7 +561,7 @@ class npc_wyrmrest_defender : public CreatureScript
                 }
             }
 
-            bool GossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
+            bool OnGossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
             {
                 if (menuId == MENU_ID && gossipListId == GOSSIP_OPTION_ID)
                 {

@@ -24,17 +24,14 @@ EndScriptData */
 
 /* ContentData
 npc_commander_dawnforge
-go_captain_tyralius_prison
 EndContentData */
 
 #include "ScriptMgr.h"
-#include "GameObject.h"
-#include "GameObjectAI.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "ScriptedEscortAI.h"
-#include "ScriptedGossip.h"
+#include "ScriptedCreature.h"
+#include "SpellScript.h"
 
 /*######
 ## npc_commander_dawnforge
@@ -229,7 +226,7 @@ public:
                 //Phase 4 Pathaleon spawns up to phase 9
             case 4:
                 //spawn pathaleon's image
-                me->SummonCreature(CreatureEntry[2], 2325.851563f, 2799.534668f, 133.084229f, 6.038996f, TEMPSUMMON_TIMED_DESPAWN, 90000);
+                me->SummonCreature(CreatureEntry[2], 2325.851563f, 2799.534668f, 133.084229f, 6.038996f, TEMPSUMMON_TIMED_DESPAWN, 90s);
                 ++Phase;
                 Phase_Timer = 500;
                 break;
@@ -463,97 +460,74 @@ public:
 };
 
 /*######
-## go_captain_tyralius_prison
+## Quest 10857: Teleport This!
 ######*/
 
-enum CaptainTyralius
+enum DetonateTeleporter
 {
-    NPC_CAPTAIN_TYRALIUS    = 20787,
-    NPC_ETHEREUM_PRISONER   = 20825,
-    SPELL_TELEPORT_VISUAL   = 51347,
-    SAY_FREE                = 0,
-    ACTION_FREED            = 0,
-    EVENT_TELEPORT          = 1
+    SPELL_TELEPORTER_KILL_CREDIT_1   = 38982,    // 22348
+    SPELL_TELEPORTER_KILL_CREDIT_2   = 38983,    // 22351
+    SPELL_TELEPORTER_KILL_CREDIT_3   = 38984,    // 22350
+    NPC_WESTERN_TELEPORTER_CREDIT    = 22348,
+    NPC_EASTERN_TELEPORTER_CREDIT    = 22351,
+    NPC_CENTRAL_TELEPORTER_CREDIT    = 22350
 };
 
-class go_captain_tyralius_prison : public GameObjectScript
+// 38920 - Detonate Teleporter
+class spell_detonate_teleporter : public SpellScript
 {
-    public:
-        go_captain_tyralius_prison() : GameObjectScript("go_captain_tyralius_prison") { }
+    PrepareSpellScript(spell_detonate_teleporter);
 
-        struct go_captain_tyralius_prisonAI : public GameObjectAI
-        {
-            go_captain_tyralius_prisonAI(GameObject* go) : GameObjectAI(go) { }
-
-            void Reset() override
-            {
-                me->SummonCreature(NPC_CAPTAIN_TYRALIUS, me->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
-                me->SummonCreature(NPC_ETHEREUM_PRISONER, me->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
-            }
-
-            bool GossipHello(Player* player) override
-            {
-                me->SetRespawnTime(60);
-                me->SetLootState(GO_JUST_DEACTIVATED);
-
-                if (Creature* tyralius = me->FindNearestCreature(NPC_CAPTAIN_TYRALIUS, 1.0f))
-                {
-                    player->KilledMonsterCredit(NPC_CAPTAIN_TYRALIUS);
-                    tyralius->AI()->DoAction(ACTION_FREED);
-                }
-
-                if (Creature* prisoner = me->FindNearestCreature(NPC_ETHEREUM_PRISONER, 1.0f))
-                    prisoner->DespawnOrUnsummon(0);
-
-                return true;
-            }
-        };
-
-        GameObjectAI* GetAI(GameObject* go) const override
-        {
-            return new go_captain_tyralius_prisonAI(go);
-        }
-};
-
-class npc_captain_tyralius : public CreatureScript
-{
-public:
-    npc_captain_tyralius() : CreatureScript("npc_captain_tyralius") { }
-
-    CreatureAI* GetAI(Creature* creature) const override
+    bool Load() override
     {
-        return new npc_captain_tyraliusAI(creature);
+        return GetCaster()->GetTypeId() == TYPEID_UNIT;
     }
 
-    struct npc_captain_tyraliusAI : public ScriptedAI
+    bool Validate(SpellInfo const* /*spellInfo*/) override
     {
-        npc_captain_tyraliusAI(Creature* creature) : ScriptedAI(creature) { }
-
-        void DoAction(int32 /*action*/) override
+        return ValidateSpellInfo(
         {
-            Talk(SAY_FREE);
-            _events.ScheduleEvent(EVENT_TELEPORT, 5s);
-        }
+            SPELL_TELEPORTER_KILL_CREDIT_1,
+            SPELL_TELEPORTER_KILL_CREDIT_2,
+            SPELL_TELEPORTER_KILL_CREDIT_3
+        });
+    }
 
-        void UpdateAI(uint32 diff) override
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* creature = GetHitCreature())
         {
-            _events.Update(diff);
-
-            if (uint32 eventId = _events.ExecuteEvent())
+            if (Unit* charmer = GetCaster()->GetCharmerOrOwner())
             {
-                switch (eventId)
+                if (Player* player = charmer->ToPlayer())
                 {
-                    case EVENT_TELEPORT:
-                        DoCastSelf(SPELL_TELEPORT_VISUAL);
-                        me->DespawnOrUnsummon(Seconds(2));
-                        break;
+                    uint32 spellId = 0;
+
+                    switch (creature->GetEntry())
+                    {
+                        case NPC_WESTERN_TELEPORTER_CREDIT:
+                            spellId = SPELL_TELEPORTER_KILL_CREDIT_1;
+                            break;
+                        case NPC_EASTERN_TELEPORTER_CREDIT:
+                            spellId = SPELL_TELEPORTER_KILL_CREDIT_2;
+                            break;
+                        case NPC_CENTRAL_TELEPORTER_CREDIT:
+                            spellId = SPELL_TELEPORTER_KILL_CREDIT_3;
+                            break;
+                        default:
+                            return;
+                    }
+
+                    player->CastSpell(player, spellId);
                 }
             }
         }
+    }
 
-    private:
-        EventMap _events;
-    };
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_detonate_teleporter::HandleScript, EFFECT_2, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
 };
 
 void AddSC_netherstorm()
@@ -561,6 +535,5 @@ void AddSC_netherstorm()
     new npc_commander_dawnforge();
     new at_commander_dawnforge();
     new npc_phase_hunter();
-    new go_captain_tyralius_prison();
-    new npc_captain_tyralius();
+    RegisterSpellScript(spell_detonate_teleporter);
 }

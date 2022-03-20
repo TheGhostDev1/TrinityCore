@@ -82,7 +82,6 @@ enum Spells
 
     SPELL_CRUMBLING_RUIN                = 75609,
 
-
     SPELL_NEMESIS_STRIKE                = 75604,
 
     SPELL_OMEGA_STANCE_SUMMON           = 77106,
@@ -151,7 +150,7 @@ public:
             if (instance->GetData(DATA_DEAD_ELEMENTALS) == 4)
             {
                 // Set to combat automatically, Brann's event won't repeat
-                me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                 events.SetPhase(PHASE_COMBAT);
                 ScheduleCombatEvents();
                 me->SetHomePosition(AnraphetActivatePos);
@@ -235,7 +234,7 @@ public:
                         events.ScheduleEvent(EVENT_ANRAPHET_READY, 6s, 0, PHASE_INTRO);
                         break;
                     case EVENT_ANRAPHET_READY:
-                        me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                        me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                         events.SetPhase(PHASE_COMBAT);
                         ScheduleCombatEvents();
                         break;
@@ -331,7 +330,7 @@ class npc_brann_bronzebeard_anraphet : public CreatureScript
         {
             npc_brann_bronzebeard_anraphetAI(Creature* creature) : CreatureAI(creature), _currentPoint(0), _instance(creature->GetInstanceScript()) { }
 
-            bool GossipSelect(Player* /*player*/, uint32 sender, uint32 action) override
+            bool OnGossipSelect(Player* /*player*/, uint32 sender, uint32 action) override
             {
                 if (_instance->GetBossState(DATA_VAULT_OF_LIGHTS) == DONE)
                     return true;

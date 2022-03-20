@@ -26,7 +26,6 @@
 #include "PassiveAI.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
-#include "Spell.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
 #include "TemporarySummon.h"
@@ -239,11 +238,11 @@ class ActivateLivingConstellation : public BasicEvent
 
         bool Execute(uint64 execTime, uint32 /*diff*/) override
         {
-            if (!_instance || _instance->GetBossState(BOSS_ALGALON) != IN_PROGRESS)
+            if (!_instance || _instance->GetBossState(DATA_ALGALON) != IN_PROGRESS)
                 return true;    // delete event
 
             _owner->CastSpell(nullptr, SPELL_TRIGGER_3_ADDS, TRIGGERED_FULL_MASK);
-            _owner->m_Events.AddEvent(this, execTime + urand(45000, 50000));
+            _owner->m_Events.AddEvent(this, Milliseconds(execTime) + randtime(45s, 50s));
             return false;
         }
 
@@ -275,7 +274,7 @@ class SummonUnleashedDarkMatter : public BasicEvent
         bool Execute(uint64 execTime, uint32 /*diff*/) override
         {
             _caster->CastSpell(nullptr, SPELL_SUMMON_UNLEASHED_DARK_MATTER, TRIGGERED_FULL_MASK);
-            _caster->m_Events.AddEvent(this, execTime + 30000);
+            _caster->m_Events.AddEvent(this, Milliseconds(execTime) + 30s);
             return false;
         }
 
@@ -285,7 +284,7 @@ class SummonUnleashedDarkMatter : public BasicEvent
 
 struct boss_algalon_the_observer : public BossAI
 {
-    boss_algalon_the_observer(Creature* creature) : BossAI(creature, BOSS_ALGALON)
+    boss_algalon_the_observer(Creature* creature) : BossAI(creature, DATA_ALGALON)
     {
         Initialize();
         _firstPull = true;
@@ -342,7 +341,7 @@ struct boss_algalon_the_observer : public BossAI
                 events.ScheduleEvent(EVENT_DESPAWN_ALGALON_2, 17s);
                 events.ScheduleEvent(EVENT_DESPAWN_ALGALON_3, 26s);
                 me->DespawnOrUnsummon(34s);
-                me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                me->AddUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                 me->SetImmuneToNPC(true);
                 break;
             case ACTION_INIT_ALGALON:
@@ -362,7 +361,7 @@ struct boss_algalon_the_observer : public BossAI
     void JustEngagedWith(Unit* who) override
     {
         Milliseconds introDelay = 0ms;
-        me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+        me->AddUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
         me->SetImmuneToNPC(true);
         events.Reset();
         events.SetPhase(PHASE_ROLE_PLAY);
@@ -448,13 +447,13 @@ struct boss_algalon_the_observer : public BossAI
 
     void EnterEvadeMode(EvadeReason why) override
     {
-        instance->SetBossState(BOSS_ALGALON, FAIL);
+        instance->SetBossState(DATA_ALGALON, FAIL);
         BossAI::EnterEvadeMode(why);
         me->SetImmuneToPC(false);
         me->SetSheath(SHEATH_STATE_UNARMED);
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (_fightWon)
         {
@@ -476,7 +475,7 @@ struct boss_algalon_the_observer : public BossAI
             for (std::list<Creature*>::iterator itr = stalkers.begin(); itr != stalkers.end(); ++itr)
                 (*itr)->m_Events.KillAllEvents(true);
             for (uint8 i = 0; i < COLLAPSING_STAR_COUNT; ++i)
-                if (Creature* wormHole = DoSummon(NPC_WORM_HOLE, CollapsingStarPos[i], TEMPSUMMON_MANUAL_DESPAWN))
+                if (Creature* wormHole = DoSummon(NPC_WORM_HOLE, CollapsingStarPos[i], 0s, TEMPSUMMON_MANUAL_DESPAWN))
                     wormHole->m_Events.AddEventAtOffset(new SummonUnleashedDarkMatter(wormHole), i >= 2 ? 8s : 6s);
         }
         else if ((int32(me->GetHealth()) - int32(damage)) < CalculatePct<int32>(int32(me->GetMaxHealth()), 2.5f) && !_fightWon)
@@ -486,7 +485,7 @@ struct boss_algalon_the_observer : public BossAI
             events.SetPhase(PHASE_ROLE_PLAY);
             me->SetReactState(REACT_PASSIVE);
             me->AttackStop();
-            me->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+            me->AddUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
             DoCastSelf(SPELL_SELF_STUN);
             events.Reset();
             summons.DespawnAll();
@@ -555,23 +554,23 @@ struct boss_algalon_the_observer : public BossAI
                 case EVENT_START_COMBAT:
                     Talk(SAY_ALGALON_AGGRO);
                     me->PlayDirectMusic(ENGAGE_MUSIC_ID);
-                    instance->SetBossState(BOSS_ALGALON, IN_PROGRESS);
+                    instance->SetBossState(DATA_ALGALON, IN_PROGRESS);
                     break;
                 case EVENT_INTRO_TIMER_DONE:
                 {
                     events.SetPhase(PHASE_NORMAL);
                     me->SetSheath(SHEATH_STATE_MELEE);
-                    me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                    me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                     me->SetImmuneToNPC(false);
                     me->SetReactState(REACT_DEFENSIVE);
                     DoCastAOE(SPELL_SUPERMASSIVE_FAIL, true);
                     //! Workaround for Creature::_IsTargetAcceptable returning false
-                    //! for creatures that start combat in REACT_PASSIVE and UNIT_FLAG_NOT_SELECTABLE
+                    //! for creatures that start combat in REACT_PASSIVE and UNIT_FLAG_UNINTERACTIBLE
                     //! causing them to immediately evade
                     if (!me->GetThreatManager().IsThreatListEmpty())
                         AttackStart(me->GetThreatManager().GetCurrentVictim());
                     for (uint8 i = 0; i < LIVING_CONSTELLATION_COUNT; ++i)
-                        if (Creature* summon = DoSummon(NPC_LIVING_CONSTELLATION, ConstellationPos[i], 0, TEMPSUMMON_DEAD_DESPAWN))
+                        if (Creature* summon = DoSummon(NPC_LIVING_CONSTELLATION, ConstellationPos[i], 0s, TEMPSUMMON_DEAD_DESPAWN))
                             summon->SetReactState(REACT_PASSIVE);
 
                     std::list<Creature*> stalkers;
@@ -632,7 +631,7 @@ struct boss_algalon_the_observer : public BossAI
                     _hasYelled = false;
                     break;
                 case EVENT_OUTRO_START:
-                    instance->SetBossState(BOSS_ALGALON, DONE);
+                    instance->SetBossState(DATA_ALGALON, DONE);
                     break;
                 case EVENT_OUTRO_1:
                     me->RemoveAllAuras();
@@ -653,7 +652,7 @@ struct boss_algalon_the_observer : public BossAI
                     break;
                 case EVENT_OUTRO_4:
                     DoCastAOE(SPELL_SUPERMASSIVE_FAIL);
-                    me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                    me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                     break;
                 case EVENT_OUTRO_5:
                     if (Creature* brann = me->SummonCreature(NPC_BRANN_BRONZBEARD_ALG, BrannOutroPos))
@@ -743,12 +742,12 @@ struct npc_living_constellation : public CreatureAI
         switch (action)
         {
             case ACTION_ACTIVATE_STAR:
-                if (Creature* algalon = _instance->GetCreature(BOSS_ALGALON))
+                if (Creature* algalon = _instance->GetCreature(DATA_ALGALON))
                 {
                     if (Unit* target = algalon->AI()->SelectTarget(SelectTargetMethod::Random, 0, NonTankTargetSelector(algalon)))
                     {
                         me->SetReactState(REACT_AGGRESSIVE);
-                        me->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                        me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                         AttackStart(target);
                         DoZoneInCombat();
                         _isActive = true;
@@ -853,13 +852,13 @@ struct npc_collapsing_star : public PassiveAI
         if (summon->GetEntry() != NPC_BLACK_HOLE)
             return;
 
-        if (Creature* algalon = _instance->GetCreature(BOSS_ALGALON))
+        if (Creature* algalon = _instance->GetCreature(DATA_ALGALON))
             algalon->AI()->JustSummoned(summon);
 
         me->DespawnOrUnsummon(1ms);
     }
 
-    void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+    void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
     {
         if (_dying)
         {
@@ -1037,7 +1036,7 @@ private:
     InstanceScript* _instance;
 };
 
-//  64412 - Phase Punch
+// 64412 - Phase Punch
 class spell_algalon_phase_punch : public AuraScript
 {
     PrepareAuraScript(spell_algalon_phase_punch);
@@ -1065,7 +1064,7 @@ class spell_algalon_phase_punch : public AuraScript
     }
 };
 
-//  65508 - Constellation Phase Trigger
+// 65508 - Constellation Phase Trigger
 class spell_algalon_phase_constellation : public AuraScript
 {
     PrepareAuraScript(spell_algalon_phase_constellation);
@@ -1118,7 +1117,7 @@ class spell_algalon_trigger_3_adds : public SpellScript
     }
 };
 
-//  62018 - Collapse
+// 62018 - Collapse
 class spell_algalon_collapse : public AuraScript
 {
     PrepareAuraScript(spell_algalon_collapse);
@@ -1275,14 +1274,14 @@ void AddSC_boss_algalon_the_observer()
     RegisterUlduarCreatureAI(npc_collapsing_star);
     RegisterUlduarCreatureAI(npc_brann_bronzebeard_algalon);
     RegisterGameObjectAI(go_celestial_planetarium_access);
-    RegisterAuraScript(spell_algalon_phase_punch);
-    RegisterAuraScript(spell_algalon_phase_constellation);
+    RegisterSpellScript(spell_algalon_phase_punch);
+    RegisterSpellScript(spell_algalon_phase_constellation);
     RegisterSpellScript(spell_algalon_trigger_3_adds);
-    RegisterAuraScript(spell_algalon_collapse);
+    RegisterSpellScript(spell_algalon_collapse);
     RegisterSpellScript(spell_algalon_big_bang);
-    RegisterAuraScript(spell_algalon_remove_phase);
+    RegisterSpellScript(spell_algalon_remove_phase);
     RegisterSpellScript(spell_algalon_cosmic_smash);
     RegisterSpellScript(spell_algalon_cosmic_smash_damage);
     RegisterSpellScript(spell_algalon_supermassive_fail);
-    RegisterAuraScript(spell_algalon_black_hole_phase_shifts);
+    RegisterSpellScript(spell_algalon_black_hole_phase_shifts);
 }

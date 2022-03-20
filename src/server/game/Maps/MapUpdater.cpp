@@ -16,11 +16,11 @@
  */
 
 #include "MapUpdater.h"
+#include "DatabaseEnv.h"
 #include "Map.h"
 #include "Metric.h"
 
 #include <mutex>
-
 
 class MapUpdateRequest
 {
@@ -102,6 +102,11 @@ void MapUpdater::update_finished()
 
 void MapUpdater::WorkerThread()
 {
+    LoginDatabase.WarnAboutSyncQueries(true);
+    CharacterDatabase.WarnAboutSyncQueries(true);
+    WorldDatabase.WarnAboutSyncQueries(true);
+    HotfixDatabase.WarnAboutSyncQueries(true);
+
     while (1)
     {
         MapUpdateRequest* request = nullptr;

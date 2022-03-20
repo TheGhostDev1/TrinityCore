@@ -21,7 +21,6 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "ScriptedCreature.h"
-#include "ScriptedGossip.h"
 #include "SpellAuras.h"
 #include "TemporarySummon.h"
 
@@ -72,7 +71,7 @@ public:
             me->SetFaction(FACTION_MONSTER);
         }
 
-        void DamageTaken(Unit* pDoneBy, uint32& uiDamage) override
+        void DamageTaken(Unit* pDoneBy, uint32& uiDamage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
         {
             if (uiDamage > me->GetHealth() && pDoneBy && pDoneBy->GetTypeId() == TYPEID_PLAYER)
             {
@@ -228,7 +227,7 @@ class npc_tournament_training_dummy : public CreatureScript
                 Reset();
             }
 
-            void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+            void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
             {
                 damage = 0;
                 events.RescheduleEvent(EVENT_DUMMY_RESET, 10s);
@@ -445,7 +444,6 @@ public:
         void JustEngagedWith(Unit* /*who*/) override { }
 
         void MoveInLineOfSight(Unit* /*who*/) override { }
-
 
         void JustSummoned(Creature* Summoned) override
         {

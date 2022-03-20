@@ -126,7 +126,7 @@ public:
             events.ScheduleEvent(EVENT_EARTH_SPIKE, 16s, 21s, 0, PHASE_NORMAL);
         }
 
-        void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+        void DamageTaken(Unit* /*attacker*/, uint32& damage, DamageEffectType /*damageType*/, SpellInfo const* /*spellInfo = nullptr*/) override
         {
             if (me->HealthBelowPctDamaged(50, damage) && (events.GetPhaseMask() & PHASE_MASK_NORMAL) && !_hasDispersed)
             {
@@ -150,7 +150,7 @@ public:
                     stalkers.remove((*itr)); // Remove it to prevent a single trigger from spawning multiple npcs.
                     (*itr)->CastSpell((*itr), SPELL_BEETLE_BURROW); // Cast visual
                     // Summon after 5 seconds.
-                    (*itr)->m_Events.AddEvent(new SummonScarab((*itr), instance), (*itr)->m_Events.CalculateTime(5000));
+                    (*itr)->m_Events.AddEventAtOffset(new SummonScarab((*itr), instance), 5s);
                 }
 
                 Trinity::Containers::RandomResize(stalkers, 2); // Holds the summoners of Dustbone Horror
@@ -293,7 +293,7 @@ public:
         {
             if (Unit* ptah = GetCaster())
             {
-                ptah->AddUnitFlag(UnitFlags(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29));
+                ptah->AddUnitFlag(UnitFlags(UNIT_FLAG_UNINTERACTIBLE | UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT));
                 ptah->AddUnitFlag2(UNIT_FLAG2_FEIGN_DEATH);
             }
         }
@@ -302,7 +302,7 @@ public:
         {
             if (Unit* ptah = GetCaster())
             {
-                ptah->RemoveUnitFlag(UnitFlags(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_UNK_29));
+                ptah->RemoveUnitFlag(UnitFlags(UNIT_FLAG_UNINTERACTIBLE | UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT));
                 ptah->RemoveUnitFlag2(UNIT_FLAG2_FEIGN_DEATH);
             }
         }

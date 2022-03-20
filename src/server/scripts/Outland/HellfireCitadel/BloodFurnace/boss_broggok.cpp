@@ -20,7 +20,6 @@
 #include "GameObject.h"
 #include "GameObjectAI.h"
 #include "InstanceScript.h"
-#include "ObjectAccessor.h"
 #include "ScriptedCreature.h"
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
@@ -119,8 +118,7 @@ class boss_broggok : public CreatureScript
                         break;
                     case ACTION_ACTIVATE_BROGGOK:
                         me->SetReactState(REACT_AGGRESSIVE);
-                        me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
-                        me->SetImmuneToAll(false);
+                        me->RemoveUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                         DoZoneInCombat();
                         events.ScheduleEvent(EVENT_SLIME_SPRAY, 10s);
                         events.ScheduleEvent(EVENT_POISON_BOLT, 7s);
@@ -128,8 +126,7 @@ class boss_broggok : public CreatureScript
                         break;
                     case ACTION_RESET_BROGGOK:
                         me->SetReactState(REACT_PASSIVE);
-                        me->AddUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
-                        me->SetImmuneToAll(true);
+                        me->AddUnitFlag(UNIT_FLAG_UNINTERACTIBLE);
                         summons.DespawnAll();
                         instance->SetBossState(DATA_BROGGOK, NOT_STARTED);
                         if (GameObject * lever = instance->GetGameObject(DATA_BROGGOK_LEVER))
@@ -150,7 +147,7 @@ class boss_broggok : public CreatureScript
         }
 };
 
-static std::vector<uint32> const PrisionersEmotes =
+static Emote const PrisionersEmotes[] =
 {
     EMOTE_ONESHOT_ROAR,
     EMOTE_ONESHOT_SHOUT,
@@ -254,7 +251,7 @@ class go_broggok_lever : public GameObjectScript
 
             InstanceScript* instance;
 
-            bool GossipHello(Player* /*player*/) override
+            bool OnGossipHello(Player* /*player*/) override
             {
                 if (instance->GetBossState(DATA_BROGGOK) != DONE && instance->GetBossState(DATA_BROGGOK) != IN_PROGRESS)
                 {
@@ -276,7 +273,7 @@ class go_broggok_lever : public GameObjectScript
         }
 };
 
-// 30914, 38462 - Poison (Broggok)
+// 30914, 38462 - Poison
 class spell_broggok_poison_cloud : public SpellScriptLoader
 {
     public:

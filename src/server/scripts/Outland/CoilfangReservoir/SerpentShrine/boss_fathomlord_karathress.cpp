@@ -26,7 +26,7 @@ EndScriptData */
 #include "InstanceScript.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
-#include "ScriptedEscortAI.h"
+#include "ScriptedCreature.h"
 #include "serpent_shrine.h"
 #include "TemporarySummon.h"
 
@@ -210,7 +210,7 @@ public:
             instance->SetData(DATA_FATHOMLORDKARATHRESSEVENT, DONE);
 
             //support for quest 10944
-            me->SummonCreature(SEER_OLUM, OLUM_X, OLUM_Y, OLUM_Z, OLUM_O, TEMPSUMMON_TIMED_DESPAWN, 3600000);
+            me->SummonCreature(SEER_OLUM, OLUM_X, OLUM_Y, OLUM_Z, OLUM_O, TEMPSUMMON_TIMED_DESPAWN, 1h);
         }
 
         void JustEngagedWith(Unit* who) override
@@ -664,10 +664,9 @@ public:
                 //DoCast(me, SPELL_SUMMON_CYCLONE); // Doesn't work
                 Cyclone_Timer = 30000 + rand32() % 10000;
 
-                if (Creature* Cyclone = me->SummonCreature(CREATURE_CYCLONE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), float(rand32() % 5), TEMPSUMMON_TIMED_DESPAWN, 15000))
+                if (Creature* Cyclone = me->SummonCreature(CREATURE_CYCLONE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), float(rand32() % 5), TEMPSUMMON_TIMED_DESPAWN, 15s))
                 {
                     Cyclone->SetObjectScale(3.0f);
-                    Cyclone->AddUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
                     Cyclone->SetFaction(me->GetFaction());
                     Cyclone->CastSpell(Cyclone, SPELL_CYCLONE_CYCLONE, true);
                     if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0))
@@ -686,8 +685,7 @@ public:
                 while (unit == nullptr || !unit->IsAlive())
                     unit = selectAdvisorUnit();
 
-                if (unit && unit->IsAlive())
-                    DoCast(unit, SPELL_HEAL);
+                DoCast(unit, SPELL_HEAL);
                 Heal_Timer = 60000;
             }
             else
