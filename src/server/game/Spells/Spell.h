@@ -152,13 +152,6 @@ enum SpellRangeFlag
     SPELL_RANGE_RANGED              = 2      //hunter range and ranged weapon
 };
 
-enum SpellFinishReason : uint8
-{
-    SPELL_FINISHED_SUCCESSFUL_CAST      = 0, // spell has sucessfully launched
-    SPELL_FINISHED_CANCELED             = 1, // spell has been canceled (interrupts)
-    SPELL_FINISHED_CHANNELING_COMPLETE  = 2  // spell channeling has been finished
-};
-
 struct SpellLogEffectPowerDrainParams
 {
     ObjectGuid Victim;
@@ -244,7 +237,6 @@ static const uint32 SPELL_INTERRUPT_NONPLAYER = 32747;
 
 class TC_GAME_API Spell
 {
-    friend void SetUnitCurrentCastSpell(Unit* unit, Spell* spell);
     friend class SpellScript;
     public:
 
