@@ -374,7 +374,7 @@ bool CriteriaData::Meets(uint32 criteriaId, Player const* source, WorldObject co
             if (!bg)
                 return false;
 
-            uint32 score = bg->GetTeamScore(source->GetTeamId() == TEAM_ALLIANCE ? TEAM_HORDE : TEAM_ALLIANCE);
+            uint32 score = bg->GetTeamScore(bg->GetPlayerTeam(source->GetGUID()) == TEAM_ALLIANCE ? TEAM_HORDE : TEAM_ALLIANCE);
             return score >= BattlegroundScore.Min && score <= BattlegroundScore.Max;
         }
         case CRITERIA_DATA_TYPE_INSTANCE_SCRIPT:
@@ -538,7 +538,9 @@ void CriteriaHandler::UpdateCriteria(CriteriaType type, uint64 miscValue1 /*= 0*
             case CriteriaType::DeliveredKillingBlow:
             case CriteriaType::PVPKillInArea:
             case CriteriaType::WinArena: // This also behaves like CriteriaType::WinAnyRankedArena
+            case CriteriaType::PlayerTriggerGameEvent:
             case CriteriaType::Login:
+            case CriteriaType::AnyoneTriggerGameEventScenario:
             case CriteriaType::BattlePetReachLevel:
             case CriteriaType::ActivelyEarnPetLevel:
             case CriteriaType::PlaceGarrisonBuilding:
@@ -812,10 +814,8 @@ void CriteriaHandler::UpdateCriteria(CriteriaType type, uint64 miscValue1 /*= 0*
             case CriteriaType::CompleteAnyChallengeMode:
             case CriteriaType::KilledAllUnitsInSpawnRegion:
             case CriteriaType::CompleteChallengeMode:
-            case CriteriaType::PlayerTriggerGameEvent:
             case CriteriaType::CreatedItemsByCastingSpellWithLimit:
             case CriteriaType::BattlePetAchievementPointsEarned:
-            case CriteriaType::AnyoneTriggerGameEventScenario:
             case CriteriaType::ReleasedSpirit:
             case CriteriaType::AccountKnownPet:
             case CriteriaType::DefeatDungeonEncounterWhileElegibleForLoot:
@@ -892,7 +892,7 @@ void CriteriaHandler::StartCriteriaTimer(CriteriaStartEvent startEvent, uint32 e
         bool canStart = false;
         for (CriteriaTree const* tree : *trees)
         {
-            if (_timeCriteriaTrees.find(tree->ID) == _timeCriteriaTrees.end() && !IsCompletedCriteriaTree(tree))
+            if ((_timeCriteriaTrees.find(tree->ID) == _timeCriteriaTrees.end() || criteria->Entry->GetFlags().HasFlag(CriteriaFlags::ResetOnStart)) && !IsCompletedCriteriaTree(tree))
             {
                 // Start the timer
                 if (criteria->Entry->StartTimer * uint32(IN_MILLISECONDS) > timeLost)

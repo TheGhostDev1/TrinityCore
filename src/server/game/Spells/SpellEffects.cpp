@@ -35,6 +35,7 @@
 #include "DB2Stores.h"
 #include "DuelPackets.h"
 #include "DynamicObject.h"
+#include "GameEventSender.h"
 #include "GameObject.h"
 #include "GameObjectAI.h"
 #include "GameTime.h"
@@ -54,7 +55,6 @@
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
-#include "Opcodes.h"
 #include "OutdoorPvPMgr.h"
 #include "PathGenerator.h"
 #include "Pet.h"
@@ -1072,12 +1072,7 @@ void Spell::EffectSendEvent()
 
     TC_LOG_DEBUG("spells", "Spell ScriptStart %u for spellid %u in EffectSendEvent ", effectInfo->MiscValue, m_spellInfo->Id);
 
-    if (ZoneScript* zoneScript = m_caster->GetZoneScript())
-        zoneScript->ProcessEvent(target, effectInfo->MiscValue, m_caster);
-    else if (InstanceScript* instanceScript = m_caster->GetInstanceScript())    // needed in case Player is the caster
-        instanceScript->ProcessEvent(target, effectInfo->MiscValue, m_caster);
-
-    m_caster->GetMap()->ScriptsStart(sEventScripts, effectInfo->MiscValue, m_caster, target);
+    GameEvents::Trigger(effectInfo->MiscValue, m_caster, target);
 }
 
 void Spell::EffectPowerBurn()
@@ -1338,7 +1333,7 @@ void Spell::EffectCreateItem()
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
-    DoCreateItem(effectInfo->ItemType, m_spellInfo->HasAttribute(SPELL_ATTR0_TRADESPELL) ? ItemContext::Trade_Skill : ItemContext::NONE);
+    DoCreateItem(effectInfo->ItemType, m_spellInfo->HasAttribute(SPELL_ATTR0_IS_TRADESKILL) ? ItemContext::Trade_Skill : ItemContext::NONE);
     ExecuteLogEffectCreateItem(SpellEffectName(effectInfo->Effect), effectInfo->ItemType);
 }
 
@@ -1352,7 +1347,7 @@ void Spell::EffectCreateItem2()
 
     Player* player = unitTarget->ToPlayer();
 
-    ItemContext context = m_spellInfo->HasAttribute(SPELL_ATTR0_TRADESPELL) ? ItemContext::Trade_Skill : ItemContext::NONE;
+    ItemContext context = m_spellInfo->HasAttribute(SPELL_ATTR0_IS_TRADESKILL) ? ItemContext::Trade_Skill : ItemContext::NONE;
 
     // Pick a random item from spell_loot_template
     if (m_spellInfo->IsLootCrafting())
@@ -1381,7 +1376,7 @@ void Spell::EffectCreateRandomItem()
     Player* player = unitTarget->ToPlayer();
 
     // create some random items
-    player->AutoStoreLoot(m_spellInfo->Id, LootTemplates_Spell, m_spellInfo->HasAttribute(SPELL_ATTR0_TRADESPELL) ? ItemContext::Trade_Skill : ItemContext::NONE);
+    player->AutoStoreLoot(m_spellInfo->Id, LootTemplates_Spell, m_spellInfo->HasAttribute(SPELL_ATTR0_IS_TRADESKILL) ? ItemContext::Trade_Skill : ItemContext::NONE);
     /// @todo ExecuteLogEffectCreateItem(i, m_spellInfo->Effects[i].ItemType);
 }
 
@@ -1549,7 +1544,7 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype)
                 if (gameObjTarget->GetGOInfo()->chest.triggeredEvent)
                 {
                     TC_LOG_DEBUG("spells", "Chest ScriptStart id %u for GO " UI64FMTD, gameObjTarget->GetGOInfo()->chest.triggeredEvent, gameObjTarget->GetSpawnId());
-                    player->GetMap()->ScriptsStart(sEventScripts, gameObjTarget->GetGOInfo()->chest.triggeredEvent, player, gameObjTarget);
+                    GameEvents::Trigger(gameObjTarget->GetGOInfo()->chest.triggeredEvent, player, gameObjTarget);
                 }
 
                 // triggering linked GO
@@ -2066,7 +2061,7 @@ void Spell::EffectLearnSpell()
     {
         for (ItemEffectEntry const* itemEffect : m_CastItem->GetEffects())
         {
-            if (itemEffect->TriggerType != ITEM_SPELLTRIGGER_LEARN_SPELL_ID)
+            if (itemEffect->TriggerType != ITEM_SPELLTRIGGER_ON_LEARN)
                 continue;
 
             bool dependent = false;
@@ -2351,7 +2346,7 @@ void Spell::EffectEnchantItemPerm()
         unitTarget = player;
         // and add a scroll
         damage = 1;
-        DoCreateItem(effectInfo->ItemType, m_spellInfo->HasAttribute(SPELL_ATTR0_TRADESPELL) ? ItemContext::Trade_Skill : ItemContext::NONE);
+        DoCreateItem(effectInfo->ItemType, m_spellInfo->HasAttribute(SPELL_ATTR0_IS_TRADESKILL) ? ItemContext::Trade_Skill : ItemContext::NONE);
         itemTarget = nullptr;
         m_targets.SetItemTarget(nullptr);
     }
@@ -2980,7 +2975,7 @@ void Spell::EffectSummonObjectWild()
     if (go->GetGoType() == GAMEOBJECT_TYPE_FLAGDROP)
         if (Player* player = m_caster->ToPlayer())
             if (Battleground* bg = player->GetBattleground())
-                bg->SetDroppedFlagGUID(go->GetGUID(), player->GetTeam() == ALLIANCE ? TEAM_HORDE: TEAM_ALLIANCE);
+                bg->SetDroppedFlagGUID(go->GetGUID(), bg->GetPlayerTeam(player->GetGUID()) == ALLIANCE ? TEAM_HORDE: TEAM_ALLIANCE);
 
     if (GameObject* linkedTrap = go->GetLinkedTrap())
     {
