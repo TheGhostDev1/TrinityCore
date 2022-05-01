@@ -1066,7 +1066,7 @@ void AuraEffect::PeriodicTick(AuraApplication* aurApp, Unit* caster) const
 
     // Update serverside orientation of tracking channeled auras on periodic update ticks
     // exclude players because can turn during channeling and shouldn't desync orientation client/server
-    if (caster && !caster->IsPlayer() && m_spellInfo->IsChanneled() && m_spellInfo->HasAttribute(SPELL_ATTR1_CHANNEL_TRACK_TARGET) && caster->m_unitData->ChannelObjects.size())
+    if (caster && !caster->IsPlayer() && m_spellInfo->IsChanneled() && m_spellInfo->HasAttribute(SPELL_ATTR1_TRACK_TARGET_IN_CHANNEL) && caster->m_unitData->ChannelObjects.size())
     {
         ObjectGuid const channelGuid = caster->m_unitData->ChannelObjects[0];
         if (channelGuid != caster->GetGUID())
@@ -1774,7 +1774,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const* aurApp, uint8 mo
         }
 
         if (!shapeInfo->GetFlags().HasFlag(SpellShapeshiftFormFlags::Stance))
-            target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Shapeshifting, GetId());
+            target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Shapeshifting, GetSpellInfo());
     }
     else
     {
@@ -3217,8 +3217,8 @@ void AuraEffect::HandleAuraModSchoolImmunity(AuraApplication const* aurApp, uint
             target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::StealthOrInvis);
 
         // remove all flag auras (they are positive, but they must be removed when you are immune)
-        if (GetSpellInfo()->HasAttribute(SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY)
-            && GetSpellInfo()->HasAttribute(SPELL_ATTR2_DAMAGE_REDUCED_SHIELD))
+        if (GetSpellInfo()->HasAttribute(SPELL_ATTR1_IMMUNITY_PURGES_EFFECT)
+            && GetSpellInfo()->HasAttribute(SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE))
             target->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::StealthOrInvis);
     }
 
@@ -5498,10 +5498,6 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
         SendTickImmune(target, caster);
         return;
     }
-
-    // heal for caster damage (must be alive)
-    if (target != caster && GetSpellInfo()->HasAttribute(SPELL_ATTR2_HEALTH_FUNNEL) && (!caster || !caster->IsAlive()))
-        return;
 
     // don't regen when permanent aura target has full power
     if (GetBase()->IsPermanent() && target->IsFullHealth())

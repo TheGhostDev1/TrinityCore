@@ -404,7 +404,7 @@ uint32 constexpr QuestDifficultyColors[MAX_QUEST_DIFFICULTY] =
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr0 : uint32
 {
-    SPELL_ATTR0_PROC_FAILURE_BURNS_CHARGE                           = 0x00000001, /*NYI*/ // TITLE Proc Failure Burns Charge
+    SPELL_ATTR0_PROC_FAILURE_BURNS_CHARGE                           = 0x00000001, // TITLE Proc Failure Burns Charge
     SPELL_ATTR0_USES_RANGED_SLOT                                    = 0x00000002, // TITLE Uses Ranged Slot DESCRIPTION Use ammo, ranged attack range modifiers, ranged haste, etc.
     SPELL_ATTR0_ON_NEXT_SWING_NO_DAMAGE                             = 0x00000004, // TITLE On Next Swing (No Damage) DESCRIPTION Both "on next swing" attributes have identical handling in server & client
     SPELL_ATTR0_DO_NOT_LOG_IMMUNE_MISSES                            = 0x00000008, // TITLE Do Not Log Immune Misses (client only)
@@ -415,7 +415,7 @@ enum SpellAttr0 : uint32
     SPELL_ATTR0_DO_NOT_LOG                                          = 0x00000100, // TITLE Do Not Log (client only) DESCRIPTION Spell will not appear in combat logs
     SPELL_ATTR0_HELD_ITEM_ONLY                                      = 0x00000200, // TITLE Held Item Only (client only) DESCRIPTION Client will automatically select main-hand item as cast target
     SPELL_ATTR0_ON_NEXT_SWING                                       = 0x00000400, // TITLE On Next Swing DESCRIPTION Both "on next swing" attributes have identical handling in server & client
-    SPELL_ATTR0_WEARER_CASTS_PROC_TRIGGER                           = 0x00000800, /*NYI*/ // TITLE Wearer Casts Proc Trigger
+    SPELL_ATTR0_WEARER_CASTS_PROC_TRIGGER                           = 0x00000800, // TITLE Wearer Casts Proc Trigger DESCRIPTION Just a marker attribute to show auras that trigger another spell (either directly or with a script)
     SPELL_ATTR0_SERVER_ONLY                                         = 0x00001000, // TITLE Server Only
     SPELL_ATTR0_ALLOW_ITEM_SPELL_IN_PVP                             = 0x00002000, // TITLE Allow Item Spell In PvP
     SPELL_ATTR0_ONLY_INDOORS                                        = 0x00004000, // TITLE Only Indoors
@@ -441,112 +441,112 @@ enum SpellAttr0 : uint32
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr1 : uint32
 {
-    SPELL_ATTR1_DISMISS_PET                      = 0x00000001, // TITLE Dismiss Pet on cast DESCRIPTION Without this attribute, summoning spells will fail if caster already has a pet
-    SPELL_ATTR1_DRAIN_ALL_POWER                  = 0x00000002, // TITLE Drain all power DESCRIPTION Ignores listed power cost and drains entire pool instead
-    SPELL_ATTR1_CHANNELED_1                      = 0x00000004, // TITLE Channeled (type 1) DESCRIPTION Both "channeled" attributes have identical handling in server & client
-    SPELL_ATTR1_CANT_BE_REDIRECTED               = 0x00000008, // TITLE Ignore redirection effects DESCRIPTION Spell will not be attracted by SPELL_MAGNET auras (Grounding Totem)
-    SPELL_ATTR1_UNK4                             = 0x00000010, // TITLE Unknown attribute 4@Attr1
-    SPELL_ATTR1_NOT_BREAK_STEALTH                = 0x00000020, // TITLE Does not break stealth
-    SPELL_ATTR1_CHANNELED_2                      = 0x00000040, // TITLE Channeled (type 2) DESCRIPTION Both "channeled" attributes have identical handling in server & client
-    SPELL_ATTR1_CANT_BE_REFLECTED                = 0x00000080, // TITLE Ignore reflection effects DESCRIPTION Spell will pierce through Spell Reflection and similar
-    SPELL_ATTR1_CANT_TARGET_IN_COMBAT            = 0x00000100, // TITLE Target cannot be in combat
-    SPELL_ATTR1_MELEE_COMBAT_START               = 0x00000200, // TITLE Starts auto-attack (client only) DESCRIPTION Caster will begin auto-attacking the target on cast
-    SPELL_ATTR1_NO_THREAT                        = 0x00000400, // TITLE Does not generate threat DESCRIPTION Also does not cause target to engage
-    SPELL_ATTR1_DONT_REFRESH_DURATION_ON_RECAST  = 0x00000800, // TITLE Aura will not refresh its duration when recast
-    SPELL_ATTR1_IS_PICKPOCKET                    = 0x00001000, // TITLE Pickpocket (client only)
-    SPELL_ATTR1_FARSIGHT                         = 0x00002000, // TITLE Farsight aura (client only)
-    SPELL_ATTR1_CHANNEL_TRACK_TARGET             = 0x00004000, // TITLE Track target while channeling DESCRIPTION While channeling, adjust facing to face target
-    SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY         = 0x00008000, // TITLE Immunity cancels preapplied auras DESCRIPTION For immunity spells, cancel all auras that this spell would make you immune to when the spell is applied
-    SPELL_ATTR1_UNAFFECTED_BY_SCHOOL_IMMUNE      = 0x00010000, // TITLE Unaffected by school immunities DESCRIPTION Will not pierce Divine Shield, Ice Block and other full invulnerabilities
-    SPELL_ATTR1_UNAUTOCASTABLE_BY_PET            = 0x00020000, // TITLE Cannot be autocast by pet
-    SPELL_ATTR1_PREVENTS_ANIM                    = 0x00040000, // TITLE Prevents Anim DESCRIPTION NYI, auras apply UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT
-    SPELL_ATTR1_CANT_TARGET_SELF                 = 0x00080000, // TITLE Cannot be self-cast
-    SPELL_ATTR1_REQ_COMBO_POINTS1                = 0x00100000, // TITLE Requires combo points (type 1)
-    SPELL_ATTR1_UNK21                            = 0x00200000, // TITLE Unknown attribute 21@Attr1
-    SPELL_ATTR1_REQ_COMBO_POINTS2                = 0x00400000, // TITLE Requires combo points (type 2)
-    SPELL_ATTR1_UNK23                            = 0x00800000, // TITLE Unknwon attribute 23@Attr1
-    SPELL_ATTR1_IS_FISHING                       = 0x01000000, // TITLE Fishing (client only)
-    SPELL_ATTR1_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr1
-    SPELL_ATTR1_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr1 DESCRIPTION Related to [target=focus] and [target=mouseover] macros?
-    SPELL_ATTR1_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr1 DESCRIPTION Melee spell?
-    SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR         = 0x10000000, // TITLE Hide in aura bar (client only)
-    SPELL_ATTR1_CHANNEL_DISPLAY_SPELL_NAME       = 0x20000000, // TITLE Show spell name during channel (client only)
-    SPELL_ATTR1_ENABLE_AT_DODGE                  = 0x40000000, // TITLE Enable at dodge
-    SPELL_ATTR1_CAST_WHEN_LEARNED                = 0x80000000  // TITLE Cast When Learned
+    SPELL_ATTR1_DISMISS_PET_FIRST                                   = 0x00000001, // TITLE Dismiss Pet First DESCRIPTION Without this attribute, summoning spells will fail if caster already has a pet
+    SPELL_ATTR1_USE_ALL_MANA                                        = 0x00000002, // TITLE Use All Mana DESCRIPTION Ignores listed power cost and drains entire pool instead
+    SPELL_ATTR1_IS_CHANNELLED                                       = 0x00000004, // TITLE Is Channelled DESCRIPTION Both "channeled" attributes have identical handling in server & client
+    SPELL_ATTR1_NO_REDIRECTION                                      = 0x00000008, // TITLE No Redirection DESCRIPTION Spell will not be attracted by SPELL_MAGNET auras (Grounding Totem)
+    SPELL_ATTR1_NO_SKILL_INCREASE                                   = 0x00000010, // TITLE No Skill Increase
+    SPELL_ATTR1_ALLOW_WHILE_STEALTHED                               = 0x00000020, // TITLE Allow While Stealthed
+    SPELL_ATTR1_IS_SELF_CHANNELLED                                  = 0x00000040, // TITLE Is Self Channelled DESCRIPTION Both "channeled" attributes have identical handling in server & client
+    SPELL_ATTR1_NO_REFLECTION                                       = 0x00000080, // TITLE No Reflection DESCRIPTION Spell will pierce through Spell Reflection and similar
+    SPELL_ATTR1_ONLY_PEACEFUL_TARGETS                               = 0x00000100, // TITLE Only Peaceful Targets DESCRIPTION Target cannot be in combat
+    SPELL_ATTR1_INITIATES_COMBAT_ENABLES_AUTO_ATTACK                = 0x00000200, // TITLE Initiates Combat (Enables Auto-Attack) (client only) DESCRIPTION Caster will begin auto-attacking the target on cast
+    SPELL_ATTR1_NO_THREAT                                           = 0x00000400, // TITLE No Threat DESCRIPTION Also does not cause target to engage
+    SPELL_ATTR1_AURA_UNIQUE                                         = 0x00000800, // TITLE Aura Unique DESCRIPTION Aura will not refresh its duration when recast
+    SPELL_ATTR1_FAILURE_BREAKS_STEALTH                              = 0x00001000, // TITLE Failure Breaks Stealth
+    SPELL_ATTR1_TOGGLE_FAR_SIGHT                                    = 0x00002000, // TITLE Toggle Far Sight (client only)
+    SPELL_ATTR1_TRACK_TARGET_IN_CHANNEL                             = 0x00004000, // TITLE Track Target in Channel DESCRIPTION While channeling, adjust facing to face target
+    SPELL_ATTR1_IMMUNITY_PURGES_EFFECT                              = 0x00008000, // TITLE Immunity Purges Effect DESCRIPTION For immunity spells, cancel all auras that this spell would make you immune to when the spell is applied
+    SPELL_ATTR1_IMMUNITY_TO_HOSTILE_AND_FRIENDLY_EFFECTS            = 0x00010000, /*WRONG IMPL*/ // TITLE Immunity to Hostile & Friendly Effects DESCRIPTION Will not pierce Divine Shield, Ice Block and other full invulnerabilities
+    SPELL_ATTR1_NO_AUTOCAST_AI                                      = 0x00020000, // TITLE No AutoCast (AI)
+    SPELL_ATTR1_PREVENTS_ANIM                                       = 0x00040000, /*NYI*/ // TITLE Prevents Anim DESCRIPTION Auras apply UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT
+    SPELL_ATTR1_EXCLUDE_CASTER                                      = 0x00080000, // TITLE Exclude Caster
+    SPELL_ATTR1_FINISHING_MOVE_DAMAGE                               = 0x00100000, // TITLE Finishing Move - Damage
+    SPELL_ATTR1_THREAT_ONLY_ON_MISS                                 = 0x00200000, /*NYI*/ // TITLE Threat only on Miss
+    SPELL_ATTR1_FINISHING_MOVE_DURATION                             = 0x00400000, // TITLE Finishing Move - Duration
+    SPELL_ATTR1_IGNORE_OWNERS_DEATH                                 = 0x00800000, /*NYI*/ // TITLE Ignore Owner's Death
+    SPELL_ATTR1_SPECIAL_SKILLUP                                     = 0x01000000, // TITLE Special Skillup
+    SPELL_ATTR1_AURA_STAYS_AFTER_COMBAT                             = 0x02000000, // TITLE Aura Stays After Combat
+    SPELL_ATTR1_REQUIRE_ALL_TARGETS                                 = 0x04000000, // TITLE Require All Targets
+    SPELL_ATTR1_DISCOUNT_POWER_ON_MISS                              = 0x08000000, // TITLE Discount Power On Miss
+    SPELL_ATTR1_NO_AURA_ICON                                        = 0x10000000, // TITLE No Aura Icon (client only)
+    SPELL_ATTR1_NAME_IN_CHANNEL_BAR                                 = 0x20000000, // TITLE Name in Channel Bar (client only)
+    SPELL_ATTR1_DISPEL_ALL_STACKS                                   = 0x40000000, // TITLE Dispel All Stacks
+    SPELL_ATTR1_CAST_WHEN_LEARNED                                   = 0x80000000  // TITLE Cast When Learned
 };
 
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr2 : uint32
 {
-    SPELL_ATTR2_CAN_TARGET_DEAD                  = 0x00000001, // TITLE Can target dead players or corpses
-    SPELL_ATTR2_UNK1                             = 0x00000002, // TITLE Unknown attribute 1@Attr2
-    SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS            = 0x00000004, // TITLE Ignore Line of Sight
-    SPELL_ATTR2_UNK3                             = 0x00000008, // TITLE Ignore aura scaling
-    SPELL_ATTR2_DISPLAY_IN_STANCE_BAR            = 0x00000010, // TITLE Show in stance bar (client only)
-    SPELL_ATTR2_AUTOREPEAT_FLAG                  = 0x00000020, // TITLE Ranged auto-attack spell
-    SPELL_ATTR2_CANT_TARGET_TAPPED               = 0x00000040, // TITLE Cannot target others' tapped units DESCRIPTION Can only target untapped units, or those tapped by caster
-    SPELL_ATTR2_UNK7                             = 0x00000080, // TITLE Unknown attribute 7@Attr2
-    SPELL_ATTR2_UNK8                             = 0x00000100, // TITLE Unknown attribute 8@Attr2
-    SPELL_ATTR2_UNK9                             = 0x00000200, // TITLE Unknown attribute 9@Attr2
-    SPELL_ATTR2_UNK10                            = 0x00000400, // TITLE Unknown attribute 10@Attr2 DESCRIPTION Related to taming?
-    SPELL_ATTR2_HEALTH_FUNNEL                    = 0x00000800, // TITLE Health Funnel
-    SPELL_ATTR2_UNK12                            = 0x00001000, // TITLE Unknown attribute 12@Attr2
-    SPELL_ATTR2_PRESERVE_ENCHANT_IN_ARENA        = 0x00002000, // TITLE Enchant persists when entering arena
-    SPELL_ATTR2_UNK14                            = 0x00004000, // TITLE Unknown attribute 14@Attr2
-    SPELL_ATTR2_UNK15                            = 0x00008000, // TITLE Unknown attribute 15@Attr2
-    SPELL_ATTR2_TAME_BEAST                       = 0x00010000, // TITLE Tame Beast
-    SPELL_ATTR2_NOT_RESET_AUTO_ACTIONS           = 0x00020000, // TITLE Don't reset swing timer DESCRIPTION Does not reset melee/ranged autoattack timer on cast
-    SPELL_ATTR2_REQ_DEAD_PET                     = 0x00040000, // TITLE Requires dead pet
-    SPELL_ATTR2_NOT_NEED_SHAPESHIFT              = 0x00080000, // TITLE Also allow outside shapeshift DESCRIPTION Even if Stances are nonzero, allow spell to be cast outside of shapeshift (though not in a different shapeshift)
-    SPELL_ATTR2_UNK20                            = 0x00100000, // TITLE Unknown attribute 20@Attr2
-    SPELL_ATTR2_DAMAGE_REDUCED_SHIELD            = 0x00200000, // TITLE Damage reduction ability DESCRIPTION Causes BG flags to be dropped if combined with ATTR1_DISPEL_AURAS_ON_IMMUNITY
-    SPELL_ATTR2_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr2
-    SPELL_ATTR2_IS_ARCANE_CONCENTRATION          = 0x00800000, // TITLE Arcane Concentration
-    SPELL_ATTR2_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr2
-    SPELL_ATTR2_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr2
-    SPELL_ATTR2_UNAFFECTED_BY_AURA_SCHOOL_IMMUNE = 0x04000000, // TITLE Pierce aura application immunities DESCRIPTION Allow aura to be applied despite target being immune to new aura applications
-    SPELL_ATTR2_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr2
-    SPELL_ATTR2_IGNORE_ACTION_AURA_INTERRUPT_FLAGS= 0x10000000,// TITLE Not an Action
-    SPELL_ATTR2_CANT_CRIT                        = 0x20000000, // TITLE Cannot critically strike
-    SPELL_ATTR2_ACTIVE_THREAT                    = 0x40000000, // TITLE Active Threat
-    SPELL_ATTR2_FOOD_BUFF                        = 0x80000000  // TITLE Food buff (client only)
+    SPELL_ATTR2_ALLOW_DEAD_TARGET                                   = 0x00000001, // TITLE Allow Dead Target
+    SPELL_ATTR2_NO_SHAPESHIFT_UI                                    = 0x00000002, // TITLE No shapeshift UI (client only) DESCRIPTION Does not replace action bar when shapeshifted
+    SPELL_ATTR2_IGNORE_LINE_OF_SIGHT                                = 0x00000004, // TITLE Ignore Line of Sight
+    SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF                                = 0x00000008, // TITLE Allow Low Level Buff
+    SPELL_ATTR2_USE_SHAPESHIFT_BAR                                  = 0x00000010, // TITLE Use Shapeshift Bar (client only)
+    SPELL_ATTR2_AUTO_REPEAT                                         = 0x00000020, // TITLE Auto Repeat
+    SPELL_ATTR2_CANNOT_CAST_ON_TAPPED                               = 0x00000040, // TITLE Cannot cast on tapped DESCRIPTION Can only target untapped units, or those tapped by caster
+    SPELL_ATTR2_DO_NOT_REPORT_SPELL_FAILURE                         = 0x00000080, // TITLE Do Not Report Spell Failure
+    SPELL_ATTR2_INCLUDE_IN_ADVANCED_COMBAT_LOG                      = 0x00000100, // TITLE Include In Advanced Combat Log (client only) DESCRIPTION Determines whether to include this aura in list of auras in SMSG_ENCOUNTER_START
+    SPELL_ATTR2_ALWAYS_CAST_AS_UNIT                                 = 0x00000200, /*NYI, UNK*/ // TITLE Always Cast As Unit
+    SPELL_ATTR2_SPECIAL_TAMING_FLAG                                 = 0x00000400, // TITLE Special Taming Flag DESCRIPTION Related to taming?
+    SPELL_ATTR2_NO_TARGET_PER_SECOND_COSTS                          = 0x00000800, // TITLE No Target Per-Second Costs
+    SPELL_ATTR2_CHAIN_FROM_CASTER                                   = 0x00001000, // TITLE Chain From Caster
+    SPELL_ATTR2_ENCHANT_OWN_ITEM_ONLY                               = 0x00002000, // TITLE Enchant own item only
+    SPELL_ATTR2_ALLOW_WHILE_INVISIBLE                               = 0x00004000, // TITLE Allow While Invisible
+    SPELL_ATTR2_DO_NOT_CONSUME_IF_GAINED_DURING_CAST                = 0x00008000, // TITLE Do Not Consume if Gained During Cast
+    SPELL_ATTR2_NO_ACTIVE_PETS                                      = 0x00010000, // TITLE No Active Pets
+    SPELL_ATTR2_DO_NOT_RESET_COMBAT_TIMERS                          = 0x00020000, // TITLE Do Not Reset Combat Timers DESCRIPTION Does not reset melee/ranged autoattack timer on cast
+    SPELL_ATTR2_NO_JUMP_WHILE_CAST_PENDING                          = 0x00040000, // TITLE No Jump While Cast Pending (client only)
+    SPELL_ATTR2_ALLOW_WHILE_NOT_SHAPESHIFTED_CASTER_FORM            = 0x00080000, // TITLE Allow While Not Shapeshifted (caster form) DESCRIPTION Even if Stances are nonzero, allow spell to be cast outside of shapeshift (though not in a different shapeshift)
+    SPELL_ATTR2_INITIATE_COMBAT_POST_CAST_ENABLES_AUTO_ATTACK       = 0x00100000, // TITLE Initiate Combat Post-Cast (Enables Auto-Attack)
+    SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE                          = 0x00200000, // TITLE Fail on all targets immune DESCRIPTION Causes BG flags to be dropped if combined with ATTR1_DISPEL_AURAS_ON_IMMUNITY
+    SPELL_ATTR2_NO_INITIAL_THREAT                                   = 0x00400000, // TITLE No Initial Threat
+    SPELL_ATTR2_PROC_COOLDOWN_ON_FAILURE                            = 0x00800000, // TITLE Proc Cooldown On Failure
+    SPELL_ATTR2_ITEM_CAST_WITH_OWNER_SKILL                          = 0x01000000, // TITLE Item Cast With Owner Skill
+    SPELL_ATTR2_DONT_BLOCK_MANA_REGEN                               = 0x02000000, // TITLE Don't Block Mana Regen
+    SPELL_ATTR2_NO_SCHOOL_IMMUNITIES                                = 0x04000000, // TITLE No School Immunities DESCRIPTION Allow aura to be applied despite target being immune to new aura applications
+    SPELL_ATTR2_IGNORE_WEAPONSKILL                                  = 0x08000000, // TITLE Ignore Weaponskill
+    SPELL_ATTR2_NOT_AN_ACTION                                       = 0x10000000, // TITLE Not an Action
+    SPELL_ATTR2_CANT_CRIT                                           = 0x20000000, // TITLE Can't Crit
+    SPELL_ATTR2_ACTIVE_THREAT                                       = 0x40000000, // TITLE Active Threat
+    SPELL_ATTR2_RETAIN_ITEM_CAST                                    = 0x80000000  // TITLE Retain Item Cast DESCRIPTION passes m_CastItem to triggered spells
 };
 
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr3 : uint32
 {
-    SPELL_ATTR3_UNK0                             = 0x00000001, // TITLE Unknown attribute 0@Attr3
-    SPELL_ATTR3_NO_PROC_EQUIP_REQUIREMENT        = 0x00000002, // TITLE No Proc Equip Requirement DESCRIPTION Ignores subclass mask check when checking proc
-    SPELL_ATTR3_UNK2                             = 0x00000004, // TITLE Unknown attribute 2@Attr3
-    SPELL_ATTR3_BLOCKABLE_SPELL                  = 0x00000008, // TITLE Blockable spell
-    SPELL_ATTR3_IGNORE_RESURRECTION_TIMER        = 0x00000010, // TITLE Ignore resurrection timer
-    SPELL_ATTR3_NO_DURABILITY_LOSS               = 0x00000020, // TITLE No Durability Loss
-    SPELL_ATTR3_UNK6                             = 0x00000040, // TITLE Unknown attribute 6@Attr3
-    SPELL_ATTR3_STACK_FOR_DIFF_CASTERS           = 0x00000080, // TITLE Stack separately for each caster
-    SPELL_ATTR3_ONLY_TARGET_PLAYERS              = 0x00000100, // TITLE Can only target players
-    SPELL_ATTR3_NOT_A_PROC                       = 0x00000200, // TITLE Not a Proc DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
-    SPELL_ATTR3_MAIN_HAND                        = 0x00000400, // TITLE Require main hand weapon
-    SPELL_ATTR3_BATTLEGROUND                     = 0x00000800, // TITLE Can only be cast in battleground
-    SPELL_ATTR3_ONLY_TARGET_GHOSTS               = 0x00001000, // TITLE Can only target ghost players
-    SPELL_ATTR3_DONT_DISPLAY_CHANNEL_BAR         = 0x00002000, // TITLE Do not display channel bar (client only)
-    SPELL_ATTR3_IS_HONORLESS_TARGET              = 0x00004000, // TITLE Honorless Target
-    SPELL_ATTR3_UNK15                            = 0x00008000, // TITLE Unknown attribute 15@Attr3 DESCRIPTION Auto Shoot, Shoot, Throw - ranged normal attack attribute?
-    SPELL_ATTR3_CANT_TRIGGER_PROC                = 0x00010000, // TITLE Cannot trigger procs
-    SPELL_ATTR3_NO_INITIAL_AGGRO                 = 0x00020000, // TITLE No initial aggro
-    SPELL_ATTR3_IGNORE_HIT_RESULT                = 0x00040000, // TITLE Ignore hit result DESCRIPTION Spell cannot miss, or be dodged/parried/blocked
-    SPELL_ATTR3_DISABLE_PROC                     = 0x00080000, // TITLE Cannot trigger spells during aura proc
-    SPELL_ATTR3_DEATH_PERSISTENT                 = 0x00100000, // TITLE Persists through death
-    SPELL_ATTR3_UNK21                            = 0x00200000, // TITLE Unknown attribute 21@Attr3
-    SPELL_ATTR3_REQ_WAND                         = 0x00400000, // TITLE Requires equipped Wand
-    SPELL_ATTR3_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr3
-    SPELL_ATTR3_REQ_OFFHAND                      = 0x01000000, // TITLE Requires offhand weapon
-    SPELL_ATTR3_TREAT_AS_PERIODIC                = 0x02000000, // TITLE Treat as periodic effect
-    SPELL_ATTR3_CAN_PROC_FROM_PROCS              = 0x04000000, // TITLE Can Proc From Procs
-    SPELL_ATTR3_DRAIN_SOUL                       = 0x08000000, // TITLE Drain Soul
-    SPELL_ATTR3_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr3
-    SPELL_ATTR3_NO_DONE_BONUS                    = 0x20000000, // TITLE Damage dealt is unaffected by modifiers
-    SPELL_ATTR3_DONT_DISPLAY_RANGE               = 0x40000000, // TITLE Do not show range in tooltip (client only)
-    SPELL_ATTR3_UNK31                            = 0x80000000  // TITLE Unknown attribute 31@Attr3
+    SPELL_ATTR3_PVP_ENABLING                                        = 0x00000001, // TITLE PvP Enabling
+    SPELL_ATTR3_NO_PROC_EQUIP_REQUIREMENT                           = 0x00000002, // TITLE No Proc Equip Requirement DESCRIPTION Ignores subclass mask check when checking proc
+    SPELL_ATTR3_NO_CASTING_BAR_TEXT                                 = 0x00000004, // TITLE No Casting Bar Text
+    SPELL_ATTR3_COMPLETELY_BLOCKED                                  = 0x00000008, // TITLE Completely Blocked
+    SPELL_ATTR3_NO_RES_TIMER                                        = 0x00000010, // TITLE No Res Timer
+    SPELL_ATTR3_NO_DURABILITY_LOSS                                  = 0x00000020, // TITLE No Durability Loss
+    SPELL_ATTR3_NO_AVOIDANCE                                        = 0x00000040, // TITLE No Avoidance
+    SPELL_ATTR3_DOT_STACKING_RULE                                   = 0x00000080, // TITLE DoT Stacking Rule DESCRIPTION Stack separately for each caster
+    SPELL_ATTR3_ONLY_ON_PLAYER                                      = 0x00000100, // TITLE Only On Player
+    SPELL_ATTR3_NOT_A_PROC                                          = 0x00000200, // TITLE Not a Proc DESCRIPTION Without this attribute, any triggered spell will be unable to trigger other auras' procs
+    SPELL_ATTR3_REQUIRES_MAIN_HAND_WEAPON                           = 0x00000400, // TITLE Requires Main-Hand Weapon
+    SPELL_ATTR3_ONLY_BATTLEGROUNDS                                  = 0x00000800, // TITLE Only Battlegrounds
+    SPELL_ATTR3_ONLY_ON_GHOSTS                                      = 0x00001000, // TITLE Only On Ghosts
+    SPELL_ATTR3_HIDE_CHANNEL_BAR                                    = 0x00002000, // TITLE Hide Channel Bar (client only)
+    SPELL_ATTR3_HIDE_IN_RAID_FILTER                                 = 0x00004000, // TITLE Hide In Raid Filter (client only)
+    SPELL_ATTR3_NORMAL_RANGED_ATTACK                                = 0x00008000, // TITLE Normal Ranged Attack DESCRIPTION Auto Shoot, Shoot, Throw - ranged normal attack attribute?
+    SPELL_ATTR3_SUPPRESS_CASTER_PROCS                               = 0x00010000, // TITLE Suppress Caster Procs
+    SPELL_ATTR3_SUPPRESS_TARGET_PROCS                               = 0x00020000, // TITLE Suppress Target Procs
+    SPELL_ATTR3_ALWAYS_HIT                                          = 0x00040000, // TITLE Always Hit DESCRIPTION Spell cannot miss, or be dodged/parried/blocked
+    SPELL_ATTR3_INSTANT_TARGET_PROCS                                = 0x00080000, // TITLE Instant Target Procs DESCRIPTION Proc events are triggered before spell batching processes the spell hit on target
+    SPELL_ATTR3_ALLOW_AURA_WHILE_DEAD                               = 0x00100000, // TITLE Allow Aura While Dead
+    SPELL_ATTR3_ONLY_PROC_OUTDOORS                                  = 0x00200000, // TITLE Only Proc Outdoors
+    SPELL_ATTR3_DO_NOT_TRIGGER_TARGET_STAND                         = 0x00400000, // TITLE Do Not Trigger Target Stand
+    SPELL_ATTR3_NO_DAMAGE_HISTORY                                   = 0x00800000, /*NYI, no damage history implementation*/ // TITLE No Damage History
+    SPELL_ATTR3_REQUIRES_OFF_HAND_WEAPON                            = 0x01000000, // TITLE Requires Off-Hand Weapon
+    SPELL_ATTR3_TREAT_AS_PERIODIC                                   = 0x02000000, // TITLE Treat As Periodic
+    SPELL_ATTR3_CAN_PROC_FROM_PROCS                                 = 0x04000000, // TITLE Can Proc From Procs
+    SPELL_ATTR3_ONLY_PROC_ON_CASTER                                 = 0x08000000, // TITLE Only Proc on Caster
+    SPELL_ATTR3_IGNORE_CASTER_AND_TARGET_RESTRICTIONS               = 0x10000000, /*NYI*/ // TITLE Ignore Caster & Target Restrictions
+    SPELL_ATTR3_IGNORE_CASTER_MODIFIERS                             = 0x20000000, // TITLE Ignore Caster Modifiers
+    SPELL_ATTR3_DO_NOT_DISPLAY_RANGE                                = 0x40000000, // TITLE Do Not Display Range (client only)
+    SPELL_ATTR3_NOT_ON_AOE_IMMUNE                                   = 0x80000000  /*NYI, no aoe immunity implementation*/ // TITLE Not On AOE Immune
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -5746,21 +5746,20 @@ enum ChatMsg : int32
     CHAT_MSG_TARGETICONS                        = 0x32,
     CHAT_MSG_BN_WHISPER                         = 0x33,
     CHAT_MSG_BN_WHISPER_INFORM                  = 0x34,
-    CHAT_MSG_BN_CONVERSATION                    = 0x35,
-    CHAT_MSG_BN_CONVERSATION_NOTICE             = 0x36,
-    CHAT_MSG_BN_CONVERSATION_LIST               = 0x37,
-    CHAT_MSG_BN_INLINE_TOAST_ALERT              = 0x38,
-    CHAT_MSG_BN_INLINE_TOAST_BROADCAST          = 0x39,
-    CHAT_MSG_BN_INLINE_TOAST_BROADCAST_INFORM   = 0x3A,
-    CHAT_MSG_BN_INLINE_TOAST_CONVERSATION       = 0x3B,
-    CHAT_MSG_BN_WHISPER_PLAYER_OFFLINE          = 0x3C,
-    CHAT_MSG_COMBAT_GUILD_XP_GAIN               = 0x3D,
-    CHAT_MSG_CURRENCY                           = 0x3E,
-    CHAT_MSG_QUEST_BOSS_EMOTE                   = 0x3F,
-    CHAT_MSG_PET_BATTLE_COMBAT_LOG              = 0x40,
-    CHAT_MSG_PET_BATTLE_INFO                    = 0x41,
-    CHAT_MSG_INSTANCE_CHAT                      = 0x42,
-    CHAT_MSG_INSTANCE_CHAT_LEADER               = 0x43,
+    CHAT_MSG_BN_INLINE_TOAST_ALERT              = 0x35,
+    CHAT_MSG_BN_INLINE_TOAST_BROADCAST          = 0x36,
+    CHAT_MSG_BN_INLINE_TOAST_BROADCAST_INFORM   = 0x37,
+    CHAT_MSG_BN_INLINE_TOAST_CONVERSATION       = 0x38,
+    CHAT_MSG_BN_WHISPER_PLAYER_OFFLINE          = 0x39,
+    CHAT_MSG_CURRENCY                           = 0x3A,
+    CHAT_MSG_QUEST_BOSS_EMOTE                   = 0x3B,
+    CHAT_MSG_PET_BATTLE_COMBAT_LOG              = 0x3C,
+    CHAT_MSG_PET_BATTLE_INFO                    = 0x3D,
+    CHAT_MSG_INSTANCE_CHAT                      = 0x3E,
+    CHAT_MSG_INSTANCE_CHAT_LEADER               = 0x3F,
+    CHAT_MSG_GUILD_ITEM_LOOTED                  = 0x40,
+    CHAT_MSG_COMMUNITIES_CHANNEL                = 0x41,
+    CHAT_MSG_VOICE_TEXT                         = 0x42,
 
     MAX_CHAT_MSG_TYPE
 };
