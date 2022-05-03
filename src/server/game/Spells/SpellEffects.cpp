@@ -333,7 +333,6 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS]=
     &Spell::EffectGiveHonor,                                //253 SPELL_EFFECT_GIVE_HONOR
     &Spell::EffectNULL,                                     //254 SPELL_EFFECT_254
     &Spell::EffectLearnTransmogSet,                         //255 SPELL_EFFECT_LEARN_TRANSMOG_SET
-    &Spell::EffectCreatePrivateConversation,                //267 SPELL_EFFECT_CREATE_PRIVATE_CONVERSATION
 };
 
 void Spell::EffectNULL(SpellEffIndex /*effIndex*/)
@@ -5783,14 +5782,4 @@ void Spell::EffectLearnTransmogSet(SpellEffIndex /*effIndex*/)
         return;
 
     unitTarget->ToPlayer()->GetSession()->GetCollectionMgr()->AddTransmogSet(effectInfo->MiscValue);
-}
-void Spell::EffectCreatePrivateConversation(SpellEffIndex /*effIndex*/)
-{
-    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
-        return;
-
-    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
-        return;
-
-    Conversation::CreateConversation(effectInfo->MiscValue, GetCaster(), unitTarget->GetPosition(), { unitTarget->GetGUID() }, GetSpellInfo());
 }
