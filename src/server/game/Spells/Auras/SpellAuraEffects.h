@@ -179,7 +179,6 @@ class TC_GAME_API AuraEffect
         void HandleAuraUntrackable(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //  skills & talents
         void HandleAuraModSkill(AuraApplication const* aurApp, uint8 mode, bool apply) const;
-        void HandleAuraAllowTalentSwapping(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         //  movement
         void HandleAuraMounted(AuraApplication const* aurApp, uint8 mode, bool apply) const;
         void HandleAuraAllowFlight(AuraApplication const* aurApp, uint8 mode, bool apply) const;
