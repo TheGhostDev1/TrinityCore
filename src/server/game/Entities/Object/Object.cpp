@@ -263,15 +263,8 @@ void Object::SendOutOfRangeForPlayer(Player* target) const
 void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags, Player* target) const
 {
     std::vector<uint32> const* PauseTimes = nullptr;
-    uint32 PauseTimesCount = 0;
     if (GameObject const* go = ToGameObject())
-    {
-        if (go->GetGoType() == GAMEOBJECT_TYPE_TRANSPORT)
-        {
-            PauseTimes = go->GetGOValue()->Transport.StopFrames;
-            PauseTimesCount = PauseTimes->size();
-        }
-    }
+        PauseTimes = go->GetPauseTimes();
 
     data->WriteBit(flags.NoBirthAnim);
     data->WriteBit(flags.EnablePortals);
@@ -384,7 +377,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags, Playe
             WorldPackets::Movement::CommonMovement::WriteCreateObjectSplineDataBlock(*unit->movespline, *data);
     }
 
-    *data << uint32(PauseTimesCount);
+    *data << uint32(PauseTimes ? PauseTimes->size() : 0);
 
     if (flags.Stationary)
     {
@@ -399,18 +392,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags, Playe
         *data << ToUnit()->GetVictim()->GetGUID();                      // CombatVictim
 
     if (flags.ServerTime)
-    {
-        GameObject const* go = ToGameObject();
-        /** @TODO Use IsTransport() to also handle type 11 (TRANSPORT)
-            Currently grid objects are not updated if there are no nearby players,
-            this causes clients to receive different PathProgress
-            resulting in players seeing the object in a different position
-        */
-        if (go && go->ToTransport())                                    // ServerTime
-            *data << uint32(go->GetGOValue()->Transport.PathProgress);
-        else
-            *data << uint32(GameTime::GetGameTimeMS());
-    }
+        *data << uint32(GameTime::GetGameTimeMS());
 
     if (flags.Vehicle)
     {
@@ -430,7 +412,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, CreateObjectBits flags, Playe
     if (flags.Rotation)
         *data << uint64(ToGameObject()->GetPackedLocalRotation());      // Rotation
 
-    if (PauseTimesCount)
+    if (PauseTimes && !PauseTimes->empty())
         data->append(PauseTimes->data(), PauseTimes->size());
 
     if (flags.MovementTransport)
@@ -885,19 +867,9 @@ void WorldObject::setActive(bool on)
         return;
 
     if (on)
-    {
-        if (GetTypeId() == TYPEID_UNIT)
-            map->AddToActive(ToCreature());
-        else if (GetTypeId() == TYPEID_DYNAMICOBJECT)
-            map->AddToActive((DynamicObject*)this);
-    }
+        map->AddToActive(this);
     else
-    {
-        if (GetTypeId() == TYPEID_UNIT)
-            map->RemoveFromActive(ToCreature());
-        else if (GetTypeId() == TYPEID_DYNAMICOBJECT)
-            map->RemoveFromActive((DynamicObject*)this);
-    }
+        map->RemoveFromActive(this);
 }
 
 void WorldObject::SetVisibilityDistanceOverride(VisibilityDistanceType type)
@@ -922,7 +894,7 @@ void WorldObject::CleanupsBeforeDelete(bool /*finalCleanup*/)
     if (IsInWorld())
         RemoveFromWorld();
 
-    if (Transport* transport = GetTransport())
+    if (TransportBase* transport = GetTransport())
         transport->RemovePassenger(this);
 }
 
@@ -999,7 +971,7 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
     Position const* thisOrTransport = this;
     Position const* objOrObjTransport = obj;
 
-    if (GetTransport() && obj->GetTransport() && obj->GetTransport()->GetGUID() == GetTransport()->GetGUID())
+    if (GetTransport() && obj->GetTransport() && obj->GetTransport()->GetTransportGUID() == GetTransport()->GetTransportGUID())
     {
         thisOrTransport = &m_movementInfo.transport.pos;
         objOrObjTransport = &obj->m_movementInfo.transport.pos;
@@ -1843,7 +1815,7 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
         return nullptr;
     }
 
-    Transport* transport = summoner ? summoner->GetTransport() : nullptr;
+    TransportBase* transport = summoner ? summoner->GetTransport() : nullptr;
     if (transport)
     {
         float x, y, z, o;
@@ -2375,7 +2347,7 @@ void WorldObject::ModSpellDurationTime(SpellInfo const* spellInfo, int32& durati
     if (!spellInfo || duration < 0)
         return;
 
-    if (spellInfo->IsChanneled() && !spellInfo->HasAttribute(SPELL_ATTR5_HASTE_AFFECT_DURATION))
+    if (spellInfo->IsChanneled() && !spellInfo->HasAttribute(SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC))
         return;
 
     // called from caster
@@ -2927,7 +2899,7 @@ bool WorldObject::IsValidAttackTarget(WorldObject const* target, SpellInfo const
     if (unit)
     {
         // can't attack invisible
-        if (!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_CAN_TARGET_INVISIBLE))
+        if (!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_IGNORE_PHASE_SHIFT))
         {
             if (!unit->CanSeeOrDetect(target, bySpell && bySpell->IsAffectingArea()))
                 return false;
@@ -2958,7 +2930,7 @@ bool WorldObject::IsValidAttackTarget(WorldObject const* target, SpellInfo const
         unitOrOwner = go->GetOwner();
 
     // ignore immunity flags when assisting
-    if (unitOrOwner && unitTarget && !(isPositiveSpell && bySpell->HasAttribute(SPELL_ATTR6_ASSIST_IGNORE_IMMUNE_FLAG)))
+    if (unitOrOwner && unitTarget && !(isPositiveSpell && bySpell->HasAttribute(SPELL_ATTR6_CAN_ASSIST_IMMUNE_PC)))
     {
         if (!unitOrOwner->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) && unitTarget->IsImmuneToNPC())
             return false;
@@ -3035,7 +3007,7 @@ bool WorldObject::IsValidAttackTarget(WorldObject const* target, SpellInfo const
     // additional checks - only PvP case
     if (playerAffectingAttacker && playerAffectingTarget)
     {
-        if (playerAffectingTarget->IsPvP())
+        if (playerAffectingTarget->IsPvP() || (bySpell && bySpell->HasAttribute(SPELL_ATTR5_IGNORE_AREA_EFFECT_PVP_CHECK)))
             return true;
 
         if (playerAffectingAttacker->IsFFAPvP() && playerAffectingTarget->IsFFAPvP())
@@ -3081,7 +3053,7 @@ bool WorldObject::IsValidAssistTarget(WorldObject const* target, SpellInfo const
     }
 
     // can't assist invisible
-    if ((!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_CAN_TARGET_INVISIBLE)) && !CanSeeOrDetect(target, bySpell && bySpell->IsAffectingArea()))
+    if ((!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_IGNORE_PHASE_SHIFT)) && !CanSeeOrDetect(target, bySpell && bySpell->IsAffectingArea()))
         return false;
 
     // can't assist dead
@@ -3096,7 +3068,7 @@ bool WorldObject::IsValidAssistTarget(WorldObject const* target, SpellInfo const
     if (isNegativeSpell && unitTarget && unitTarget->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_ON_TAXI | UNIT_FLAG_NOT_ATTACKABLE_1 | UNIT_FLAG_NON_ATTACKABLE_2))
         return false;
 
-    if (isNegativeSpell || !bySpell || !bySpell->HasAttribute(SPELL_ATTR6_ASSIST_IGNORE_IMMUNE_FLAG))
+    if (isNegativeSpell || !bySpell || !bySpell->HasAttribute(SPELL_ATTR6_CAN_ASSIST_IMMUNE_PC))
     {
         if (unit && unit->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))
         {
@@ -3142,7 +3114,7 @@ bool WorldObject::IsValidAssistTarget(WorldObject const* target, SpellInfo const
     // !target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE) &&
     else if (unit && unit->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))
     {
-        if (!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_ASSIST_IGNORE_IMMUNE_FLAG))
+        if (!bySpell || !bySpell->HasAttribute(SPELL_ATTR6_CAN_ASSIST_IMMUNE_PC))
             if (unitTarget && !unitTarget->IsPvP())
                 if (Creature const* creatureTarget = target->ToCreature())
                     return ((creatureTarget->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_TREAT_AS_RAID_UNIT) || (creatureTarget->GetCreatureTemplate()->type_flags & CREATURE_TYPE_FLAG_CAN_ASSIST));
@@ -3606,7 +3578,7 @@ void WorldObject::RemoveFromObjectUpdate()
 ObjectGuid WorldObject::GetTransGUID() const
 {
     if (GetTransport())
-        return GetTransport()->GetGUID();
+        return GetTransport()->GetTransportGUID();
     return ObjectGuid::Empty;
 }
 

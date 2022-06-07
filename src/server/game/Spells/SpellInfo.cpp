@@ -377,6 +377,7 @@ std::array<SpellImplicitTargetInfo::StaticData, TOTAL_SPELL_TARGETS> SpellImplic
     {TARGET_OBJECT_TYPE_DEST, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_DEFAULT, TARGET_CHECK_DEFAULT,  TARGET_DIR_RANDOM},      // 149
     {TARGET_OBJECT_TYPE_UNIT, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_DEFAULT, TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 150 TARGET_UNIT_OWN_CRITTER
     {TARGET_OBJECT_TYPE_UNIT, TARGET_REFERENCE_TYPE_CASTER, TARGET_SELECT_CATEGORY_AREA,    TARGET_CHECK_ENEMY,    TARGET_DIR_NONE},        // 151
+    {TARGET_OBJECT_TYPE_NONE, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 152
 } };
 
 SpellEffectInfo::SpellEffectInfo(SpellInfo const* spellInfo): _spellInfo(spellInfo), EffectIndex(EFFECT_0), Effect(SPELL_EFFECT_NONE), ApplyAuraName(AuraType(0)), ApplyAuraPeriod(0),
@@ -1648,7 +1649,7 @@ bool SpellInfo::IsChanneled() const
 
 bool SpellInfo::IsMoveAllowedChannel() const
 {
-    return IsChanneled() && (HasAttribute(SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING) || !ChannelInterruptFlags.HasFlag(SpellAuraInterruptFlags::Moving | SpellAuraInterruptFlags::Turning));
+    return IsChanneled() && !ChannelInterruptFlags.HasFlag(SpellAuraInterruptFlags::Moving | SpellAuraInterruptFlags::Turning);
 }
 
 bool SpellInfo::NeedsComboPoints() const
@@ -1675,7 +1676,7 @@ bool SpellInfo::IsAutoRepeatRangedSpell() const
 
 bool SpellInfo::HasInitialAggro() const
 {
-    return !(HasAttribute(SPELL_ATTR1_NO_THREAT) || HasAttribute(SPELL_ATTR2_NO_INITIAL_THREAT));
+    return !(HasAttribute(SPELL_ATTR1_NO_THREAT) || HasAttribute(SPELL_ATTR2_NO_INITIAL_THREAT) || HasAttribute(SPELL_ATTR4_NO_HARMFUL_THREAT));
 }
 
 bool SpellInfo::HasHitDelay() const
@@ -1816,16 +1817,8 @@ bool SpellInfo::CanDispelAura(SpellInfo const* auraSpellInfo) const
 bool SpellInfo::IsSingleTarget() const
 {
     // all other single target spells have if it has AttributesEx5
-    if (HasAttribute(SPELL_ATTR5_SINGLE_TARGET_SPELL))
+    if (HasAttribute(SPELL_ATTR5_LIMIT_N))
         return true;
-
-    switch (GetSpellSpecific())
-    {
-        case SPELL_SPECIFIC_JUDGEMENT:
-            return true;
-        default:
-            break;
-    }
 
     return false;
 }
@@ -1874,7 +1867,6 @@ bool SpellInfo::IsAuraExclusiveBySpecificPerCasterWith(SpellInfo const* spellInf
         case SPELL_SPECIFIC_CURSE:
         case SPELL_SPECIFIC_BANE:
         case SPELL_SPECIFIC_ASPECT:
-        case SPELL_SPECIFIC_JUDGEMENT:
         case SPELL_SPECIFIC_WARLOCK_CORRUPTION:
             return spellSpec == spellInfo->GetSpellSpecific();
         default:
@@ -1952,7 +1944,7 @@ SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 a
     }
 
     // continent limitation (virtual continent)
-    if (HasAttribute(SPELL_ATTR4_CAST_ONLY_IN_OUTLAND))
+    if (HasAttribute(SPELL_ATTR4_ONLY_FLYING_AREAS))
     {
         uint32 mountFlags = 0;
         if (player && player->HasAuraType(SPELL_AURA_MOUNT_RESTRICTIONS))
@@ -1982,7 +1974,7 @@ SpellCastResult SpellInfo::CheckLocation(uint32 map_id, uint32 zone_id, uint32 a
     }
 
     // raid instance limitation
-    if (HasAttribute(SPELL_ATTR6_NOT_IN_RAID_INSTANCE))
+    if (HasAttribute(SPELL_ATTR6_NOT_IN_RAID_INSTANCES))
     {
         MapEntry const* mapEntry = sMapStore.LookupEntry(map_id);
         if (!mapEntry || mapEntry->IsRaid())
@@ -2107,7 +2099,7 @@ SpellCastResult SpellInfo::CheckTarget(WorldObject const* caster, WorldObject co
         return SPELL_FAILED_BAD_TARGETS;
 
     // check visibility - ignore stealth for implicit (area) targets
-    if (!HasAttribute(SPELL_ATTR6_CAN_TARGET_INVISIBLE) && !caster->CanSeeOrDetect(target, implicit))
+    if (!HasAttribute(SPELL_ATTR6_IGNORE_PHASE_SHIFT) && !caster->CanSeeOrDetect(target, implicit))
         return SPELL_FAILED_BAD_TARGETS;
 
     Unit const* unitTarget = target->ToUnit();
@@ -2178,21 +2170,27 @@ SpellCastResult SpellInfo::CheckTarget(WorldObject const* caster, WorldObject co
     else return SPELL_CAST_OK;
 
     // corpseOwner and unit specific target checks
-    if (HasAttribute(SPELL_ATTR3_ONLY_ON_PLAYER) && unitTarget->GetTypeId() != TYPEID_PLAYER)
-       return SPELL_FAILED_TARGET_NOT_PLAYER;
+    if (!unitTarget->IsPlayer())
+    {
+        if (HasAttribute(SPELL_ATTR3_ONLY_ON_PLAYER))
+            return SPELL_FAILED_TARGET_NOT_PLAYER;
+
+        if (HasAttribute(SPELL_ATTR5_NOT_ON_PLAYER_CONTROLLED_NPC) && unitTarget->IsControlledByPlayer())
+            return SPELL_FAILED_TARGET_IS_PLAYER_CONTROLLED;
+    }
+    else if (HasAttribute(SPELL_ATTR5_NOT_ON_PLAYER))
+        return SPELL_FAILED_TARGET_IS_PLAYER;
 
     if (!IsAllowingDeadTarget() && !unitTarget->IsAlive())
        return SPELL_FAILED_TARGETS_DEAD;
 
     // check this flag only for implicit targets (chain and area), allow to explicitly target units for spells like Shield of Righteousness
-    if (implicit && HasAttribute(SPELL_ATTR6_CANT_TARGET_CROWD_CONTROLLED) && !unitTarget->CanFreeMove())
+    if (implicit && HasAttribute(SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS) && !unitTarget->CanFreeMove())
        return SPELL_FAILED_BAD_TARGETS;
 
     // checked in Unit::IsValidAttack/AssistTarget, shouldn't be checked for ENTRY targets
     //if (!HasAttribute(SPELL_ATTR6_CAN_TARGET_UNTARGETABLE) && target->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNINTERACTIBLE))
     //    return SPELL_FAILED_BAD_TARGETS;
-
-    //if (!HasAttribute(SPELL_ATTR6_CAN_TARGET_POSSESSED_FRIENDS))
 
     if (!CheckTargetCreatureType(unitTarget))
     {
@@ -2319,7 +2317,7 @@ SpellCastResult SpellInfo::CheckVehicle(Unit const* caster) const
             checkMask = VEHICLE_SEAT_FLAG_CAN_ATTACK;
 
         VehicleSeatEntry const* vehicleSeat = vehicle->GetSeatForPassenger(caster);
-        if (!HasAttribute(SPELL_ATTR6_CASTABLE_WHILE_ON_VEHICLE) && !HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED)
+        if (!HasAttribute(SPELL_ATTR6_ALLOW_WHILE_RIDING_VEHICLE) && !HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED)
             && (vehicleSeat->Flags & checkMask) != checkMask)
             return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
 
@@ -2653,10 +2651,6 @@ void SpellInfo::_LoadSpellSpecific()
 
                 if (SpellFamilyFlags[0] & 0x00002190)
                     return SPELL_SPECIFIC_HAND;
-
-                // Judgement
-                if (Id == 20271)
-                    return SPELL_SPECIFIC_JUDGEMENT;
 
                 // only paladin auras have this (for palaldin class family)
                 switch (Id)
@@ -3468,7 +3462,7 @@ void SpellInfo::_LoadImmunityInfo()
         _allowedMechanicMask |= immuneInfo.MechanicImmuneMask;
     }
 
-    if (HasAttribute(SPELL_ATTR5_USABLE_WHILE_STUNNED))
+    if (HasAttribute(SPELL_ATTR5_ALLOW_WHILE_STUNNED))
     {
         switch (Id)
         {
@@ -3488,10 +3482,10 @@ void SpellInfo::_LoadImmunityInfo()
         }
     }
 
-    if (HasAttribute(SPELL_ATTR5_USABLE_WHILE_CONFUSED))
+    if (HasAttribute(SPELL_ATTR5_ALLOW_WHILE_CONFUSED))
         _allowedMechanicMask |= (1 << MECHANIC_DISORIENTED);
 
-    if (HasAttribute(SPELL_ATTR5_USABLE_WHILE_FEARED))
+    if (HasAttribute(SPELL_ATTR5_ALLOW_WHILE_FLEEING))
     {
         switch (Id)
         {
@@ -3824,7 +3818,7 @@ uint32 SpellInfo::GetMaxTicks() const
                     if (effect.ApplyAuraPeriod > 0 && DotDuration > 0)
                     {
                         totalTicks = static_cast<uint32>(DotDuration) / effect.ApplyAuraPeriod;
-                        if (HasAttribute(SPELL_ATTR5_START_PERIODIC_AT_APPLY))
+                        if (HasAttribute(SPELL_ATTR5_EXTRA_INITIAL_PERIOD))
                             ++totalTicks;
                     }
                     break;
@@ -3943,7 +3937,7 @@ Optional<SpellPowerCost> SpellInfo::CalcPowerCost(SpellPowerEntry const* power, 
     bool initiallyNegative = powerCost < 0;
 
     // Shiv - costs 20 + weaponSpeed*10 energy (apply only to non-triggered spell with energy cost)
-    if (HasAttribute(SPELL_ATTR4_SPELL_VS_EXTEND_COST))
+    if (HasAttribute(SPELL_ATTR4_WEAPON_SPEED_COST_SCALING))
     {
         uint32 speed = 0;
         if (SpellShapeshiftFormEntry const* ss = sSpellShapeshiftFormStore.LookupEntry(unitCaster->GetShapeshiftForm()))
@@ -4406,6 +4400,9 @@ bool _isPositiveEffectImpl(SpellInfo const* spellInfo, SpellEffectInfo const& ef
     // not found a single positive spell with this attribute
     if (spellInfo->HasAttribute(SPELL_ATTR0_AURA_IS_DEBUFF))
         return false;
+
+    if (spellInfo->HasAttribute(SPELL_ATTR4_AURA_IS_BUFF))
+        return true;
 
     visited.insert({ spellInfo, effect.EffectIndex });
 

@@ -20,7 +20,7 @@
 
 #include "Define.h"
 #include "EnumFlag.h"
-#include <array>
+#include <vector>
 
 #pragma pack(push, 1)
 
@@ -190,8 +190,6 @@ enum AzeriteTierUnlockSetFlags
 {
     AZERITE_TIER_UNLOCK_SET_FLAG_DEFAULT = 0x1
 };
-
-#define BATTLE_PET_SPECIES_MAX_ID 3248
 
 enum class BattlePetSpeciesFlags : uint16
 {
@@ -865,6 +863,10 @@ enum ItemBonusType
     ITEM_BONUS_REQUIRED_LEVEL_CURVE             = 27,
     ITEM_BONUS_DESCRIPTION_TEXT                 = 30,             // Item description
     ITEM_BONUS_OVERRIDE_NAME                    = 31,             // ItemNameDescription id
+    ITEM_BONUS_ITEM_BONUS_LIST_GROUP            = 34,
+    ITEM_BONUS_ITEM_LIMIT_CATEGORY              = 35,
+    ITEM_BONUS_ITEM_CONVERSION                  = 37,
+    ITEM_BONUS_ITEM_HISTORY_SLOT                = 38,
 };
 
 enum class ItemContext : uint8
@@ -1499,6 +1501,7 @@ enum class SpellEffectAttributes
     None                                    = 0,
     UnaffectedByInvulnerability             = 0x000001, // not cancelled by immunities
     NoScaleWithStack                        = 0x000040,
+    ChainFromInitialTarget                  = 0x000080,
     StackAuraAmountOnRecast                 = 0x008000, // refreshing periodic auras with this attribute will add remaining damage to new aura
     AllowAnyExplicitTarget                  = 0x100000,
     IgnoreDuringCooldownTimeRateCalculation = 0x800000
@@ -1578,8 +1581,25 @@ enum class SpellVisualEffectNameType : uint32
     UnitItemRangedIgnoreDisarmed    = 10
 };
 
-#define TaxiMaskSize 345
-typedef std::array<uint8, TaxiMaskSize> TaxiMask;
+class TaxiMask
+{
+public:
+    using value_type = uint8;
+
+    TaxiMask();
+
+    value_type& operator[](size_t i) { return _data[i]; }
+    value_type const& operator[](size_t i) const { return _data[i]; }
+
+    size_t size() const { return _data.size(); }
+    value_type const* data() const { return _data.data(); }
+
+    decltype(auto) begin() { return _data.begin(); }
+    decltype(auto) end() { return _data.end(); }
+
+private:
+    std::vector<value_type> _data;
+};
 
 enum TotemCategoryType
 {

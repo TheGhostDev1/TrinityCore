@@ -552,112 +552,112 @@ enum SpellAttr3 : uint32
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr4 : uint32
 {
-    SPELL_ATTR4_IGNORE_RESISTANCES               = 0x00000001, // TITLE Cannot be resisted
-    SPELL_ATTR4_PROC_ONLY_ON_CASTER              = 0x00000002, // TITLE Only proc on self-cast
-    SPELL_ATTR4_AURA_EXPIRES_OFFLINE             = 0x00000004, // TITLE Aura Expires Offline DESCRIPTION Debuffs (except Resurrection Sickness) will automatically do this
-    SPELL_ATTR4_UNK3                             = 0x00000008, // TITLE Unknown attribute 3@Attr4
-    SPELL_ATTR4_UNK4                             = 0x00000010, // TITLE Treat as delayed spell
-    SPELL_ATTR4_UNK5                             = 0x00000020, // TITLE Unknown attribute 5@Attr4
-    SPELL_ATTR4_NOT_STEALABLE                    = 0x00000040, // TITLE Aura cannot be stolen
-    SPELL_ATTR4_CAN_CAST_WHILE_CASTING           = 0x00000080, // TITLE Can be cast while casting DESCRIPTION Ignores already in-progress cast and still casts
-    SPELL_ATTR4_FIXED_DAMAGE                     = 0x00000100, // TITLE Deals fixed damage
-    SPELL_ATTR4_TRIGGER_ACTIVATE                 = 0x00000200, // TITLE Spell is initially disabled (client only)
-    SPELL_ATTR4_SPELL_VS_EXTEND_COST             = 0x00000400, // TITLE Attack speed modifies cost DESCRIPTION Adds 10 to power cost for each 1s of weapon speed
-    SPELL_ATTR4_UNK11                            = 0x00000800, // TITLE Unknown attribute 11@Attr4
-    SPELL_ATTR4_UNK12                            = 0x00001000, // TITLE Unknown attribute 12@Attr4
-    SPELL_ATTR4_COMBAT_LOG_NO_CASTER             = 0x00002000, // TITLE Do Not Log Caster
-    SPELL_ATTR4_DAMAGE_DOESNT_BREAK_AURAS        = 0x00004000, // TITLE Damage does not break auras
-    SPELL_ATTR4_HIDDEN_IN_SPELLBOOK              = 0x00008000, // TITLE Not In Spellbook
-    SPELL_ATTR4_NOT_USABLE_IN_ARENA_OR_RATED_BG  = 0x00010000, // TITLE Not In Arena or Rated Battleground DESCRIPTION Makes spell unusable despite CD <= 10min
-    SPELL_ATTR4_USABLE_IN_ARENA                  = 0x00020000, // TITLE Usable in arena DESCRIPTION Makes spell usable despite CD > 10min
-    SPELL_ATTR4_AREA_TARGET_CHAIN                = 0x00040000, // TITLE Chain area targets DESCRIPTION [NYI] Hits area targets over time instead of all at once
-    SPELL_ATTR4_UNK19                            = 0x00080000, // TITLE Unknown attribute 19@Attr4
-    SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER         = 0x00100000, // TITLE Allow self-cast to override stronger aura (client only)
-    SPELL_ATTR4_DONT_REMOVE_IN_ARENA             = 0x00200000, // TITLE Allow Entering Arena
-    SPELL_ATTR4_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr4
-    SPELL_ATTR4_SUPPRESS_WEAPON_PROCS            = 0x00800000, // TITLE Suppress Weapon Procs
-    SPELL_ATTR4_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr4 DESCRIPTION Shoot-type spell?
-    SPELL_ATTR4_IS_PET_SCALING                   = 0x02000000, // TITLE Pet Scaling aura
-    SPELL_ATTR4_CAST_ONLY_IN_OUTLAND             = 0x04000000, // TITLE Only in Outland/Northrend
-    SPELL_ATTR4_UNK27                            = 0x08000000, // TITLE Unknown attribute 27@Attr4
-    SPELL_ATTR4_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr4
-    SPELL_ATTR4_UNK29                            = 0x20000000, // TITLE Unknown attribute 29@Attr4
-    SPELL_ATTR4_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr4
-    SPELL_ATTR4_UNK31                            = 0x80000000  // TITLE Unknown attribute 31@Attr4
+    SPELL_ATTR4_NO_CAST_LOG                                         = 0x00000001, // TITLE No Cast Log
+    SPELL_ATTR4_CLASS_TRIGGER_ONLY_ON_TARGET                        = 0x00000002, // TITLE Class Trigger Only On Target
+    SPELL_ATTR4_AURA_EXPIRES_OFFLINE                                = 0x00000004, // TITLE Aura Expires Offline DESCRIPTION Debuffs (except Resurrection Sickness) will automatically do this
+    SPELL_ATTR4_NO_HELPFUL_THREAT                                   = 0x00000008, // TITLE No Helpful Threat
+    SPELL_ATTR4_NO_HARMFUL_THREAT                                   = 0x00000010, // TITLE No Harmful Threat
+    SPELL_ATTR4_ALLOW_CLIENT_TARGETING                              = 0x00000020, // TITLE Allow Client Targeting DESCRIPTION Allows client to send spell targets for this spell. Applies only to pet spells, without this attribute CMSG_PET_ACTION is sent instead of CMSG_PET_CAST_SPELL
+    SPELL_ATTR4_CANNOT_BE_STOLEN                                    = 0x00000040, // TITLE Cannot Be Stolen
+    SPELL_ATTR4_ALLOW_CAST_WHILE_CASTING                            = 0x00000080, // TITLE Allow Cast While Casting DESCRIPTION Ignores already in-progress cast and still casts
+    SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS                       = 0x00000100, // TITLE Ignore Damage Taken Modifiers
+    SPELL_ATTR4_COMBAT_FEEDBACK_WHEN_USABLE                         = 0x00000200, // TITLE Combat Feedback When Usable (client only)
+    SPELL_ATTR4_WEAPON_SPEED_COST_SCALING                           = 0x00000400, // TITLE Weapon Speed Cost Scaling DESCRIPTION Adds 10 to power cost for each 1s of weapon speed
+    SPELL_ATTR4_NO_PARTIAL_IMMUNITY                                 = 0x00000800, // TITLE No Partial Immunity
+    SPELL_ATTR4_AURA_IS_BUFF                                        = 0x00001000, // TITLE Aura Is Buff
+    SPELL_ATTR4_DO_NOT_LOG_CASTER                                   = 0x00002000, // TITLE Do Not Log Caster
+    SPELL_ATTR4_REACTIVE_DAMAGE_PROC                                = 0x00004000, // TITLE Reactive Damage Proc DESCRIPTION Damage from spells with this attribute doesn't break auras that normally break on damage taken
+    SPELL_ATTR4_NOT_IN_SPELLBOOK                                    = 0x00008000, // TITLE Not In Spellbook
+    SPELL_ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND                  = 0x00010000, // TITLE Not In Arena or Rated Battleground DESCRIPTION Makes spell unusable despite CD <= 10min
+    SPELL_ATTR4_IGNORE_DEFAULT_ARENA_RESTRICTIONS                   = 0x00020000, // TITLE Ignore Default Arena Restrictions DESCRIPTION Makes spell usable despite CD > 10min
+    SPELL_ATTR4_BOUNCY_CHAIN_MISSILES                               = 0x00040000, // TITLE Bouncy Chain Missiles DESCRIPTION Hits area targets over time instead of all at once
+    SPELL_ATTR4_ALLOW_PROC_WHILE_SITTING                            = 0x00080000, // TITLE Allow Proc While Sitting
+    SPELL_ATTR4_AURA_NEVER_BOUNCES                                  = 0x00100000, // TITLE Aura Never Bounces
+    SPELL_ATTR4_ALLOW_ENTERING_ARENA                                = 0x00200000, // TITLE Allow Entering Arena
+    SPELL_ATTR4_PROC_SUPPRESS_SWING_ANIM                            = 0x00400000, // TITLE Proc Suppress Swing Anim
+    SPELL_ATTR4_SUPPRESS_WEAPON_PROCS                               = 0x00800000, // TITLE Suppress Weapon Procs
+    SPELL_ATTR4_AUTO_RANGED_COMBAT                                  = 0x01000000, // TITLE Auto Ranged Combat
+    SPELL_ATTR4_OWNER_POWER_SCALING                                 = 0x02000000, // TITLE Owner Power Scaling
+    SPELL_ATTR4_ONLY_FLYING_AREAS                                   = 0x04000000, // TITLE Only Flying Areas
+    SPELL_ATTR4_FORCE_DISPLAY_CASTBAR                               = 0x08000000, // TITLE Force Display Castbar
+    SPELL_ATTR4_IGNORE_COMBAT_TIMER                                 = 0x10000000, // TITLE Ignore Combat Timer
+    SPELL_ATTR4_AURA_BOUNCE_FAILS_SPELL                             = 0x20000000, // TITLE Aura Bounce Fails Spell
+    SPELL_ATTR4_OBSOLETE                                            = 0x40000000, // TITLE Obsolete
+    SPELL_ATTR4_USE_FACING_FROM_SPELL                               = 0x80000000  // TITLE Use Facing From Spell
 };
 
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr5 : uint32
 {
-    SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING          = 0x00000001, // TITLE Can be channeled while moving
-    SPELL_ATTR5_NO_REAGENT_WHILE_PREP            = 0x00000002, // TITLE No reagents during arena preparation
-    SPELL_ATTR5_REMOVE_ENTERING_ARENA            = 0x00000004, // TITLE Remove Entering Arena DESCRIPTION Force this aura to be removed on entering arena, regardless of other properties
-    SPELL_ATTR5_USABLE_WHILE_STUNNED             = 0x00000008, // TITLE Usable while stunned
-    SPELL_ATTR5_UNK4                             = 0x00000010, // TITLE Unknown attribute 4@Attr5
-    SPELL_ATTR5_SINGLE_TARGET_SPELL              = 0x00000020, // TITLE Single-target aura DESCRIPTION Remove previous application to another unit if applied
-    SPELL_ATTR5_UNK6                             = 0x00000040, // TITLE Unknown attribute 6@Attr5
-    SPELL_ATTR5_UNK7                             = 0x00000080, // TITLE Unknown attribute 7@Attr5
-    SPELL_ATTR5_CANT_TARGET_PLAYER_CONTROLLED    = 0x00000100, // TITLE Not On Player Controlled NPC
-    SPELL_ATTR5_START_PERIODIC_AT_APPLY          = 0x00000200, // TITLE Immediately do periodic tick on apply
-    SPELL_ATTR5_HIDE_DURATION                    = 0x00000400, // TITLE Do not send aura duration to client
-    SPELL_ATTR5_ALLOW_TARGET_OF_TARGET_AS_TARGET = 0x00000800, // TITLE Auto-target target of target (client only)
-    SPELL_ATTR5_UNK12                            = 0x00001000, // TITLE Unknown attribute 12@Attr5 DESCRIPTION Cleave related?
-    SPELL_ATTR5_HASTE_AFFECT_DURATION            = 0x00002000, // TITLE Duration scales with Haste Rating
-    SPELL_ATTR5_NOT_USABLE_WHILE_CHARMED         = 0x00004000, // TITLE Not Available While Charmed
-    SPELL_ATTR5_UNK15                            = 0x00008000, // TITLE Unknown attribute 15@Attr5 DESCRIPTION Related to multi-target spells?
-    SPELL_ATTR5_UNK16                            = 0x00010000, // TITLE Unknown attribute 16@Attr5
-    SPELL_ATTR5_USABLE_WHILE_FEARED              = 0x00020000, // TITLE Usable while feared
-    SPELL_ATTR5_USABLE_WHILE_CONFUSED            = 0x00040000, // TITLE Usable while confused
-    SPELL_ATTR5_DONT_TURN_DURING_CAST            = 0x00080000, // TITLE Do not auto-turn while casting
-    SPELL_ATTR5_UNK20                            = 0x00100000, // TITLE Unknown attribute 20@Attr5
-    SPELL_ATTR5_UNK21                            = 0x00200000, // TITLE Unknown attribute 21@Attr5
-    SPELL_ATTR5_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr5
-    SPELL_ATTR5_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr5
-    SPELL_ATTR5_UNK24                            = 0x01000000, // TITLE Unknown attribute 24@Attr5
-    SPELL_ATTR5_UNK25                            = 0x02000000, // TITLE Unknown attribute 25@Attr5
-    SPELL_ATTR5_ALWAYS_AOE_LINE_OF_SIGHT         = 0x04000000, // TITLE Ignore line of sight checks
-    SPELL_ATTR5_DONT_SHOW_AURA_IF_SELF_CAST      = 0x08000000, // TITLE Don't show aura if self-cast (client only)
-    SPELL_ATTR5_DONT_SHOW_AURA_IF_NOT_SELF_CAST  = 0x10000000, // TITLE Don't show aura unless self-cast (client only)
-    SPELL_ATTR5_UNK29                            = 0x20000000, // TITLE Unknown attribute 29@Attr5
-    SPELL_ATTR5_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr5
-    SPELL_ATTR5_UNK31                            = 0x80000000  // TITLE Unknown attribute 31@Attr5 DESCRIPTION Forces nearby enemies to attack caster?
+    SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL                        = 0x00000001, // TITLE Allow Actions During Channel
+    SPELL_ATTR5_NO_REAGENT_COST_WITH_AURA                           = 0x00000002, // TITLE No Reagent Cost With Aura
+    SPELL_ATTR5_REMOVE_ENTERING_ARENA                               = 0x00000004, // TITLE Remove Entering Arena DESCRIPTION Force this aura to be removed on entering arena, regardless of other properties
+    SPELL_ATTR5_ALLOW_WHILE_STUNNED                                 = 0x00000008, // TITLE Allow While Stunned
+    SPELL_ATTR5_TRIGGERS_CHANNELING                                 = 0x00000010, // TITLE Triggers Channeling
+    SPELL_ATTR5_LIMIT_N                                             = 0x00000020, // TITLE Limit N DESCRIPTION Remove previous application to another unit if applied
+    SPELL_ATTR5_IGNORE_AREA_EFFECT_PVP_CHECK                        = 0x00000040, // TITLE Ignore Area Effect PvP Check
+    SPELL_ATTR5_NOT_ON_PLAYER                                       = 0x00000080, // TITLE Not On Player
+    SPELL_ATTR5_NOT_ON_PLAYER_CONTROLLED_NPC                        = 0x00000100, // TITLE Not On Player Controlled NPC
+    SPELL_ATTR5_EXTRA_INITIAL_PERIOD                                = 0x00000200, // TITLE Extra Initial Period DESCRIPTION Immediately do periodic tick on apply
+    SPELL_ATTR5_DO_NOT_DISPLAY_DURATION                             = 0x00000400, // TITLE Do Not Display Duration
+    SPELL_ATTR5_IMPLIED_TARGETING                                   = 0x00000800, // TITLE Implied Targeting (client only)
+    SPELL_ATTR5_MELEE_CHAIN_TARGETING                               = 0x00001000, // TITLE Melee Chain Targeting
+    SPELL_ATTR5_SPELL_HASTE_AFFECTS_PERIODIC                        = 0x00002000, // TITLE Spell Haste Affects Periodic
+    SPELL_ATTR5_NOT_AVAILABLE_WHILE_CHARMED                         = 0x00004000, // TITLE Not Available While Charmed
+    SPELL_ATTR5_TREAT_AS_AREA_EFFECT                                = 0x00008000, // TITLE Treat as Area Effect
+    SPELL_ATTR5_AURA_AFFECTS_NOT_JUST_REQ_EQUIPPED_ITEM             = 0x00010000, // TITLE Aura Affects Not Just Req. Equipped Item
+    SPELL_ATTR5_ALLOW_WHILE_FLEEING                                 = 0x00020000, // TITLE Allow While Fleeing
+    SPELL_ATTR5_ALLOW_WHILE_CONFUSED                                = 0x00040000, // TITLE Allow While Confused
+    SPELL_ATTR5_AI_DOESNT_FACE_TARGET                               = 0x00080000, // TITLE AI Doesn't Face Target
+    SPELL_ATTR5_DO_NOT_ATTEMPT_A_PET_RESUMMON_WHEN_DISMOUNTING      = 0x00100000, // TITLE Do Not Attempt a Pet Resummon When Dismounting DESCRIPTION No generic handling possible, used by scripted dismount spells
+    SPELL_ATTR5_IGNORE_TARGET_REQUIREMENTS                          = 0x00200000, /*NYI*/ // TITLE Ignore Target Requirements
+    SPELL_ATTR5_NOT_ON_TRIVIAL                                      = 0x00400000, /*NYI*/ // TITLE Not On Trivial
+    SPELL_ATTR5_NO_PARTIAL_RESISTS                                  = 0x00800000, /*NYI, resisting only some spell effects not implemented*/ // TITLE No Partial Resists
+    SPELL_ATTR5_IGNORE_CASTER_REQUIREMENTS                          = 0x01000000, /*NYI*/ // TITLE Ignore Caster Requirements
+    SPELL_ATTR5_ALWAYS_LINE_OF_SIGHT                                = 0x02000000, // TITLE Always Line of Sight
+    SPELL_ATTR5_ALWAYS_AOE_LINE_OF_SIGHT                            = 0x04000000, // TITLE Always AOE Line of Sight DESCRIPTION Requires line of sight between caster and target in addition to between dest and target
+    SPELL_ATTR5_NO_CASTER_AURA_ICON                                 = 0x08000000, // TITLE No Caster Aura Icon (client only)
+    SPELL_ATTR5_NO_TARGET_AURA_ICON                                 = 0x10000000, // TITLE No Target Aura Icon (client only)
+    SPELL_ATTR5_AURA_UNIQUE_PER_CASTER                              = 0x20000000, // TITLE Aura Unique Per Caster
+    SPELL_ATTR5_ALWAYS_SHOW_GROUND_TEXTURE                          = 0x40000000, // TITLE Always Show Ground Texture
+    SPELL_ATTR5_ADD_MELEE_HIT_RATING                                = 0x80000000  // TITLE Add Melee Hit Rating
 };
 
 // EnumUtils: DESCRIBE THIS
 enum SpellAttr6 : uint32
 {
-    SPELL_ATTR6_DONT_DISPLAY_COOLDOWN            = 0x00000001, // TITLE Don't display cooldown (client only)
-    SPELL_ATTR6_ONLY_IN_ARENA                    = 0x00000002, // TITLE Only usable in arena
-    SPELL_ATTR6_IGNORE_CASTER_AURAS              = 0x00000004, // TITLE Ignore all preventing caster auras
-    SPELL_ATTR6_ASSIST_IGNORE_IMMUNE_FLAG        = 0x00000008, // TITLE Ignore immunity flags when assisting
-    SPELL_ATTR6_UNK4                             = 0x00000010, // TITLE Unknown attribute 4@Attr6
-    SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES         = 0x00000020, // TITLE Don't consume proc charges
-    SPELL_ATTR6_USE_SPELL_CAST_EVENT             = 0x00000040, // TITLE Generate spell_cast event instead of aura_start (client only)
-    SPELL_ATTR6_UNK7                             = 0x00000080, // TITLE Unknown attribute 7@Attr6
-    SPELL_ATTR6_CANT_TARGET_CROWD_CONTROLLED     = 0x00000100, // TITLE Do not implicitly target in CC DESCRIPTION Implicit targeting (chaining and area targeting) will not impact crowd controlled targets
-    SPELL_ATTR6_UNK9                             = 0x00000200, // TITLE Unknown attribute 9@Attr6
-    SPELL_ATTR6_CAN_TARGET_POSSESSED_FRIENDS     = 0x00000400, // TITLE Can target possessed friends DESCRIPTION [NYI]
-    SPELL_ATTR6_NOT_IN_RAID_INSTANCE             = 0x00000800, // TITLE Unusable in raid instances
-    SPELL_ATTR6_CASTABLE_WHILE_ON_VEHICLE        = 0x00001000, // TITLE Castable while caster is on vehicle
-    SPELL_ATTR6_CAN_TARGET_INVISIBLE             = 0x00002000, // TITLE Can target invisible units
-    SPELL_ATTR6_UNK14                            = 0x00004000, // TITLE Unknown attribute 14@Attr6
-    SPELL_ATTR6_UNK15                            = 0x00008000, // TITLE Unknown attribute 15@Attr6
-    SPELL_ATTR6_UNK16                            = 0x00010000, // TITLE Unknown attribute 16@Attr6
-    SPELL_ATTR6_UNK17                            = 0x00020000, // TITLE Unknown attribute 17@Attr6 DESCRIPTION Mount related?
-    SPELL_ATTR6_CAST_BY_CHARMER                  = 0x00040000, // TITLE Spell is cast by charmer DESCRIPTION Client will prevent casting if not possessed, charmer will be caster for all intents and purposes
-    SPELL_ATTR6_UNK19                            = 0x00080000, // TITLE Unknown attribute 19@Attr6
-    SPELL_ATTR6_ONLY_VISIBLE_TO_CASTER           = 0x00100000, // TITLE Only visible to caster (client only)
-    SPELL_ATTR6_CLIENT_UI_TARGET_EFFECTS         = 0x00200000, // TITLE Client UI target effects (client only)
-    SPELL_ATTR6_UNK22                            = 0x00400000, // TITLE Unknown attribute 22@Attr6
-    SPELL_ATTR6_UNK23                            = 0x00800000, // TITLE Unknown attribute 23@Attr6
-    SPELL_ATTR6_CAN_TARGET_UNTARGETABLE          = 0x01000000, // TITLE Can target untargetable units
-    SPELL_ATTR6_NOT_RESET_SWING_IF_INSTANT       = 0x02000000, // TITLE Do not reset swing timer if cast time is instant
-    SPELL_ATTR6_UNK26                            = 0x04000000, // TITLE Unknown attribute 26@Attr6 DESCRIPTION Player castable buff?
-    SPELL_ATTR6_IGNORE_HEALING_MODIFIERS         = 0x08000000, // TITLE Limit applicable %healing modifiers DESCRIPTION This prevents certain healing modifiers from applying - see implementation if you really care about details
-    SPELL_ATTR6_UNK28                            = 0x10000000, // TITLE Unknown attribute 28@Attr6 DESCRIPTION Death grip?
-    SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS   = 0x20000000, // TITLE Limit applicable %damage modifiers DESCRIPTION This prevents certain damage modifiers from applying - see implementation if you really care about details
-    SPELL_ATTR6_UNK30                            = 0x40000000, // TITLE Unknown attribute 30@Attr6
-    SPELL_ATTR6_IGNORE_CATEGORY_COOLDOWN_MODS    = 0x80000000  // TITLE Ignore cooldown modifiers for category cooldown
+    SPELL_ATTR6_NO_COOLDOWN_ON_TOOLTIP                              = 0x00000001, // TITLE No Cooldown On Tooltip (client only)
+    SPELL_ATTR6_DO_NOT_RESET_COOLDOWN_IN_ARENA                      = 0x00000002, // TITLE Do Not Reset Cooldown In Arena
+    SPELL_ATTR6_NOT_AN_ATTACK                                       = 0x00000004, /*NYI*/ // TITLE Not an Attack
+    SPELL_ATTR6_CAN_ASSIST_IMMUNE_PC                                = 0x00000008, // TITLE Can Assist Immune PC
+    SPELL_ATTR6_IGNORE_FOR_MOD_TIME_RATE                            = 0x00000010, /*NYI, time rate not implemented*/ // TITLE Ignore For Mod Time Rate
+    SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES                            = 0x00000020, // TITLE Do Not Consume Resources
+    SPELL_ATTR6_FLOATING_COMBAT_TEXT_ON_CAST                        = 0x00000040, // TITLE Floating Combat Text On Cast (client only)
+    SPELL_ATTR6_AURA_IS_WEAPON_PROC                                 = 0x00000080, // TITLE Aura Is Weapon Proc
+    SPELL_ATTR6_DO_NOT_CHAIN_TO_CROWD_CONTROLLED_TARGETS            = 0x00000100, // TITLE Do Not Chain To Crowd-Controlled Targets DESCRIPTION Implicit targeting (chaining and area targeting) will not impact crowd controlled targets
+    SPELL_ATTR6_ALLOW_ON_CHARMED_TARGETS                            = 0x00000200, /*NYI*/ // TITLE Allow On Charmed Targets
+    SPELL_ATTR6_NO_AURA_LOG                                         = 0x00000400, // TITLE No Aura Log
+    SPELL_ATTR6_NOT_IN_RAID_INSTANCES                               = 0x00000800, // TITLE Not In Raid Instances
+    SPELL_ATTR6_ALLOW_WHILE_RIDING_VEHICLE                          = 0x00001000, // TITLE Allow While Riding Vehicle
+    SPELL_ATTR6_IGNORE_PHASE_SHIFT                                  = 0x00002000, // TITLE Ignore Phase Shift
+    SPELL_ATTR6_AI_PRIMARY_RANGED_ATTACK                            = 0x00004000, /*NYI*/ // TITLE AI Primary Ranged Attack
+    SPELL_ATTR6_NO_PUSHBACK                                         = 0x00008000, // TITLE No Pushback
+    SPELL_ATTR6_NO_JUMP_PATHING                                     = 0x00010000, /*NYI, currently jumps dont path at all*/ // TITLE No Jump Pathing
+    SPELL_ATTR6_ALLOW_EQUIP_WHILE_CASTING                           = 0x00020000, // TITLE Allow Equip While Casting
+    SPELL_ATTR6_ORIGINATE_FROM_CONTROLLER                           = 0x00040000, // TITLE Originate From Controller DESCRIPTION Client will prevent casting if not possessed, charmer will be caster for all intents and purposes
+    SPELL_ATTR6_DELAY_COMBAT_TIMER_DURING_CAST                      = 0x00080000, // TITLE Delay Combat Timer During Cast
+    SPELL_ATTR6_AURA_ICON_ONLY_FOR_CASTER_LIMIT_10                  = 0x00100000, // TITLE Aura Icon Only For Caster (Limit 10) (client only)
+    SPELL_ATTR6_SHOW_MECHANIC_AS_COMBAT_TEXT                        = 0x00200000, // TITLE Show Mechanic as Combat Text (client only)
+    SPELL_ATTR6_ABSORB_CANNOT_BE_IGNORE                             = 0x00400000, // TITLE Absorb Cannot Be Ignore
+    SPELL_ATTR6_TAPS_IMMEDIATELY                                    = 0x00800000, // TITLE Taps immediately
+    SPELL_ATTR6_CAN_TARGET_UNTARGETABLE                             = 0x01000000, // TITLE Can Target Untargetable
+    SPELL_ATTR6_DOESNT_RESET_SWING_TIMER_IF_INSTANT                 = 0x02000000, // TITLE Doesn't Reset Swing Timer if Instant
+    SPELL_ATTR6_VEHICLE_IMMUNITY_CATEGORY                           = 0x04000000, /*NYI, immunity to some buffs for some vehicles*/ // TITLE Vehicle Immunity Category
+    SPELL_ATTR6_IGNORE_HEALING_MODIFIERS                            = 0x08000000, // TITLE Ignore Healing Modifiers DESCRIPTION This prevents certain healing modifiers from applying - see implementation if you really care about details
+    SPELL_ATTR6_DO_NOT_AUTO_SELECT_TARGET_WITH_INITIATES_COMBAT     = 0x10000000, // TITLE Do Not Auto Select Target with Initiates Combat (client only)
+    SPELL_ATTR6_IGNORE_CASTER_DAMAGE_MODIFIERS                      = 0x20000000, // TITLE Ignore Caster Damage Modifiers DESCRIPTION This prevents certain damage modifiers from applying - see implementation if you really care about details
+    SPELL_ATTR6_DISABLE_TIED_EFFECT_POINTS                          = 0x40000000, /*NYI*/ // TITLE Disable Tied Effect Points
+    SPELL_ATTR6_NO_CATEGORY_COOLDOWN_MODS                           = 0x80000000  // TITLE No Category Cooldown Mods
 };
 
 // EnumUtils: DESCRIBE THIS
@@ -717,7 +717,7 @@ enum SpellAttr8 : uint32
     SPELL_ATTR8_UNK14                            = 0x00004000, // TITLE Unknown attribute 14@Attr8
     SPELL_ATTR8_WATER_MOUNT                      = 0x00008000, // TITLE Requires location to be on liquid surface
     SPELL_ATTR8_UNK16                            = 0x00010000, // TITLE Unknown attribute 16@Attr8
-    SPELL_ATTR8_UNK17                            = 0x00020000, // TITLE Unknown attribute 17@Attr8
+    SPELL_ATTR8_HASTE_AFFECTS_DURATION           = 0x00020000, // TITLE Haste Affects Duration
     SPELL_ATTR8_REMEMBER_SPELLS                  = 0x00040000, // TTILE Ignore Spellcast Override Cost
     SPELL_ATTR8_USE_COMBO_POINTS_ON_ANY_TARGET   = 0x00080000, // TITLE Allow Targets Hidden by Spawn Tracking
     SPELL_ATTR8_ARMOR_SPECIALIZATION             = 0x00100000, // TITLE Requires Equipped Inv Types
@@ -2351,46 +2351,46 @@ enum StealthType
 
 enum InvisibilityType
 {
-    INVISIBILITY_GENERAL     =  0,
-    INVISIBILITY_UNK1        =  1,
-    INVISIBILITY_UNK2        =  2,
-    INVISIBILITY_TRAP        =  3,
-    INVISIBILITY_UNK4        =  4,
-    INVISIBILITY_UNK5        =  5,
-    INVISIBILITY_DRUNK       =  6,
-    INVISIBILITY_UNK7        =  7,
-    INVISIBILITY_UNK8        =  8,
-    INVISIBILITY_UNK9        =  9,
-    INVISIBILITY_UNK10       = 10,
-    INVISIBILITY_UNK11       = 11,
-    INVISIBILITY_UNK12       = 12,
-    INVISIBILITY_TRA13       = 13,
-    INVISIBILITY_UNK14       = 14,
-    INVISIBILITY_UNK15       = 15,
-    INVISIBILITY_UNK16       = 16,
-    INVISIBILITY_UNK17       = 17,
-    INVISIBILITY_UNK18       = 18,
-    INVISIBILITY_UNK19       = 19,
-    INVISIBILITY_UNK20       = 20,
-    INVISIBILITY_UNK21       = 21,
-    INVISIBILITY_UNK22       = 22,
-    INVISIBILITY_TRA23       = 23,
-    INVISIBILITY_UNK24       = 24,
-    INVISIBILITY_UNK25       = 25,
-    INVISIBILITY_UNK26       = 26,
-    INVISIBILITY_UNK27       = 27,
-    INVISIBILITY_UNK28       = 28,
-    INVISIBILITY_UNK29       = 29,
-    INVISIBILITY_UNK30       = 30,
-    INVISIBILITY_UNK31       = 31,
-    INVISIBILITY_UNK32       = 32,
-    INVISIBILITY_UNK33       = 33,
-    INVISIBILITY_UNK34       = 34,
-    INVISIBILITY_UNK35       = 35,
-    INVISIBILITY_UNK36       = 36,
-    INVISIBILITY_UNK37       = 37,
+    INVISIBILITY_GENERAL                =  0,
+    INVISIBILITY_UNK1                   =  1,
+    INVISIBILITY_UNK2                   =  2,
+    INVISIBILITY_TRAP                   =  3,
+    INVISIBILITY_UNK4                   =  4,
+    INVISIBILITY_UNK5                   =  5,
+    INVISIBILITY_DRUNK                  =  6,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_1  =  7,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_2  =  8,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_3  =  9,
+    INVISIBILITY_UNK10                  = 10,
+    INVISIBILITY_UNK11                  = 11,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_4  = 12,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_5  = 13,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_6  = 14,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_7  = 15,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_8  = 16,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_9  = 17,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_10 = 18,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_11 = 19,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_12 = 20,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_13 = 21,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_14 = 22,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_15 = 23,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_16 = 24,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_17 = 25,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_18 = 26,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_19 = 27,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_20 = 28,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_21 = 29,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_22 = 30,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_23 = 31,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_24 = 32,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_25 = 33,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_26 = 34,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_27 = 35,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_28 = 36,
+    INVISIBILITY_QUEST_ZONE_SPECIFIC_29 = 37,
 
-    TOTAL_INVISIBILITY_TYPES = 38
+    TOTAL_INVISIBILITY_TYPES            = 38
 };
 
 enum ServerSideVisibilityType
@@ -2677,6 +2677,7 @@ enum Targets
     TARGET_UNK_149                              = 149,
     TARGET_UNIT_OWN_CRITTER                     = 150, // own battle pet from UNIT_FIELD_CRITTER
     TARGET_UNK_151                              = 151,
+    TARGET_UNK_152                              = 152,
     TOTAL_SPELL_TARGETS
 };
 
@@ -2820,7 +2821,7 @@ enum GameObjectFlags
 
 DEFINE_ENUM_FLAG(GameObjectFlags);
 
-enum GameObjectDynamicLowFlags
+enum GameObjectDynamicLowFlags : uint16
 {
     GO_DYNFLAG_LO_HIDE_MODEL        = 0x0002,               // Object model is not shown with this flag
     GO_DYNFLAG_LO_ACTIVATE          = 0x0004,               // enables interaction with GO

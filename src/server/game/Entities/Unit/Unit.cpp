@@ -299,7 +299,7 @@ SpellNonMeleeDamage::SpellNonMeleeDamage(Unit* _attacker, Unit* _target, SpellIn
 
 Unit::Unit(bool isWorldObject) :
     WorldObject(isWorldObject), m_lastSanctuaryTime(0), LastCharmerGUID(), movespline(new Movement::MoveSpline()),
-    m_ControlledByPlayer(false), m_AutoRepeatFirstCast(false), m_procDeep(0), m_transformSpell(0),
+    m_ControlledByPlayer(false), m_procDeep(0), m_transformSpell(0),
     m_removedAurasCount(0), m_interruptMask(SpellAuraInterruptFlags::None), m_interruptMask2(SpellAuraInterruptFlags2::None),
     m_unitMovedByMe(nullptr), m_playerMovingMe(nullptr), m_charmer(nullptr), m_charmed(nullptr),
     i_motionMaster(new MotionMaster(this)), m_regenTimer(0), m_vehicle(nullptr),
@@ -470,13 +470,20 @@ void Unit::Update(uint32 p_time)
         _lastExtraAttackSpell = 0;
     }
 
-    // not implemented before 3.0.2
-    if (uint32 base_att = getAttackTimer(BASE_ATTACK))
-        setAttackTimer(BASE_ATTACK, (p_time >= base_att ? 0 : base_att - p_time));
-    if (uint32 ranged_att = getAttackTimer(RANGED_ATTACK))
-        setAttackTimer(RANGED_ATTACK, (p_time >= ranged_att ? 0 : ranged_att - p_time));
-    if (uint32 off_att = getAttackTimer(OFF_ATTACK))
-        setAttackTimer(OFF_ATTACK, (p_time >= off_att ? 0 : off_att - p_time));
+    auto spellPausesCombatTimer = [&](CurrentSpellTypes type)
+    {
+        return GetCurrentSpell(type) && GetCurrentSpell(type)->GetSpellInfo()->HasAttribute(SPELL_ATTR6_DELAY_COMBAT_TIMER_DURING_CAST);
+    };
+
+    if (!spellPausesCombatTimer(CURRENT_GENERIC_SPELL) && !spellPausesCombatTimer(CURRENT_CHANNELED_SPELL))
+    {
+        if (uint32 base_att = getAttackTimer(BASE_ATTACK))
+            setAttackTimer(BASE_ATTACK, (p_time >= base_att ? 0 : base_att - p_time));
+        if (uint32 ranged_att = getAttackTimer(RANGED_ATTACK))
+            setAttackTimer(RANGED_ATTACK, (p_time >= ranged_att ? 0 : ranged_att - p_time));
+        if (uint32 off_att = getAttackTimer(OFF_ATTACK))
+            setAttackTimer(OFF_ATTACK, (p_time >= off_att ? 0 : off_att - p_time));
+    }
 
     // update abilities available only for fraction of time
     UpdateReactives(p_time);
@@ -758,7 +765,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
         // interrupting auras with SpellAuraInterruptFlags::Damage before checking !damage (absorbed damage breaks that type of auras)
         if (spellProto)
         {
-            if (!spellProto->HasAttribute(SPELL_ATTR4_DAMAGE_DOESNT_BREAK_AURAS))
+            if (!spellProto->HasAttribute(SPELL_ATTR4_REACTIVE_DAMAGE_PROC))
                 victim->RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Damage, spellProto);
         }
         else
@@ -964,7 +971,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
             if (damagetype != DOT && damage > 0 && !victim->GetOwnerGUID().IsPlayer() && (!spellProto || !spellProto->HasAura(SPELL_AURA_DAMAGE_SHIELD)))
                 victim->ToCreature()->SetLastDamagedTime(GameTime::GetGameTime() + MAX_AGGRO_RESET_TIME);
 
-            if (attacker)
+            if (attacker && (!spellProto || !spellProto->HasAttribute(SPELL_ATTR4_NO_HARMFUL_THREAT)))
                 victim->GetThreatManager().AddThreat(attacker, float(damage), spellProto);
         }
         else                                                // victim is a player
@@ -989,7 +996,7 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
 
         if (damagetype != NODAMAGE && damagetype != DOT)
         {
-            if (victim != attacker && (!spellProto || !(spellProto->HasAttribute(SPELL_ATTR7_NO_PUSHBACK_ON_DAMAGE) || spellProto->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))))
+            if (victim != attacker && (!spellProto || !(spellProto->HasAttribute(SPELL_ATTR6_NO_PUSHBACK) || spellProto->HasAttribute(SPELL_ATTR7_NO_PUSHBACK_ON_DAMAGE) || spellProto->HasAttribute(SPELL_ATTR3_TREAT_AS_PERIODIC))))
             {
                 if (Spell* spell = victim->m_currentSpells[CURRENT_GENERIC_SPELL])
                 {
@@ -1028,12 +1035,12 @@ bool Unit::HasBreakableByDamageCrowdControlAura(Unit* excludeCasterChannel) cons
                         else if (isCastDelayed())
                             spell->Delayed();
                     }
-
-                    if (damage && victim->IsPlayer())
-                        if (Spell* spell = victim->m_currentSpells[CURRENT_CHANNELED_SPELL])
-                            if (spell->getState() == SPELL_STATE_CASTING && spell->m_spellInfo->HasChannelInterruptFlag(SpellAuraInterruptFlags::DamageChannelDuration))
-                                spell->DelayedChannel();
                 }
+
+                if (damage && victim->IsPlayer())
+                    if (Spell* spell = victim->m_currentSpells[CURRENT_CHANNELED_SPELL])
+                        if (spell->getState() == SPELL_STATE_CASTING && spell->m_spellInfo->HasChannelInterruptFlag(SpellAuraInterruptFlags::DamageChannelDuration))
+                            spell->DelayedChannel();
             }
         }
 
@@ -1082,8 +1089,8 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
 
     SpellSchoolMask damageSchoolMask = SpellSchoolMask(damageInfo->schoolMask);
 
-    // Spells with SPELL_ATTR4_FIXED_DAMAGE ignore resilience because their damage is based off another spell's damage.
-    if (!spellInfo->HasAttribute(SPELL_ATTR4_FIXED_DAMAGE))
+    // Spells with SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS ignore resilience because their damage is based off another spell's damage.
+    if (!spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS))
     {
         if (Unit::IsDamageReducedByArmor(damageSchoolMask, spellInfo))
             damage = Unit::CalcArmorReducedDamage(damageInfo->attacker, victim, damage, spellInfo, attackType);
@@ -1647,13 +1654,6 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
     if ((schoolMask & SPELL_SCHOOL_MASK_HOLY) && victim->GetTypeId() != TYPEID_UNIT)
         return 0;
 
-    // Ignore spells that can't be resisted
-    if (spellInfo)
-    {
-        if (spellInfo->HasAttribute(SPELL_ATTR4_IGNORE_RESISTANCES))
-            return 0;
-    }
-
     float const averageResist = Unit::CalculateAverageResistReduction(attacker, schoolMask, victim, spellInfo);
     float discreteResistProbability[11] = { };
     if (averageResist <= 0.1f)
@@ -1765,7 +1765,6 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
         spell->CallScriptOnResistAbsorbCalculateHandlers(damageInfo, resistedDamage, absorbIgnoringDamage);
 
     damageInfo.ResistDamage(resistedDamage);
-    damageInfo.ModifyDamage(-absorbIgnoringDamage);
 
     // We're going to call functions which can modify content of the list during iteration over it's elements
     // Let's copy the list so we can prevent iterator invalidation
@@ -1788,6 +1787,9 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
         // aura with infinite absorb amount - let the scripts handle absorbtion amount, set here to 0 for safety
         if (currentAbsorb < 0)
             currentAbsorb = 0;
+
+        if (!absorbAurEff->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ABSORB_CANNOT_BE_IGNORE))
+            damageInfo.ModifyDamage(-absorbIgnoringDamage);
 
         uint32 tempAbsorb = uint32(currentAbsorb);
 
@@ -1816,6 +1818,9 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
                     absorbAurEff->GetBase()->Remove(AURA_REMOVE_BY_ENEMY_SPELL);
             }
         }
+
+        if (!absorbAurEff->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ABSORB_CANNOT_BE_IGNORE))
+            damageInfo.ModifyDamage(absorbIgnoringDamage);
 
         if (currentAbsorb)
         {
@@ -1850,6 +1855,9 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
         // aura with infinite absorb amount - let the scripts handle absorbtion amount, set here to 0 for safety
         if (currentAbsorb < 0)
             currentAbsorb = 0;
+
+        if (!absorbAurEff->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ABSORB_CANNOT_BE_IGNORE))
+            damageInfo.ModifyDamage(-absorbIgnoringDamage);
 
         uint32 tempAbsorb = currentAbsorb;
 
@@ -1888,6 +1896,9 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
             }
         }
 
+        if (!absorbAurEff->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ABSORB_CANNOT_BE_IGNORE))
+            damageInfo.ModifyDamage(absorbIgnoringDamage);
+
         if (currentAbsorb)
         {
             WorldPackets::CombatLog::SpellAbsorbLog absorbLog;
@@ -1902,8 +1913,6 @@ void Unit::HandleEmoteCommand(Emote emoteId, Player* target /*=nullptr*/, Trinit
             damageInfo.GetVictim()->SendCombatLogMessage(&absorbLog);
         }
     }
-
-    damageInfo.ModifyDamage(absorbIgnoringDamage);
 
     // split damage auras - only when not damaging self
     if (damageInfo.GetVictim() != damageInfo.GetAttacker())
@@ -2721,6 +2730,8 @@ void Unit::_DeleteRemovedAuras()
 
 void Unit::_UpdateSpells(uint32 time)
 {
+    _spellHistory->Update();
+
     if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL])
         _UpdateAutoRepeatSpell();
 
@@ -2774,8 +2785,6 @@ void Unit::_UpdateSpells(uint32 time)
                 ++itr;
         }
     }
-
-    _spellHistory->Update();
 }
 
 void Unit::_UpdateAutoRepeatSpell()
@@ -2784,23 +2793,16 @@ void Unit::_UpdateAutoRepeatSpell()
 
     // check "realtime" interrupts
     // don't cancel spells which are affected by a SPELL_AURA_CAST_WHILE_WALKING effect
-    if (((GetTypeId() == TYPEID_PLAYER && ToPlayer()->isMoving()) || IsNonMeleeSpellCast(false, false, true, autoRepeatSpellInfo->Id == 75)) &&
-        !CanCastSpellWhileMoving(autoRepeatSpellInfo))
+    if ((isMoving() && m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->CheckMovement() != SPELL_CAST_OK) || IsNonMeleeSpellCast(false, false, true, autoRepeatSpellInfo->Id == 75))
     {
         // cancel wand shoot
         if (autoRepeatSpellInfo->Id != 75)
             InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
-        m_AutoRepeatFirstCast = true;
         return;
     }
 
-    // apply delay (Auto Shot (spellID 75) not affected)
-    if (m_AutoRepeatFirstCast && getAttackTimer(RANGED_ATTACK) < 500 && autoRepeatSpellInfo->Id != 75)
-        setAttackTimer(RANGED_ATTACK, 500);
-    m_AutoRepeatFirstCast = false;
-
     // castroutine
-    if (isAttackReady(RANGED_ATTACK))
+    if (isAttackReady(RANGED_ATTACK) && m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->getState() != SPELL_STATE_PREPARING)
     {
         // Check if able to cast
         SpellCastResult result = m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->CheckCast(true);
@@ -2815,11 +2817,8 @@ void Unit::_UpdateAutoRepeatSpell()
         }
 
         // we want to shoot
-        Spell* spell = new Spell(this, autoRepeatSpellInfo, TRIGGERED_FULL_MASK);
+        Spell* spell = new Spell(this, autoRepeatSpellInfo, TRIGGERED_IGNORE_GCD);
         spell->prepare(m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_targets);
-
-        // all went good, reset attack
-        resetAttackTimer(RANGED_ATTACK);
     }
 }
 
@@ -2832,16 +2831,16 @@ void Unit::SetCurrentCastSpell(Spell* pSpell)
     if (pSpell == m_currentSpells[CSpellType])             // avoid breaking self
         return;
 
-    // break same type spell if it is not delayed
-    InterruptSpell(CSpellType, false);
-
     // special breakage effects:
     switch (CSpellType)
     {
         case CURRENT_GENERIC_SPELL:
         {
+            InterruptSpell(CURRENT_GENERIC_SPELL, false);
+
             // generic spells always break channeled not delayed spells
-            InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+            if (m_currentSpells[CURRENT_CHANNELED_SPELL] && !m_currentSpells[CURRENT_CHANNELED_SPELL]->GetSpellInfo()->HasAttribute(SPELL_ATTR5_ALLOW_ACTIONS_DURING_CHANNEL))
+                InterruptSpell(CURRENT_CHANNELED_SPELL, false);
 
             // autorepeat breaking
             if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL])
@@ -2849,7 +2848,6 @@ void Unit::SetCurrentCastSpell(Spell* pSpell)
                 // break autorepeat if not Auto Shot
                 if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->GetSpellInfo()->Id != 75)
                     InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
-                m_AutoRepeatFirstCast = true;
             }
             if (pSpell->GetCastTime() > 0)
                 AddUnitState(UNIT_STATE_CASTING);
@@ -2872,6 +2870,9 @@ void Unit::SetCurrentCastSpell(Spell* pSpell)
         }
         case CURRENT_AUTOREPEAT_SPELL:
         {
+            if (m_currentSpells[CSpellType] && m_currentSpells[CSpellType]->getState() == SPELL_STATE_IDLE)
+                m_currentSpells[CSpellType]->setState(SPELL_STATE_FINISHED);
+
             // only Auto Shoot does not break anything
             if (pSpell->GetSpellInfo()->Id != 75)
             {
@@ -2879,8 +2880,6 @@ void Unit::SetCurrentCastSpell(Spell* pSpell)
                 InterruptSpell(CURRENT_GENERIC_SPELL, false);
                 InterruptSpell(CURRENT_CHANNELED_SPELL, false);
             }
-            // special action: set first cast flag
-            m_AutoRepeatFirstCast = true;
 
             break;
         }
@@ -3014,7 +3013,7 @@ bool Unit::IsMovementPreventedByCasting() const
     // channeled spells during channel stage (after the initial cast timer) allow movement with a specific spell attribute
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
         if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive())
-            if (spell->GetSpellInfo()->IsMoveAllowedChannel())
+            if (spell->GetSpellInfo()->IsMoveAllowedChannel() || CanCastSpellWhileMoving(spell->GetSpellInfo()))
                 return false;
 
     // prohibit movement for all other spell casts
@@ -3190,18 +3189,18 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
 
         // register single target aura
         caster->GetSingleCastAuras().push_back(aura);
+
+        std::queue<Aura*> aurasSharingLimit;
         // remove other single target auras
-        Unit::AuraList& scAuras = caster->GetSingleCastAuras();
-        for (Unit::AuraList::iterator itr = scAuras.begin(); itr != scAuras.end();)
+        for (Aura* scAura : caster->GetSingleCastAuras())
+            if (scAura != aura && scAura->IsSingleTargetWith(aura))
+                aurasSharingLimit.push(scAura);
+
+        uint32 maxOtherAuras = aura->GetSpellInfo()->MaxAffectedTargets - 1;
+        while (aurasSharingLimit.size() > maxOtherAuras)
         {
-            if ((*itr) != aura &&
-                (*itr)->IsSingleTargetWith(aura))
-            {
-                (*itr)->Remove();
-                itr = scAuras.begin();
-            }
-            else
-                ++itr;
+            aurasSharingLimit.front()->Remove();
+            aurasSharingLimit.pop();
         }
     }
 }
@@ -4151,7 +4150,7 @@ void Unit::RemoveArenaAuras()
     RemoveAppliedAuras([](AuraApplication const* aurApp)
     {
         Aura const* aura = aurApp->GetBase();
-        return (!aura->GetSpellInfo()->HasAttribute(SPELL_ATTR4_DONT_REMOVE_IN_ARENA)                          // don't remove stances, shadowform, pally/hunter auras
+        return (!aura->GetSpellInfo()->HasAttribute(SPELL_ATTR4_ALLOW_ENTERING_ARENA)                          // don't remove stances, shadowform, pally/hunter auras
             && !aura->IsPassive()                                                                              // don't remove passive auras
             && (aurApp->IsPositive() || !aura->GetSpellInfo()->HasAttribute(SPELL_ATTR3_ALLOW_AURA_WHILE_DEAD))) || // not negative death persistent auras
             aura->GetSpellInfo()->HasAttribute(SPELL_ATTR5_REMOVE_ENTERING_ARENA);                             // special marker, always remove
@@ -6634,8 +6633,8 @@ uint32 Unit::SpellDamageBonusTaken(Unit* caster, SpellInfo const* spellProto, ui
         if (cheatDeath->GetMiscValue() & SPELL_SCHOOL_MASK_NORMAL)
             AddPct(TakenTotalMod, cheatDeath->GetAmount());
 
-    // Spells with SPELL_ATTR4_FIXED_DAMAGE should only benefit from mechanic damage mod auras.
-    if (!spellProto->HasAttribute(SPELL_ATTR4_FIXED_DAMAGE))
+    // Spells with SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS should only benefit from mechanic damage mod auras.
+    if (!spellProto->HasAttribute(SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS))
     {
         // Versatility
         if (Player* modOwner = GetSpellModOwner())
@@ -7256,6 +7255,8 @@ bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo, WorldObject const* caste
             immuneToAllEffects = false;
             break;
         }
+        if (spellInfo->HasAttribute(SPELL_ATTR4_NO_PARTIAL_IMMUNITY))
+            return true;
     }
 
     if (immuneToAllEffects) //Return immune only if the target is immune to all spell effects.
@@ -8408,11 +8409,6 @@ void Unit::AtTargetAttacked(Unit* target, bool canInitialAggro)
     if (Unit* targetOwner = target->GetCharmerOrOwner())
         targetOwner->EngageWithTarget(this);
 
-    //Patch 3.0.8: All player spells which cause a creature to become aggressive to you will now also immediately cause the creature to be tapped.
-    if (Creature* creature = target->ToCreature())
-        if (!creature->hasLootRecipient() && GetTypeId() == TYPEID_PLAYER)
-            creature->SetLootRecipient(this);
-
     Player* myPlayerOwner = GetCharmerOrOwnerPlayerOrPlayerItself();
     Player* targetPlayerOwner = target->GetCharmerOrOwnerPlayerOrPlayerItself();
     if (myPlayerOwner && targetPlayerOwner && !(myPlayerOwner->duel && myPlayerOwner->duel->Opponent == targetPlayerOwner))
@@ -9516,6 +9512,9 @@ void CharmInfo::InitPossessCreateSpells()
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId, _unit->GetMap()->GetDifficultyID());
             if (spellInfo)
             {
+                if (spellInfo->HasAttribute(SPELL_ATTR5_NOT_AVAILABLE_WHILE_CHARMED))
+                    continue;
+
                 if (spellInfo->IsPassive())
                     _unit->CastSpell(_unit, spellInfo->Id, true);
                 else
@@ -9547,6 +9546,9 @@ void CharmInfo::InitCharmCreateSpells()
             _charmspells[x].SetActionAndType(spellId, ACT_DISABLED);
             continue;
         }
+
+        if (spellInfo->HasAttribute(SPELL_ATTR5_NOT_AVAILABLE_WHILE_CHARMED))
+            continue;
 
         if (spellInfo->IsPassive())
         {
@@ -11468,7 +11470,7 @@ ObjectGuid Unit::GetTransGUID() const
     if (GetVehicle())
         return GetVehicleBase()->GetGUID();
     if (GetTransport())
-        return GetTransport()->GetGUID();
+        return GetTransport()->GetTransportGUID();
 
     return ObjectGuid::Empty;
 }
@@ -12072,7 +12074,7 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
     }
 
     ASSERT(!m_vehicle);
-    (void)vehicle->AddPassenger(this, seatId);
+    (void)vehicle->AddVehiclePassenger(this, seatId);
 }
 
 void Unit::ChangeSeat(int8 seatId, bool next)

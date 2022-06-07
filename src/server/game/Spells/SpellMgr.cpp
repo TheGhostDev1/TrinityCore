@@ -715,7 +715,7 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
         if (!player || gender != player->GetNativeGender())
             return false;
 
-    if (raceMask)                                // is not expected race
+    if (!raceMask.IsEmpty())                     // is not expected race
         if (!player || !raceMask.HasRace(player->GetRace()))
             return false;
 
@@ -2291,7 +2291,7 @@ void SpellMgr::LoadSpellAreas()
                     continue;
                 if (spellArea.auraSpell != itr->second.auraSpell)
                     continue;
-                if ((spellArea.raceMask & itr->second.raceMask) == 0)
+                if ((spellArea.raceMask & itr->second.raceMask).IsEmpty())
                     continue;
                 if (spellArea.gender != itr->second.gender)
                     continue;
@@ -2382,7 +2382,7 @@ void SpellMgr::LoadSpellAreas()
             }
         }
 
-        if (spellArea.raceMask && (spellArea.raceMask.RawValue & RACEMASK_ALL_PLAYABLE) == 0)
+        if (!spellArea.raceMask.IsEmpty() && (spellArea.raceMask & RACEMASK_ALL_PLAYABLE).IsEmpty())
         {
             TC_LOG_ERROR("sql.sql", "The spell %u listed in `spell_area` has wrong race mask (" UI64FMTD ") requirement.", spell, spellArea.raceMask.RawValue);
             continue;
@@ -3478,7 +3478,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         60864  // Jaws of Death
         }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx4 |= SPELL_ATTR4_FIXED_DAMAGE;
+        spellInfo->AttributesEx4 |= SPELL_ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS;
     });
 
     // Howl of Azgalor
@@ -3650,7 +3650,7 @@ void SpellMgr::LoadSpellInfoCorrections()
         41487  // Envenom - Black Temple
     }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
     });
 
     // Oscillation Field
@@ -3716,7 +3716,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Earthbind Totem (instant pulse)
     ApplySpellFix({ 6474 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx5 |= SPELL_ATTR5_START_PERIODIC_AT_APPLY;
+        spellInfo->AttributesEx5 |= SPELL_ATTR5_EXTRA_INITIAL_PERIOD;
     });
 
     ApplySpellFix({
@@ -4144,12 +4144,6 @@ void SpellMgr::LoadSpellInfoCorrections()
         });
     });
 
-    // Coldflame (Lord Marrowgar)
-    ApplySpellFix({ 69146 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->AttributesEx4 &= ~SPELL_ATTR4_IGNORE_RESISTANCES;
-    });
-
     // Shadow's Fate
     ApplySpellFix({ 71169 }, [](SpellInfo* spellInfo)
     {
@@ -4399,7 +4393,7 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Twilight Mending
     ApplySpellFix({ 75509 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->AttributesEx6 |= SPELL_ATTR6_CAN_TARGET_INVISIBLE;
+        spellInfo->AttributesEx6 |= SPELL_ATTR6_IGNORE_PHASE_SHIFT;
         spellInfo->AttributesEx2 |= SPELL_ATTR2_IGNORE_LINE_OF_SIGHT;
     });
 
@@ -4706,12 +4700,12 @@ void SpellMgr::LoadSpellInfoCorrections()
 
         // due to the way spell system works, unit would change orientation in Spell::_cast
         if (spellInfo->HasAura(SPELL_AURA_CONTROL_VEHICLE))
-            spellInfo->AttributesEx5 |= SPELL_ATTR5_DONT_TURN_DURING_CAST;
+            spellInfo->AttributesEx5 |= SPELL_ATTR5_AI_DOESNT_FACE_TARGET;
 
         if (spellInfo->ActiveIconFileDataId == 135754)  // flight
             spellInfo->Attributes |= SPELL_ATTR0_PASSIVE;
 
-        if (spellInfo->IsSingleTarget())
+        if (spellInfo->IsSingleTarget() && !spellInfo->MaxAffectedTargets)
             spellInfo->MaxAffectedTargets = 1;
     }
 

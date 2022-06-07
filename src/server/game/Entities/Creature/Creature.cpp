@@ -1384,7 +1384,11 @@ void Creature::SaveToDB()
         return;
     }
 
-    uint32 mapId = GetTransport() ? GetTransport()->GetGOInfo()->moTransport.SpawnMap : GetMapId();
+    uint32 mapId = GetMapId();
+    if (TransportBase* transport = GetTransport())
+        if (transport->GetMapIdForSpawning() >= 0)
+            mapId = transport->GetMapIdForSpawning();
+
     SaveToDB(mapId, data->spawnDifficulties);
 }
 
@@ -1526,20 +1530,7 @@ void Creature::SelectLevel()
     uint8 level = minlevel == maxlevel ? minlevel : urand(minlevel, maxlevel);
     SetLevel(level);
 
-    CreatureLevelScaling const* scaling = cInfo->GetLevelScaling(GetMap()->GetDifficultyID());
-
-    if (Optional<ContentTuningLevels> levels = sDB2Manager.GetContentTuningData(scaling->ContentTuningID, 0))
-    {
-        SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelMin), levels->MinLevel);
-        SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelMax), levels->MaxLevel);
-    }
-
-    int32 mindelta = std::min(scaling->DeltaLevelMax, scaling->DeltaLevelMin);
-    int32 maxdelta = std::max(scaling->DeltaLevelMax, scaling->DeltaLevelMin);
-    int32 delta = mindelta == maxdelta ? mindelta : irand(mindelta, maxdelta);
-
-    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelDelta), delta);
-    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ContentTuningID), scaling->ContentTuningID);
+    ApplyLevelScaling();
 
     UpdateLevelDependantStats();
 }
@@ -2357,27 +2348,6 @@ void Creature::LoadTemplateImmunities()
     }
 }
 
-bool Creature::IsImmunedToSpell(SpellInfo const* spellInfo, WorldObject const* caster) const
-{
-    if (!spellInfo)
-        return false;
-
-    bool immunedToAllEffects = true;
-    for (SpellEffectInfo const& spellEffectInfo : spellInfo->GetEffects())
-    {
-        if (spellEffectInfo.IsEffect() && !IsImmunedToSpellEffect(spellInfo, spellEffectInfo, caster))
-        {
-            immunedToAllEffects = false;
-            break;
-        }
-    }
-
-    if (immunedToAllEffects)
-        return true;
-
-    return Unit::IsImmunedToSpell(spellInfo, caster);
-}
-
 bool Creature::IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster) const
 {
     if (GetCreatureTemplate()->type == CREATURE_TYPE_MECHANICAL && spellEffectInfo.IsEffect(SPELL_EFFECT_HEAL))
@@ -2902,10 +2872,25 @@ void Creature::AllLootRemovedFromCorpse()
 
 bool Creature::HasScalableLevels() const
 {
-    CreatureTemplate const* cinfo = GetCreatureTemplate();
-    CreatureLevelScaling const* scaling = cinfo->GetLevelScaling(GetMap()->GetDifficultyID());
+    return m_unitData->ContentTuningID != 0;
+}
 
-    return scaling->ContentTuningID != 0;
+void Creature::ApplyLevelScaling()
+{
+    CreatureLevelScaling const* scaling = GetCreatureTemplate()->GetLevelScaling(GetMap()->GetDifficultyID());
+
+    if (Optional<ContentTuningLevels> levels = sDB2Manager.GetContentTuningData(scaling->ContentTuningID, 0))
+    {
+        SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelMin), levels->MinLevel);
+        SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelMax), levels->MaxLevel);
+    }
+
+    int32 mindelta = std::min(scaling->DeltaLevelMax, scaling->DeltaLevelMin);
+    int32 maxdelta = std::max(scaling->DeltaLevelMax, scaling->DeltaLevelMin);
+    int32 delta = mindelta == maxdelta ? mindelta : irand(mindelta, maxdelta);
+
+    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ScalingLevelDelta), delta);
+    SetUpdateFieldValue(m_values.ModifyValue(&Unit::m_unitData).ModifyValue(&UF::UnitData::ContentTuningID), scaling->ContentTuningID);
 }
 
 uint64 Creature::GetMaxHealthByLevel(uint8 level) const
@@ -3293,7 +3278,7 @@ void Creature::SetSpellFocus(Spell const* focusSpell, WorldObject const* target)
 
     _spellFocusInfo.Spell = focusSpell;
 
-    bool const noTurnDuringCast = spellInfo->HasAttribute(SPELL_ATTR5_DONT_TURN_DURING_CAST);
+    bool const noTurnDuringCast = spellInfo->HasAttribute(SPELL_ATTR5_AI_DOESNT_FACE_TARGET);
     bool const turnDisabled = HasUnitFlag2(UNIT_FLAG2_CANNOT_TURN);
     // set target, then force send update packet to players if it changed to provide appropriate facing
     ObjectGuid newTarget = (target && !noTurnDuringCast && !turnDisabled) ? target->GetGUID() : ObjectGuid::Empty;
@@ -3335,7 +3320,7 @@ void Creature::ReleaseSpellFocus(Spell const* focusSpell, bool withDelay)
     if (focusSpell && focusSpell != _spellFocusInfo.Spell)
         return;
 
-    if (_spellFocusInfo.Spell->GetSpellInfo()->HasAttribute(SPELL_ATTR5_DONT_TURN_DURING_CAST))
+    if (_spellFocusInfo.Spell->GetSpellInfo()->HasAttribute(SPELL_ATTR5_AI_DOESNT_FACE_TARGET))
         ClearUnitState(UNIT_STATE_FOCUSING);
 
     if (IsPet()) // player pets do not use delay system
@@ -3384,7 +3369,7 @@ bool Creature::IsMovementPreventedByCasting() const
     if (Spell* spell = m_currentSpells[CURRENT_CHANNELED_SPELL])
     {
         if (spell->getState() != SPELL_STATE_FINISHED && spell->IsChannelActive())
-            if (spell->GetSpellInfo()->IsMoveAllowedChannel())
+            if (spell->CheckMovement() != SPELL_CAST_OK)
                 return false;
     }
 

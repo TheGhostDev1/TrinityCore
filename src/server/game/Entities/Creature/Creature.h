@@ -150,12 +150,12 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool CanResetTalents(Player* player) const;
         bool CanCreatureAttack(Unit const* victim, bool force = true) const;
         void LoadTemplateImmunities();
-        bool IsImmunedToSpell(SpellInfo const* spellInfo, WorldObject const* caster) const override;
         bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster) const override;
         bool isElite() const;
         bool isWorldBoss() const;
 
         bool HasScalableLevels() const;
+        void ApplyLevelScaling();
         uint8 GetLevelForTarget(WorldObject const* target) const override;
 
         uint64 GetMaxHealthByLevel(uint8 level) const;

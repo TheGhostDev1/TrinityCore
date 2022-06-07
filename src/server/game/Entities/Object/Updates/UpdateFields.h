@@ -772,7 +772,7 @@ struct ActivePlayerData : public IsUpdateFieldStructureTag, public HasChangesMas
     UpdateFieldArray<float, 3, 585, 586> WeaponDmgMultipliers;
     UpdateFieldArray<float, 3, 585, 589> WeaponAtkSpeedMultipliers;
     UpdateFieldArray<uint32, 12, 592, 593> BuybackPrice;
-    UpdateFieldArray<uint32, 12, 592, 605> BuybackTimestamp;
+    UpdateFieldArray<int64, 12, 592, 605> BuybackTimestamp;
     UpdateFieldArray<int32, 32, 617, 618> CombatRatings;
     UpdateFieldArray<UF::PVPInfo, 6, 650, 651> PvpInfo;
     UpdateFieldArray<uint32, 4, 657, 658> NoReagentCostMask;
@@ -804,13 +804,11 @@ struct GameObjectData : public IsUpdateFieldStructureTag, public HasChangesMask<
     UpdateField<QuaternionData, 0, 12> ParentRotation;
     UpdateField<int32, 0, 13> FactionTemplate;
     UpdateField<int8, 0, 14> State;
-    struct StateTag : ViewerDependentValueTag<int8> {};
     UpdateField<int8, 0, 15> TypeID;
     UpdateField<uint8, 0, 16> PercentHealth;
     UpdateField<uint32, 0, 17> ArtKit;
     UpdateField<uint32, 0, 18> CustomParam;
     UpdateField<int32, 0, 19> Level;
-    struct LevelTag : ViewerDependentValueTag<int32> {};
     UpdateField<uint32, 0, 20> AnimGroupInstance;
 
     void WriteCreate(ByteBuffer& data, EnumFlag<UpdateFieldFlag> fieldVisibilityFlags, GameObject const* owner, Player const* receiver) const;

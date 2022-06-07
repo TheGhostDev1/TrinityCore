@@ -923,13 +923,13 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
     }
 
     // Check loaded DB2 files proper version
-    if (!sAreaTableStore.LookupEntry(13574) ||               // last area added in 9.0.2 (37176)
-        !sCharTitlesStore.LookupEntry(694) ||                // last char title added in 9.0.2 (37176)
-        !sGemPropertiesStore.LookupEntry(3825) ||            // last gem property added in 9.0.2 (37176)
-        !sItemStore.LookupEntry(184869) ||                   // last item added in 9.0.2 (37176)
-        !sItemExtendedCostStore.LookupEntry(7048) ||         // last item extended cost added in 9.0.2 (37176)
-        !sMapStore.LookupEntry(2453) ||                      // last map added in 9.0.2 (37176)
-        !sSpellNameStore.LookupEntry(349043))                // last spell added in 9.0.2 (37176)
+    if (!sAreaTableStore.LookupEntry(14083) ||               // last area added in 9.2.5 (43971)
+        !sCharTitlesStore.LookupEntry(727) ||                // last char title added in 9.2.5 (43971)
+        !sGemPropertiesStore.LookupEntry(3922) ||            // last gem property added in 9.2.5 (43971)
+        !sItemStore.LookupEntry(193265) ||                   // last item added in 9.2.5 (43971)
+        !sItemExtendedCostStore.LookupEntry(7302) ||         // last item extended cost added in 9.2.5 (43971)
+        !sMapStore.LookupEntry(2559) ||                      // last map added in 9.2.5 (43971)
+        !sSpellNameStore.LookupEntry(375051))                // last spell added in 9.2.5 (43971)
     {
         TC_LOG_ERROR("misc", "You have _outdated_ DB2 files. Please extract correct versions from current using client.");
         exit(1);
@@ -994,17 +994,14 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
         if (battlemaster->MaxLevel < battlemaster->MinLevel)
         {
             TC_LOG_ERROR("db2.hotfix.battlemaster_list", "Battlemaster (%u) contains bad values for MinLevel (%u) and MaxLevel (%u). Swapping values.", battlemaster->ID, battlemaster->MinLevel, battlemaster->MaxLevel);
-            std::swap(*(int8*)&battlemaster->MaxLevel, *(int8*)&battlemaster->MinLevel);
+            std::swap(const_cast<BattlemasterListEntry*>(battlemaster)->MaxLevel, const_cast<BattlemasterListEntry*>(battlemaster)->MinLevel);
         }
         if (battlemaster->MaxPlayers < battlemaster->MinPlayers)
         {
             TC_LOG_ERROR("db2.hotfix.battlemaster_list", "Battlemaster (%u) contains bad values for MinPlayers (%u) and MaxPlayers (%u). Swapping values.", battlemaster->ID, battlemaster->MinPlayers, battlemaster->MaxPlayers);
-            std::swap(*(int8*)&battlemaster->MaxPlayers, *(int8*)&battlemaster->MinPlayers);
+            std::swap(const_cast<BattlemasterListEntry*>(battlemaster)->MaxPlayers, const_cast<BattlemasterListEntry*>(battlemaster)->MinPlayers);
         }
     }
-
-    ASSERT(BATTLE_PET_SPECIES_MAX_ID >= sBattlePetSpeciesStore.GetNumRows(),
-        "BATTLE_PET_SPECIES_MAX_ID (%d) must be equal to or greater than %u", BATTLE_PET_SPECIES_MAX_ID, sBattlePetSpeciesStore.GetNumRows());
 
     for (BroadcastTextDurationEntry const* broadcastTextDuration : sBroadcastTextDurationStore)
         _broadcastTextDurations[{ broadcastTextDuration->BroadcastTextID, CascLocaleBit(broadcastTextDuration->Locale) }] = broadcastTextDuration->Duration;
@@ -1149,11 +1146,11 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
     for (GameObjectDisplayInfoEntry const* gameObjectDisplayInfo : sGameObjectDisplayInfoStore)
     {
         if (gameObjectDisplayInfo->GeoBoxMax.X < gameObjectDisplayInfo->GeoBoxMin.X)
-            std::swap(*(float*)(&gameObjectDisplayInfo->GeoBoxMax.X), *(float*)(&gameObjectDisplayInfo->GeoBoxMin.X));
+            std::swap(const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMax.X, const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMin.X);
         if (gameObjectDisplayInfo->GeoBoxMax.Y < gameObjectDisplayInfo->GeoBoxMin.Y)
-            std::swap(*(float*)(&gameObjectDisplayInfo->GeoBoxMax.Y), *(float*)(&gameObjectDisplayInfo->GeoBoxMin.Y));
+            std::swap(const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMax.Y, const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMin.Y);
         if (gameObjectDisplayInfo->GeoBoxMax.Z < gameObjectDisplayInfo->GeoBoxMin.Z)
-            std::swap(*(float*)(&gameObjectDisplayInfo->GeoBoxMax.Z), *(float*)(&gameObjectDisplayInfo->GeoBoxMin.Z));
+            std::swap(const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMax.Z, const_cast<GameObjectDisplayInfoEntry*>(gameObjectDisplayInfo)->GeoBoxMin.Z);
     }
 
     for (HeirloomEntry const* heirloom : sHeirloomStore)
@@ -1520,40 +1517,27 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
 
     // Initialize global taxinodes mask
     // include existed nodes that have at least single not spell base (scripted) path
+    for (TaxiNodesEntry const* node : sTaxiNodesStore)
     {
-        if (sTaxiNodesStore.GetNumRows())
-        {
-            ASSERT(TaxiMaskSize >= ((sTaxiNodesStore.GetNumRows() - 1) / 8) + 1,
-                "TaxiMaskSize is not large enough to contain all taxi nodes! (current value %d, required %d)",
-                TaxiMaskSize, (((sTaxiNodesStore.GetNumRows() - 1) / 8) + 1));
-        }
+        if (!(node->Flags & (TAXI_NODE_FLAG_ALLIANCE | TAXI_NODE_FLAG_HORDE)))
+            continue;
 
-        sTaxiNodesMask.fill(0);
-        sOldContinentsNodesMask.fill(0);
-        sHordeTaxiNodesMask.fill(0);
-        sAllianceTaxiNodesMask.fill(0);
-        for (TaxiNodesEntry const* node : sTaxiNodesStore)
-        {
-            if (!(node->Flags & (TAXI_NODE_FLAG_ALLIANCE | TAXI_NODE_FLAG_HORDE)))
-                continue;
+        // valid taxi network node
+        uint32 field = uint32((node->ID - 1) / (sizeof(TaxiMask::value_type) * 8));
+        TaxiMask::value_type submask = TaxiMask::value_type(1 << ((node->ID - 1) % (sizeof(TaxiMask::value_type) * 8)));
 
-            // valid taxi network node
-            uint32 field = uint32((node->ID - 1) / 8);
-            uint32 submask = 1 << ((node->ID - 1) % 8);
+        sTaxiNodesMask[field] |= submask;
+        if (node->Flags & TAXI_NODE_FLAG_HORDE)
+            sHordeTaxiNodesMask[field] |= submask;
+        if (node->Flags & TAXI_NODE_FLAG_ALLIANCE)
+            sAllianceTaxiNodesMask[field] |= submask;
 
-            sTaxiNodesMask[field] |= submask;
-            if (node->Flags & TAXI_NODE_FLAG_HORDE)
-                sHordeTaxiNodesMask[field] |= submask;
-            if (node->Flags & TAXI_NODE_FLAG_ALLIANCE)
-                sAllianceTaxiNodesMask[field] |= submask;
+        int32 uiMapId = -1;
+        if (!GetUiMapPosition(node->Pos.X, node->Pos.Y, node->Pos.Z, node->ContinentID, 0, 0, 0, UI_MAP_SYSTEM_ADVENTURE, false, &uiMapId))
+            GetUiMapPosition(node->Pos.X, node->Pos.Y, node->Pos.Z, node->ContinentID, 0, 0, 0, UI_MAP_SYSTEM_TAXI, false, &uiMapId);
 
-            int32 uiMapId = -1;
-            if (!GetUiMapPosition(node->Pos.X, node->Pos.Y, node->Pos.Z, node->ContinentID, 0, 0, 0, UI_MAP_SYSTEM_ADVENTURE, false, &uiMapId))
-                GetUiMapPosition(node->Pos.X, node->Pos.Y, node->Pos.Z, node->ContinentID, 0, 0, 0, UI_MAP_SYSTEM_TAXI, false, &uiMapId);
-
-            if (uiMapId == 985 || uiMapId == 986)
-                sOldContinentsNodesMask[field] |= submask;
-        }
+        if (uiMapId == 985 || uiMapId == 986)
+            sOldContinentsNodesMask[field] |= submask;
     }
 
     TC_LOG_INFO("server.loading", ">> Initialized " SZFMTD " DB2 data stores in %u ms", _stores.size(), GetMSTimeDiffToNow(oldMSTime));
@@ -2952,7 +2936,7 @@ SkillRaceClassInfoEntry const* DB2Manager::GetSkillRaceClassInfo(uint32 skill, u
     auto bounds = _skillRaceClassInfoBySkill.equal_range(skill);
     for (auto itr = bounds.first; itr != bounds.second; ++itr)
     {
-        if (itr->second->RaceMask && !(itr->second->RaceMask.HasRace(race)))
+        if (!itr->second->RaceMask.IsEmpty() && !(itr->second->RaceMask.HasRace(race)))
             continue;
         if (itr->second->ClassMask && !(itr->second->ClassMask & (1 << (class_ - 1))))
             continue;
@@ -3398,6 +3382,11 @@ bool ChrClassesXPowerTypesEntryComparator::Compare(ChrClassesXPowerTypesEntry co
 bool ItemLevelSelectorQualityEntryComparator::Compare(ItemLevelSelectorQualityEntry const* left, ItemLevelSelectorQualityEntry const* right)
 {
     return left->Quality < right->Quality;
+}
+
+TaxiMask::TaxiMask()
+{
+    _data.resize(((sTaxiNodesStore.GetNumRows() - 1) / (sizeof(value_type) * 8)) + 1, 0);
 }
 
 bool DB2Manager::FriendshipRepReactionEntryComparator::Compare(FriendshipRepReactionEntry const* left, FriendshipRepReactionEntry const* right)

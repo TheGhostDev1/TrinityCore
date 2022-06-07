@@ -43,6 +43,7 @@
 #include "RaceMask.h"
 #include "Realm.h"
 #include "ReputationMgr.h"
+#include "Scenario.h"
 #include "ScriptMgr.h"
 #include "Spell.h"
 #include "SpellAuras.h"
@@ -146,6 +147,7 @@ ConditionMgr::ConditionTypeInfo const ConditionMgr::StaticConditionTypeData[COND
     { "Object Entry or Guid",      true, true,  true  },
     { "Object TypeMask",           true, false, false },
     { "BattlePet Species Learned", true, true,  true  },
+    { "On Scenario Step",          true, false, false },
 };
 
 // Checks if object meets the condition
@@ -574,6 +576,13 @@ bool Condition::Meets(ConditionSourceInfo& sourceInfo) const
                     static_cast<uint8>(ConditionValue2));
             break;
         }
+        case CONDITION_SCENARIO_STEP:
+        {
+            if (Scenario const* scenario = object->GetScenario())
+                if (ScenarioStepEntry const* step = scenario->GetStep())
+                    condMeets = step->ID == ConditionValue1;
+            break;
+        }
         default:
             condMeets = false;
             break;
@@ -777,6 +786,9 @@ uint32 Condition::GetSearcherTypeMaskForCondition() const
             break;
         case CONDITION_BATTLE_PET_COUNT:
             mask |= GRID_MAP_TYPE_MASK_PLAYER;
+            break;
+        case CONDITION_SCENARIO_STEP:
+            mask |= GRID_MAP_TYPE_MASK_ALL;
             break;
         default:
             ABORT_MSG("Condition::GetSearcherTypeMaskForCondition - missing condition handling!");
@@ -2230,9 +2242,10 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond) const
         }
         case CONDITION_RACE:
         {
-            if (uint32(cond->ConditionValue1 & ~RACEMASK_ALL_PLAYABLE)) // uint32 works thanks to weird index remapping in racemask
+            Trinity::RaceMask<uint64> invalidRaceMask = Trinity::RaceMask<uint64>{ cond->ConditionValue1 } & ~RACEMASK_ALL_PLAYABLE;
+            if (!invalidRaceMask.IsEmpty()) // uint32 works thanks to weird index remapping in racemask
             {
-                TC_LOG_ERROR("sql.sql", "%s has non existing racemask (" UI64FMTD "), skipped.", cond->ToString(true).c_str(), cond->ConditionValue1 & ~RACEMASK_ALL_PLAYABLE);
+                TC_LOG_ERROR("sql.sql", "%s has non existing racemask (" UI64FMTD "), skipped.", cond->ToString(true).c_str(), invalidRaceMask.RawValue);
                 return false;
             }
             break;
@@ -2601,6 +2614,15 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond) const
                 return false;
             }
             break;
+        case CONDITION_SCENARIO_STEP:
+        {
+            if (!sScenarioStepStore.LookupEntry(cond->ConditionValue1))
+            {
+                TC_LOG_ERROR("sql.sql", "%s has non existing ScenarioStep in value1 (%u), skipped.", cond->ToString(true).c_str(), cond->ConditionValue1);
+                return false;
+            }
+            break;
+        }
         default:
             TC_LOG_ERROR("sql.sql", "%s Invalid ConditionType in `condition` table, ignoring.", cond->ToString().c_str());
             return false;
@@ -2821,7 +2843,7 @@ bool ConditionMgr::IsPlayerMeetingCondition(Player const* player, PlayerConditio
         }
     }
 
-    if (condition->RaceMask && !condition->RaceMask.HasRace(player->GetRace()))
+    if (!condition->RaceMask.IsEmpty() && !condition->RaceMask.HasRace(player->GetRace()))
         return false;
 
     if (condition->ClassMask && !(player->GetClassMask() & condition->ClassMask))

@@ -1235,33 +1235,6 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
     // Place character in world (and load zone) before some object loading
     pCurrChar->LoadCorpse(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_CORPSE_LOCATION));
 
-    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_FAVORITE_AUCTIONS);
-    stmt->setUInt64(0, pCurrChar->GetGUID().GetCounter());
-    GetQueryProcessor().AddCallback(CharacterDatabase.AsyncQuery(stmt)).WithPreparedCallback([this](PreparedQueryResult favoriteAuctionResult)
-    {
-        WorldPackets::AuctionHouse::AuctionFavoriteList favoriteItems;
-        if (favoriteAuctionResult)
-        {
-            favoriteItems.Items.reserve(favoriteAuctionResult->GetRowCount());
-
-            do
-            {
-                Field* fields = favoriteAuctionResult->Fetch();
-
-                favoriteItems.Items.emplace_back();
-                WorldPackets::AuctionHouse::AuctionFavoriteInfo& item = favoriteItems.Items.back();
-                item.Order = fields[0].GetUInt32();
-                item.ItemID = fields[1].GetUInt32();
-                item.ItemLevel = fields[2].GetUInt32();
-                item.BattlePetSpeciesID = fields[3].GetUInt32();
-                item.SuffixItemNameDescriptionID = fields[4].GetUInt32();
-
-            } while (favoriteAuctionResult->NextRow());
-
-        }
-        SendPacket(favoriteItems.Write());
-    });
-
     // setting Ghost+speed if dead
     if (pCurrChar->m_deathState == DEAD)
     {
@@ -2288,7 +2261,7 @@ void WorldSession::HandleCharRaceOrFactionChangeCallback(std::shared_ptr<WorldPa
                 // this doesn't seem to be 100% blizzlike... but it can't really be helped.
                 std::ostringstream taximaskstream;
                 TaxiMask const& factionMask = newTeamId == TEAM_HORDE ? sHordeTaxiNodesMask : sAllianceTaxiNodesMask;
-                for (std::size_t i = 0; i < TaxiMaskSize; ++i)
+                for (std::size_t i = 0; i < factionMask.size(); ++i)
                 {
                     // i = (315 - 1) / 8 = 39
                     // m = 1 << ((315 - 1) % 8) = 4
@@ -2420,8 +2393,8 @@ void WorldSession::HandleCharRaceOrFactionChangeCallback(std::shared_ptr<WorldPa
                 ObjectMgr::QuestContainer const& questTemplates = sObjectMgr->GetQuestTemplates();
                 for (auto const& questTemplatePair : questTemplates)
                 {
-                    uint64 newRaceMask = (newTeamId == TEAM_ALLIANCE) ? RACEMASK_ALLIANCE : RACEMASK_HORDE;
-                    if (questTemplatePair.second.GetAllowableRaces().RawValue != uint64(-1) && !(questTemplatePair.second.GetAllowableRaces().RawValue & newRaceMask))
+                    Trinity::RaceMask<uint64> newRaceMask = (newTeamId == TEAM_ALLIANCE) ? RACEMASK_ALLIANCE : RACEMASK_HORDE;
+                    if (questTemplatePair.second.GetAllowableRaces().RawValue != uint64(-1) && (questTemplatePair.second.GetAllowableRaces() & newRaceMask).IsEmpty())
                     {
                         stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_QUESTSTATUS_REWARDED_ACTIVE_BY_QUEST);
                         stmt->setUInt64(0, lowGuid);

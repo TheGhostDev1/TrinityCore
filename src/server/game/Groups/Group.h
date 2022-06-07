@@ -23,6 +23,7 @@
 #include "GroupRefManager.h"
 #include "Loot.h"
 #include "Object.h"
+#include "RaceMask.h"
 #include "SharedDefines.h"
 #include "Timer.h"
 #include <map>
@@ -224,6 +225,7 @@ class TC_GAME_API Group
         {
             ObjectGuid  guid;
             std::string name;
+            Races       race;
             uint8       _class;
             uint8       group;
             uint8       flags;
@@ -380,8 +382,8 @@ class TC_GAME_API Group
                 worker(itr->GetSource());
         }
 
-        void BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignoredPlayer = ObjectGuid::Empty);
-        void BroadcastAddonMessagePacket(WorldPacket const* packet, const std::string& prefix, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignore = ObjectGuid::Empty);
+        void BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignoredPlayer = ObjectGuid::Empty) const;
+        void BroadcastAddonMessagePacket(WorldPacket const* packet, const std::string& prefix, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignore = ObjectGuid::Empty) const;
 
         /*********************************************************/
         /***                   LOOT SYSTEM                     ***/

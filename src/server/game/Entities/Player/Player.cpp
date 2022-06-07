@@ -89,6 +89,7 @@
 #include "Opcodes.h"
 #include "OutdoorPvP.h"
 #include "OutdoorPvPMgr.h"
+#include "PartyPackets.h"
 #include "Pet.h"
 #include "PetPackets.h"
 #include "PoolMgr.h"
@@ -289,6 +290,9 @@ Player::Player(WorldSession* session) : Unit(true), m_sceneMgr(this)
 
     // Player summoning
     m_summon_expire = 0;
+    m_summon_instanceId = 0;
+
+    m_recall_instanceId = 0;
 
     m_unitMovedByMe = this;
     m_playerMovingMe = this;
@@ -1306,7 +1310,7 @@ uint8 Player::GetChatFlags() const
     return tag;
 }
 
-bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options)
+bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options /*= 0*/, Optional<uint32> instanceId /*= {}*/)
 {
     if (!MapManager::IsValidMapCoord(mapid, x, y, z, orientation))
     {
@@ -1338,7 +1342,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         TC_LOG_DEBUG("maps", "Player '%s' (%s) using client without required expansion tried teleporting to non accessible map (MapID: %u)",
             GetName().c_str(), GetGUID().ToString().c_str(), mapid);
 
-        if (Transport* transport = GetTransport())
+        if (TransportBase* transport = GetTransport())
         {
             transport->RemovePassenger(this);
             RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
@@ -1360,7 +1364,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     DisableSpline();
     GetMotionMaster()->Remove(EFFECT_MOTION_TYPE);
 
-    if (Transport* transport = GetTransport())
+    if (TransportBase* transport = GetTransport())
     {
         if (!(options & TELE_TO_NOT_LEAVE_TRANSPORT))
             transport->RemovePassenger(this);
@@ -1372,7 +1376,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     if (duel && GetMapId() != mapid && GetMap()->GetGameObject(m_playerData->DuelArbiter))
         DuelComplete(DUEL_FLED);
 
-    if (GetMapId() == mapid)
+    if (GetMapId() == mapid && (!instanceId || GetInstanceId() == instanceId))
     {
         //lets reset far teleport flag if it wasn't reset during chained teleport
         SetSemaphoreTeleportFar(false);
@@ -1385,6 +1389,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             SetSemaphoreTeleportNear(true);
             //lets save teleport destination for player
             m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
+            m_teleport_instanceId = {};
             m_teleport_options = options;
             return true;
         }
@@ -1404,6 +1409,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
         // this will be used instead of the current location in SaveToDB
         m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
+        m_teleport_instanceId = {};
         m_teleport_options = options;
         SetFallInformation(0, GetPositionZ());
 
@@ -1451,6 +1457,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 SetSemaphoreTeleportFar(true);
                 //lets save teleport destination for player
                 m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
+                m_teleport_instanceId = instanceId;
                 m_teleport_options = options;
                 return true;
             }
@@ -1505,7 +1512,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 WorldPackets::Movement::TransferPending transferPending;
                 transferPending.MapID = mapid;
                 transferPending.OldMapPosition = GetPosition();
-                if (Transport* transport = GetTransport())
+                if (Transport* transport = dynamic_cast<Transport*>(GetTransport()))
                 {
                     transferPending.Ship.emplace();
                     transferPending.Ship->ID = transport->GetEntry();
@@ -1520,6 +1527,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 oldmap->RemovePlayerFromMap(this, false);
 
             m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
+            m_teleport_instanceId = instanceId;
             m_teleport_options = options;
             SetFallInformation(0, GetPositionZ());
             // if the player is saved before worldportack (at logout for example)
@@ -1543,9 +1551,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     return true;
 }
 
-bool Player::TeleportTo(WorldLocation const& loc, uint32 options /*= 0*/)
+bool Player::TeleportTo(WorldLocation const& loc, uint32 options /*= 0*/, Optional<uint32> instanceId /*= {}*/)
 {
-    return TeleportTo(loc.GetMapId(), loc.GetPositionX(), loc.GetPositionY(), loc.GetPositionZ(), loc.GetOrientation(), options);
+    return TeleportTo(loc.GetMapId(), loc.GetPositionX(), loc.GetPositionY(), loc.GetPositionZ(), loc.GetOrientation(), options, instanceId);
 }
 
 bool Player::TeleportToBGEntryPoint()
@@ -1652,6 +1660,9 @@ void Player::RemoveFromWorld()
             GetName().c_str(), GetGUID().ToString().c_str(), viewpoint->GetEntry(), viewpoint->GetTypeId());
         SetViewpoint(viewpoint, false);
     }
+
+    RemovePlayerLocalFlag(PLAYER_LOCAL_FLAG_OVERRIDE_TRANSPORT_SERVER_TIME);
+    SetTransportServerTime(0);
 }
 
 void Player::SetObjectScale(float scale)
@@ -3369,7 +3380,9 @@ void Player::RemoveArenaSpellCooldowns(bool removeActivePetCooldowns)
     GetSpellHistory()->ResetCooldowns([](SpellHistory::CooldownStorageType::iterator itr)
     {
         SpellInfo const* spellInfo = sSpellMgr->AssertSpellInfo(itr->first, DIFFICULTY_NONE);
-        return spellInfo->RecoveryTime < 10 * MINUTE * IN_MILLISECONDS && spellInfo->CategoryRecoveryTime < 10 * MINUTE * IN_MILLISECONDS;
+        return spellInfo->RecoveryTime < 10 * MINUTE * IN_MILLISECONDS
+            && spellInfo->CategoryRecoveryTime < 10 * MINUTE * IN_MILLISECONDS
+            && !spellInfo->HasAttribute(SPELL_ATTR6_DO_NOT_RESET_COOLDOWN_IN_ARENA);
     }, true);
 
     // pet cooldowns
@@ -11488,10 +11501,15 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16 &dest, Item* pItem, bool
                 }
 
                 if (IsInCombat() && (pProto->GetClass() == ITEM_CLASS_WEAPON || pProto->GetInventoryType() == INVTYPE_RELIC) && m_weaponChangeTimer != 0)
-                    return EQUIP_ERR_CLIENT_LOCKED_OUT;         // maybe exist better err
+                    return EQUIP_ERR_ITEM_COOLDOWN;
 
-                if (IsNonMeleeSpellCast(false))
-                    return EQUIP_ERR_CLIENT_LOCKED_OUT;
+                if (Spell* currentGenericSpell = GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                    if (!currentGenericSpell->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ALLOW_EQUIP_WHILE_CASTING))
+                        return EQUIP_ERR_CLIENT_LOCKED_OUT;
+
+                if (Spell* currentChanneledSpell = GetCurrentSpell(CURRENT_CHANNELED_SPELL))
+                    if (!currentChanneledSpell->GetSpellInfo()->HasAttribute(SPELL_ATTR6_ALLOW_EQUIP_WHILE_CASTING))
+                        return EQUIP_ERR_CLIENT_LOCKED_OUT;
             }
 
             Optional<ContentTuningLevels> requiredLevels;
@@ -13709,7 +13727,7 @@ void Player::AddItemToBuyBackSlot(Item* pItem)
         // if current back slot non-empty search oldest or free
         if (m_items[slot])
         {
-            uint32 oldest_time = m_activePlayerData->BuybackTimestamp[0];
+            time_t oldest_time = m_activePlayerData->BuybackTimestamp[0];
             uint32 oldest_slot = BUYBACK_SLOT_START;
 
             for (uint32 i = BUYBACK_SLOT_START + 1; i < BUYBACK_SLOT_END; ++i)
@@ -13721,7 +13739,7 @@ void Player::AddItemToBuyBackSlot(Item* pItem)
                     break;
                 }
 
-                uint32 i_time = m_activePlayerData->BuybackTimestamp[i - BUYBACK_SLOT_START];
+                time_t i_time = m_activePlayerData->BuybackTimestamp[i - BUYBACK_SLOT_START];
 
                 if (oldest_time > i_time)
                 {
@@ -20457,8 +20475,8 @@ void Player::SaveToDB(LoginDatabaseTransaction loginTransaction, CharacterDataba
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = UI64LIT(0);
-        if (GetTransport())
-            transLowGUID = GetTransport()->GetGUID().GetCounter();
+        if (Transport* transport = dynamic_cast<Transport*>(GetTransport()))
+            transLowGUID = transport->GetGUID().GetCounter();
         stmt->setUInt64(index++, transLowGUID);
 
         std::ostringstream ss;
@@ -20602,8 +20620,8 @@ void Player::SaveToDB(LoginDatabaseTransaction loginTransaction, CharacterDataba
         stmt->setFloat(index++, finiteAlways(GetTransOffsetZ()));
         stmt->setFloat(index++, finiteAlways(GetTransOffsetO()));
         ObjectGuid::LowType transLowGUID = UI64LIT(0);
-        if (GetTransport())
-            transLowGUID = GetTransport()->GetGUID().GetCounter();
+        if (Transport* transport = dynamic_cast<Transport*>(GetTransport()))
+            transLowGUID = transport->GetGUID().GetCounter();
         stmt->setUInt64(index++, transLowGUID);
 
         std::ostringstream ss;
@@ -22327,6 +22345,9 @@ void Player::VehicleSpellInitialize()
         uint32 spellId = vehicle->m_spells[i];
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId, GetMap()->GetDifficultyID());
         if (!spellInfo)
+            continue;
+
+        if (spellInfo->HasAttribute(SPELL_ATTR5_NOT_AVAILABLE_WHILE_CHARMED))
             continue;
 
         if (!sConditionMgr->IsObjectMeetingVehicleSpellConditions(vehicle->GetEntry(), spellId, this, vehicle))
@@ -24083,6 +24104,13 @@ bool Player::IsNeverVisibleFor(WorldObject const* seer) const
     return false;
 }
 
+bool Player::CanNeverSee(WorldObject const* obj) const
+{
+    // the intent is to delay sending visible objects until client is ready for them
+    // some gameobjects dont function correctly if they are sent before TransportServerTime is correctly set (after CMSG_MOVE_INIT_ACTIVE_MOVER_COMPLETE)
+    return !HasPlayerLocalFlag(PLAYER_LOCAL_FLAG_OVERRIDE_TRANSPORT_SERVER_TIME) || WorldObject::CanNeverSee(obj);
+}
+
 bool Player::CanAlwaysSee(WorldObject const* obj) const
 {
     // Always can see self
@@ -24137,17 +24165,6 @@ template<class T>
 inline void UpdateVisibilityOf_helper(GuidUnorderedSet& s64, T* target, std::set<Unit*>& /*v*/)
 {
     s64.insert(target->GetGUID());
-}
-
-template<>
-inline void UpdateVisibilityOf_helper(GuidUnorderedSet& s64, GameObject* target, std::set<Unit*>& /*v*/)
-{
-    // @HACK: This is to prevent objects like deeprun tram from disappearing when player moves far from its spawn point while riding it
-    // But exclude stoppable elevators from this hack - they would be teleporting from one end to another
-    // if affected transports move so far horizontally that it causes them to run out of visibility range then you are out of luck
-    // fix visibility instead of adding hacks here
-    if (!target->IsDynTransport())
-        s64.insert(target->GetGUID());
 }
 
 template<>
@@ -25015,7 +25032,7 @@ void Player::LearnSkillRewardedSpells(uint32 skillId, uint32 skillValue, Races r
             continue;
 
         // Check race if set
-        if (ability->RaceMask && !ability->RaceMask.HasRace(race))
+        if (!ability->RaceMask.IsEmpty() && !ability->RaceMask.HasRace(race))
             continue;
 
         // Check class if set
@@ -25377,7 +25394,7 @@ bool Player::IsSpellFitByClassAndRace(uint32 spell_id) const
     for (SkillLineAbilityMap::const_iterator _spell_idx = bounds.first; _spell_idx != bounds.second; ++_spell_idx)
     {
         // skip wrong race skills
-        if (_spell_idx->second->RaceMask && !_spell_idx->second->RaceMask.HasRace(race))
+        if (!_spell_idx->second->RaceMask.IsEmpty() && !_spell_idx->second->RaceMask.HasRace(race))
             continue;
 
         // skip wrong class skills
@@ -25499,25 +25516,48 @@ void Player::SendSummonRequestFrom(Unit* summoner)
 
     m_summon_expire = GameTime::GetGameTime() + MAX_PLAYER_SUMMON_DELAY;
     m_summon_location.WorldRelocate(*summoner);
+    m_summon_instanceId = summoner->GetInstanceId();
 
     WorldPackets::Movement::SummonRequest summonRequest;
     summonRequest.SummonerGUID = summoner->GetGUID();
     summonRequest.SummonerVirtualRealmAddress = GetVirtualRealmAddress();
     summonRequest.AreaID = summoner->GetZoneId();
     SendDirectMessage(summonRequest.Write());
+
+    if (Group const* group = GetGroup())
+    {
+        WorldPackets::Party::BroadcastSummonCast summonCast;
+        summonCast.Target = GetGUID();
+        group->BroadcastPacket(summonCast.Write(), false);
+    }
 }
 
 void Player::SummonIfPossible(bool agree)
 {
+    auto broadcastSummonResponse = [&](bool accepted)
+    {
+        if (Group const* group = GetGroup())
+        {
+            WorldPackets::Party::BroadcastSummonResponse summonResponse;
+            summonResponse.Target = GetGUID();
+            summonResponse.Accepted = accepted;
+            group->BroadcastPacket(summonResponse.Write(), false);
+        }
+    };
+
     if (!agree)
     {
         m_summon_expire = 0;
+        broadcastSummonResponse(false);
         return;
     }
 
     // expire and auto declined
     if (m_summon_expire < GameTime::GetGameTime())
+    {
+        broadcastSummonResponse(false);
         return;
+    }
 
     // stop taxi flight at summon
     FinishTaxiFlight();
@@ -25532,7 +25572,9 @@ void Player::SummonIfPossible(bool agree)
     UpdateCriteria(CriteriaType::AcceptSummon, 1);
     RemoveAurasWithInterruptFlags(SpellAuraInterruptFlags::Summon);
 
-    TeleportTo(m_summon_location);
+    TeleportTo(m_summon_location, 0, m_summon_instanceId);
+
+    broadcastSummonResponse(true);
 }
 
 void Player::RemoveItemDurations(Item* item)
@@ -25665,7 +25707,7 @@ bool Player::HasItemFitToSpellRequirements(SpellInfo const* spellInfo, Item cons
 bool Player::CanNoReagentCast(SpellInfo const* spellInfo) const
 {
     // don't take reagents for spells with SPELL_ATTR5_NO_REAGENT_WHILE_PREP
-    if (spellInfo->HasAttribute(SPELL_ATTR5_NO_REAGENT_WHILE_PREP) &&
+    if (spellInfo->HasAttribute(SPELL_ATTR5_NO_REAGENT_COST_WITH_AURA) &&
         HasUnitFlag(UNIT_FLAG_PREPARATION))
         return true;
 
