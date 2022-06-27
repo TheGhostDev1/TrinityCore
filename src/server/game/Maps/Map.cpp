@@ -56,6 +56,8 @@
 #include "WeatherMgr.h"
 #include "World.h"
 #include "WorldSession.h"
+#include "WorldStateMgr.h"
+#include "WorldStatePackets.h"
 #include <sstream>
 
 #include "Hacks/boost_1_74_fibonacci_heap.h"
@@ -371,6 +373,8 @@ i_scriptLock(false), _respawnCheckTimer(0)
 
     MMAP::MMapFactory::createOrGetMMapManager()->loadMapInstance(sWorld->GetDataPath(), GetId(), i_InstanceId);
 
+    _worldStateValues = sWorldStateMgr->GetInitialWorldStatesForMap(this);
+
     sScriptMgr->OnCreateMap(this);
 }
 
@@ -684,6 +688,44 @@ void Map::UpdatePersonalPhasesForPlayer(Player const* player)
     GetMultiPersonalPhaseTracker().OnOwnerPhaseChanged(player, getNGrid(cell.GridX(), cell.GridY()), this, cell);
 }
 
+int32 Map::GetWorldStateValue(int32 worldStateId) const
+{
+    if (int32 const* value = Trinity::Containers::MapGetValuePtr(_worldStateValues, worldStateId))
+        return *value;
+
+    return 0;
+}
+
+void Map::SetWorldStateValue(int32 worldStateId, int32 value)
+{
+    auto itr = _worldStateValues.try_emplace(worldStateId, 0).first;
+    int32 oldValue = itr->second;
+    itr->second = value;
+
+    WorldStateTemplate const* worldStateTemplate = sWorldStateMgr->GetWorldStateTemplate(worldStateId);
+    if (worldStateTemplate)
+        sScriptMgr->OnWorldStateValueChange(worldStateTemplate, oldValue, value, this);
+
+    // Broadcast update to all players on the map
+    WorldPackets::WorldState::UpdateWorldState updateWorldState;
+    updateWorldState.VariableID = worldStateId;
+    updateWorldState.Value = value;
+    updateWorldState.Write();
+
+    for (MapReference const& mapReference : m_mapRefManager)
+    {
+        if (worldStateTemplate && !worldStateTemplate->AreaIds.empty())
+        {
+            bool isInAllowedArea = std::any_of(worldStateTemplate->AreaIds.begin(), worldStateTemplate->AreaIds.end(),
+                [playerAreaId = mapReference.GetSource()->GetAreaId()](uint32 requiredAreaId) { return DB2Manager::IsInArea(playerAreaId, requiredAreaId); });
+            if (!isInAllowedArea)
+                continue;
+        }
+
+        mapReference.GetSource()->SendDirectMessage(updateWorldState.GetRawPacket());
+    }
+}
+
 template<class T>
 void Map::InitializeObject(T* /*obj*/) { }
 
@@ -853,6 +895,7 @@ void Map::Update(uint32 t_diff)
     if (_respawnCheckTimer <= t_diff)
     {
         ProcessRespawns();
+        UpdateSpawnGroupConditions();
         _respawnCheckTimer = sWorld->getIntConfig(CONFIG_RESPAWN_MINCHECKINTERVALMS);
     }
     else
@@ -3638,6 +3681,28 @@ bool Map::IsSpawnGroupActive(uint32 groupId) const
         return true;
     // either manual spawn group and toggled, or not manual spawn group and not toggled...
     return (_toggledSpawnGroupIds.find(groupId) != _toggledSpawnGroupIds.end()) != !(data->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN);
+}
+
+void Map::UpdateSpawnGroupConditions()
+{
+    std::vector<uint32> const* spawnGroups = sObjectMgr->GetSpawnGroupsForMap(GetId());
+    if (!spawnGroups)
+        return;
+
+    for (uint32 spawnGroupId : *spawnGroups)
+    {
+        bool isActive = IsSpawnGroupActive(spawnGroupId);
+        bool shouldBeActive = sConditionMgr->IsMapMeetingNotGroupedConditions(CONDITION_SOURCE_TYPE_SPAWN_GROUP, spawnGroupId, this);
+        if (isActive == shouldBeActive)
+            continue;
+
+        if (shouldBeActive)
+            SpawnGroupSpawn(spawnGroupId);
+        else if (ASSERT_NOTNULL(GetSpawnGroupData(spawnGroupId))->flags & SPAWNGROUP_FLAG_DESPAWN_ON_CONDITION_FAILURE)
+            SpawnGroupDespawn(spawnGroupId);
+        else
+            SetSpawnGroupInactive(spawnGroupId);
+    }
 }
 
 void Map::AddFarSpellCallback(FarSpellCallback&& callback)
