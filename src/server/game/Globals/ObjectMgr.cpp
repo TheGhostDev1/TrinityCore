@@ -661,10 +661,7 @@ void ObjectMgr::LoadCreatureTemplatePersonal()
     {
         Field* fields = result->Fetch();
 
-        uint32 entryID              = fields[0].GetUInt32();
-        uint32 entryForSummoner     = fields[1].GetUInt32();
-        uint32 groundMountDisplayID = fields[2].GetUInt32();
-        uint32 flightMountDisplayID = fields[3].GetUInt32();
+        uint32 entryID = fields[0].GetUInt32();
 
         CreatureTemplate const* cInfo = GetCreatureTemplate(entryID);
         if (!cInfo)
@@ -673,35 +670,31 @@ void ObjectMgr::LoadCreatureTemplatePersonal()
             continue;
         }
 
-        CreatureTemplate const* cInfo = GetCreatureTemplate(entryForSummoner);
-        if (!cInfo)
-        {
-            TC_LOG_ERROR("sql.sql", "Creature template (Entry for Summoner: %u) does not exist but has a record in `creature_template_personal`", entryForSummoner);
-            continue;
-        }
-
-        CreatureDisplayInfoEntry const* groundMountDisplayEntry = sCreatureDisplayInfoStore.LookupEntry(groundMountDisplayID);
-        if (!groundMountDisplayEntry)
-        {
-            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as ground mount. Fallback to 0.", entryID, groundMountDisplayID);
-            groundMountDisplayEntry = 0;
-            continue;
-        }
-
-        CreatureDisplayInfoEntry const* flightMountDisplayEntry = sCreatureDisplayInfoStore.LookupEntry(groundMountDisplayID);
-        if (!flightMountDisplayEntry)
-        {
-            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as flight mount. Fallback to 0.", entryID, flightMountDisplayID);
-            flightMountDisplayID = 0;
-            continue;
-        }
-
         CreaturePersonalInfo creaturePersonal = { };
 
-        creaturePersonal.Entry                = entryID;
-        creaturePersonal.EntryForSummoner     = entryForSummoner;
-        creaturePersonal.GroundMountDisplayID = groundMountDisplayID;
-        creaturePersonal.FlightMountDisplayID = flightMountDisplayID;
+        creaturePersonal.EntryForSummoner     = fields[1].GetUInt32();
+        creaturePersonal.GroundMountDisplayID = fields[2].GetUInt32();
+        creaturePersonal.FlightMountDisplayID = fields[3].GetUInt32();
+
+        if (!creaturePersonal.EntryForSummoner)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature template (Entry for Summoner: %u) does not exist but has a record in `creature_template_personal`", creaturePersonal.EntryForSummoner);
+            continue;
+        }
+
+        if (!creaturePersonal.GroundMountDisplayID)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as ground mount. Fallback to 0.", entryID, creaturePersonal.GroundMountDisplayID);
+            creaturePersonal.GroundMountDisplayID = 0;
+            continue;
+        }
+
+        if (!creaturePersonal.FlightMountDisplayID)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as flight mount. Fallback to 0.", entryID, creaturePersonal.FlightMountDisplayID);
+            creaturePersonal.FlightMountDisplayID = 0;
+            continue;
+        }
 
         _creaturePersonalStore[entryID] = creaturePersonal;
 
