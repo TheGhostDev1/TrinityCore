@@ -161,10 +161,8 @@ public:
         {
             if (receiver == unit->ToTempSummon()->GetSummoner())
             {
-                if (CreatureTemplate const* newEntryID = sObjectMgr->GetCreatureTemplate(spellEffectInfo.MiscValue))
-                    entryID = newEntryID;
-            }
-                
+                // TODO: Need to load the information from the creature_template_personal to send the EntryForSummoner instead.
+            }       
         }
 
         return entryID;

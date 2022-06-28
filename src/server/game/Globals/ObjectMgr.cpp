@@ -646,7 +646,7 @@ void ObjectMgr::LoadCreatureTemplatePersonal()
 {
     uint32 oldMSTime = getMSTime();
 
-    //                                                   0      1                 2                     3                    
+    //                                               0      1                 2                     3        
     QueryResult result = WorldDatabase.Query("SELECT Entry, EntryForSummoner, GroundMountDisplayID, FlightMountDisplayID FROM creature_template_personal");
 
     if (!result)
