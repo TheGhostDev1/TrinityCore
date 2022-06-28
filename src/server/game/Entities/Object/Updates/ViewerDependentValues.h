@@ -159,9 +159,13 @@ public:
 
         if (Unit const* unit = object->ToUnit())
         {
-            if (receiver == unit->ToTempSummon()->GetSummoner())
+            if (TempSummon const* summon = unit->ToTempSummon())
             {
-                // TODO: Need to load the information from the creature_template_personal to send the EntryForSummoner instead.
+                if (receiver == summon->GetSummoner())
+                {
+                    if (CreaturePersonalInfo const* personalInfo = sObjectMgr->GetCreaturePersonalInfo(summon->GetEntry()))
+                        entryID = personalInfo->EntryForSummoner;
+                }
             }
         }
 

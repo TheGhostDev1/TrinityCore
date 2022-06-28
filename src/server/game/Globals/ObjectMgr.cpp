@@ -1679,6 +1679,11 @@ CreatureModelInfo const* ObjectMgr::GetCreatureModelInfo(uint32 modelId) const
     return nullptr;
 }
 
+CreaturePersonalInfo const* ObjectMgr::GetCreaturePersonalInfo(uint32 entryId) const
+{
+    return Trinity::Containers::MapGetValuePtr(_creaturePersonalStore, entryId);
+}
+
 CreatureModel const* ObjectMgr::ChooseDisplayId(CreatureTemplate const* cinfo, CreatureData const* data /*= nullptr*/)
 {
     // Load creature model (display id)
