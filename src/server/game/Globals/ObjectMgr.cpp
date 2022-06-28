@@ -642,6 +642,76 @@ void ObjectMgr::LoadCreatureTemplateModels()
     TC_LOG_INFO("server.loading", ">> Loaded %u creature template models in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
+void ObjectMgr::LoadCreatureTemplatePersonal()
+{
+    uint32 oldMSTime = getMSTime();
+
+    //                                                   0      1                 2                     3                    
+    QueryResult result = WorldDatabase.Query("SELECT Entry, EntryForSummoner, GroundMountDisplayID, FlightMountDisplayID FROM creature_template_personal");
+
+    if (!result)
+    {
+        TC_LOG_INFO("server.loading", ">> Loaded 0 creature template personal definitions. DB table `creature_template_personal` is empty.");
+        return;
+    }
+
+    uint32 count = 0;
+
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 entryID              = fields[0].GetUInt32();
+        uint32 entryForSummoner     = fields[1].GetUInt32();
+        uint32 groundMountDisplayID = fields[2].GetUInt32();
+        uint32 flightMountDisplayID = fields[3].GetUInt32();
+
+        CreatureTemplate const* cInfo = GetCreatureTemplate(entryID);
+        if (!cInfo)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature template (Entry: %u) does not exist but has a record in `creature_template_personal`", entryID);
+            continue;
+        }
+
+        CreatureTemplate const* cInfo = GetCreatureTemplate(entryForSummoner);
+        if (!cInfo)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature template (Entry for Summoner: %u) does not exist but has a record in `creature_template_personal`", entryForSummoner);
+            continue;
+        }
+
+        CreatureDisplayInfoEntry const* groundMountDisplayEntry = sCreatureDisplayInfoStore.LookupEntry(groundMountDisplayID);
+        if (!groundMountDisplayEntry)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as ground mount. Fallback to 0.", entryID, groundMountDisplayID);
+            groundMountDisplayEntry = 0;
+            continue;
+        }
+
+        CreatureDisplayInfoEntry const* flightMountDisplayEntry = sCreatureDisplayInfoStore.LookupEntry(groundMountDisplayID);
+        if (!flightMountDisplayEntry)
+        {
+            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as flight mount. Fallback to 0.", entryID, flightMountDisplayID);
+            flightMountDisplayID = 0;
+            continue;
+        }
+
+        CreaturePersonalInfo creaturePersonal = { };
+
+        creaturePersonal.Entry                = entryID;
+        creaturePersonal.EntryForSummoner     = entryForSummoner;
+        creaturePersonal.GroundMountDisplayID = groundMountDisplayID;
+        creaturePersonal.FlightMountDisplayID = flightMountDisplayID;
+
+        _creaturePersonalStore[entryID] = creaturePersonal;
+
+        ++count;
+
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded %u creature template personal in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+}
+
 void ObjectMgr::LoadCreatureTemplateAddons()
 {
     uint32 oldMSTime = getMSTime();

@@ -26,6 +26,7 @@
 #include "Player.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "TemporarySummon.h"
 #include "World.h"
 #include "WorldSession.h"
 
@@ -143,6 +144,30 @@ public:
         }
 
         return displayId;
+    }
+};
+
+template<>
+class ViewerDependentValue<UF::ObjectData::EntryIDTag>
+{
+public:
+    using value_type = UF::ObjectData::EntryIDTag::value_type;
+
+    static value_type GetValue(UF::ObjectData const* objectData, Object const* object, Player const* receiver)
+    {
+        value_type entryID = objectData->EntryID;
+
+        if (Unit const* unit = object->ToUnit())
+        {
+            if (receiver == unit->ToTempSummon()->GetSummoner())
+            {
+                if (CreatureTemplate const* newEntryID = sObjectMgr->GetCreatureTemplate(spellEffectInfo.MiscValue))
+                    entryID = newEntryID;
+            }
+                
+        }
+
+        return entryID;
     }
 };
 
