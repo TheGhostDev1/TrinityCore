@@ -162,7 +162,7 @@ public:
             if (receiver == unit->ToTempSummon()->GetSummoner())
             {
                 // TODO: Need to load the information from the creature_template_personal to send the EntryForSummoner instead.
-            }     
+            }
         }
 
         return entryID;
