@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `creature_template_personal` (
   `GroundMountDisplayID` int(10) unsigned NOT NULL DEFAULT '0',
   `FlightMountDisplayID` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`Entry`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DELETE FROM `creature_template_personal`;
 INSERT INTO `creature_template_personal` (`Entry`, `EntryForSummoner`, `GroundMountDisplayID`, `FlightMountDisplayID`) VALUES
