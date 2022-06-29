@@ -56,6 +56,8 @@
 #include "WeatherMgr.h"
 #include "World.h"
 #include "WorldSession.h"
+#include "WorldStateMgr.h"
+#include "WorldStatePackets.h"
 #include <sstream>
 
 #include "Hacks/boost_1_74_fibonacci_heap.h"
@@ -371,6 +373,8 @@ i_scriptLock(false), _respawnCheckTimer(0)
 
     MMAP::MMapFactory::createOrGetMMapManager()->loadMapInstance(sWorld->GetDataPath(), GetId(), i_InstanceId);
 
+    _worldStateValues = sWorldStateMgr->GetInitialWorldStatesForMap(this);
+
     sScriptMgr->OnCreateMap(this);
 }
 
@@ -682,6 +686,44 @@ void Map::UpdatePersonalPhasesForPlayer(Player const* player)
 {
     Cell cell(player->GetPositionX(), player->GetPositionY());
     GetMultiPersonalPhaseTracker().OnOwnerPhaseChanged(player, getNGrid(cell.GridX(), cell.GridY()), this, cell);
+}
+
+int32 Map::GetWorldStateValue(int32 worldStateId) const
+{
+    if (int32 const* value = Trinity::Containers::MapGetValuePtr(_worldStateValues, worldStateId))
+        return *value;
+
+    return 0;
+}
+
+void Map::SetWorldStateValue(int32 worldStateId, int32 value)
+{
+    auto itr = _worldStateValues.try_emplace(worldStateId, 0).first;
+    int32 oldValue = itr->second;
+    itr->second = value;
+
+    WorldStateTemplate const* worldStateTemplate = sWorldStateMgr->GetWorldStateTemplate(worldStateId);
+    if (worldStateTemplate)
+        sScriptMgr->OnWorldStateValueChange(worldStateTemplate, oldValue, value, this);
+
+    // Broadcast update to all players on the map
+    WorldPackets::WorldState::UpdateWorldState updateWorldState;
+    updateWorldState.VariableID = worldStateId;
+    updateWorldState.Value = value;
+    updateWorldState.Write();
+
+    for (MapReference const& mapReference : m_mapRefManager)
+    {
+        if (worldStateTemplate && !worldStateTemplate->AreaIds.empty())
+        {
+            bool isInAllowedArea = std::any_of(worldStateTemplate->AreaIds.begin(), worldStateTemplate->AreaIds.end(),
+                [playerAreaId = mapReference.GetSource()->GetAreaId()](uint32 requiredAreaId) { return DB2Manager::IsInArea(playerAreaId, requiredAreaId); });
+            if (!isInAllowedArea)
+                continue;
+        }
+
+        mapReference.GetSource()->SendDirectMessage(updateWorldState.GetRawPacket());
+    }
 }
 
 template<class T>
