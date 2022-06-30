@@ -23,5 +23,5 @@ void AddSC_solocraft();
 // void Add${NameOfDirectory}Scripts()
 void AddCustomScripts()
 {
-AddSC_solocraft();    
+     AddSC_solocraft();    
 }
