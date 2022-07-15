@@ -404,7 +404,7 @@ struct areatrigger_pri_divine_star : AreaTriggerAI
         if (!caster)
             return;
 
-        if (at->GetDistance(_casterCurrentPosition) > 1.0f)
+        if (at->GetDistance(_casterCurrentPosition) > 0.05f)
         {
             _affectedUnits.clear();
 
