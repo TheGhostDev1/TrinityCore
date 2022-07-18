@@ -3203,6 +3203,10 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                 }
             }
         }
+
+        // Saving to DB happens before removing from world - skip saving these auras
+        if (spellInfoMutable->HasAuraInterruptFlag(SpellAuraInterruptFlags::LeaveWorld))
+            spellInfoMutable->AttributesCu |= SPELL_ATTR0_CU_AURA_CANNOT_BE_SAVED;
     }
 
     // addition for binary spells, omit spells triggering other spells
@@ -4643,6 +4647,12 @@ void SpellMgr::LoadSpellInfoCorrections()
         {
             spellEffectInfo->Effect = SPELL_EFFECT_APPLY_AURA;
         });
+    });
+
+    // Ray of Frost (Fingers of Frost charges)
+    ApplySpellFix({ 269748 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx &= ~SPELL_ATTR1_IS_CHANNELLED;
     });
 
     for (SpellInfo const& s : mSpellInfoMap)

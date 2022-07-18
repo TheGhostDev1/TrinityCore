@@ -391,7 +391,7 @@ void ObjectMgr::LoadCreatureTemplates()
     // We load the creature models after loading but before checking
     LoadCreatureTemplateModels();
 
-    LoadCreatureTemplatePersonal();
+    LoadCreatureSummonedData();
 
     // Checking needs to be done after loading because of the difficulty self referencing
     for (auto const& ctPair : _creatureTemplateStore)
@@ -644,67 +644,68 @@ void ObjectMgr::LoadCreatureTemplateModels()
     TC_LOG_INFO("server.loading", ">> Loaded %u creature template models in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
-void ObjectMgr::LoadCreatureTemplatePersonal()
+void ObjectMgr::LoadCreatureSummonedData()
 {
     uint32 oldMSTime = getMSTime();
 
-    //                                               0      1                 2                     3
-    QueryResult result = WorldDatabase.Query("SELECT Entry, EntryForSummoner, GroundMountDisplayID, FlightMountDisplayID FROM creature_template_personal");
+    //                                               0           1                            2                     3
+    QueryResult result = WorldDatabase.Query("SELECT CreatureID, CreatureIDVisibleToSummoner, GroundMountDisplayID, FlyingMountDisplayID FROM creature_summoned_data");
 
     if (!result)
     {
-        TC_LOG_INFO("server.loading", ">> Loaded 0 creature template personal definitions. DB table `creature_template_personal` is empty.");
+        TC_LOG_INFO("server.loading", ">> Loaded 0 creature summoned data definitions. DB table `creature_summoned_data` is empty.");
         return;
     }
-
-    uint32 count = 0;
 
     do
     {
         Field* fields = result->Fetch();
 
-        uint32 entryID = fields[0].GetUInt32();
-
-        CreatureTemplate const* cInfo = GetCreatureTemplate(entryID);
-        if (!cInfo)
+        uint32 creatureId = fields[0].GetUInt32();
+        if (!GetCreatureTemplate(creatureId))
         {
-            TC_LOG_ERROR("sql.sql", "Creature template (Entry: %u) does not exist but has a record in `creature_template_personal`", entryID);
+            TC_LOG_ERROR("sql.sql", "Table `creature_summoned_data` references non-existing creature %u, skipped", creatureId);
             continue;
         }
 
-        CreaturePersonalInfo creaturePersonal = { };
+        CreatureSummonedData& summonedData = _creatureSummonedDataStore[creatureId];
 
-        creaturePersonal.EntryForSummoner     = fields[1].GetUInt32();
-        creaturePersonal.GroundMountDisplayID = fields[2].GetUInt32();
-        creaturePersonal.FlightMountDisplayID = fields[3].GetUInt32();
-
-        if (!creaturePersonal.EntryForSummoner)
+        if (!fields[1].IsNull())
         {
-            TC_LOG_ERROR("sql.sql", "Creature template (Entry for Summoner: %u) does not exist but has a record in `creature_template_personal`", creaturePersonal.EntryForSummoner);
-            continue;
+            summonedData.CreatureIDVisibleToSummoner = fields[1].GetUInt32();
+            if (!GetCreatureTemplate(*summonedData.CreatureIDVisibleToSummoner))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `creature_summoned_data` references non-existing creature %u in CreatureIDVisibleToSummoner for creature %u, set to 0",
+                    *summonedData.CreatureIDVisibleToSummoner, creatureId);
+                summonedData.CreatureIDVisibleToSummoner.reset();
+            }
         }
 
-        if (!creaturePersonal.GroundMountDisplayID)
+        if (!fields[2].IsNull())
         {
-            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as ground mount. Fallback to 0.", entryID, creaturePersonal.GroundMountDisplayID);
-            creaturePersonal.GroundMountDisplayID = 0;
-            continue;
+            summonedData.GroundMountDisplayID = fields[2].GetUInt32();
+            if (!sCreatureDisplayInfoStore.LookupEntry(*summonedData.GroundMountDisplayID))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `creature_summoned_data` references non-existing display id %u in GroundMountDisplayID for creature %u, set to 0",
+                    *summonedData.GroundMountDisplayID, creatureId);
+                summonedData.CreatureIDVisibleToSummoner.reset();
+            }
         }
 
-        if (!creaturePersonal.FlightMountDisplayID)
+        if (!fields[3].IsNull())
         {
-            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) lists non-existing CreatureDisplayID id (%u) as flight mount. Fallback to 0.", entryID, creaturePersonal.FlightMountDisplayID);
-            creaturePersonal.FlightMountDisplayID = 0;
-            continue;
+            summonedData.FlyingMountDisplayID = fields[3].GetUInt32();
+            if (!sCreatureDisplayInfoStore.LookupEntry(*summonedData.FlyingMountDisplayID))
+            {
+                TC_LOG_ERROR("sql.sql", "Table `creature_summoned_data` references non-existing display id %u in FlyingMountDisplayID for creature %u, set to 0",
+                    *summonedData.FlyingMountDisplayID, creatureId);
+                summonedData.GroundMountDisplayID.reset();
+            }
         }
-
-        _creaturePersonalStore[entryID] = creaturePersonal;
-
-        ++count;
 
     } while (result->NextRow());
 
-    TC_LOG_INFO("server.loading", ">> Loaded %u creature template personal in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    TC_LOG_INFO("server.loading", ">> Loaded " SZFMTD " creature summoned data definitions in %u ms", _creatureSummonedDataStore.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
 void ObjectMgr::LoadCreatureTemplateAddons()
@@ -1681,9 +1682,9 @@ CreatureModelInfo const* ObjectMgr::GetCreatureModelInfo(uint32 modelId) const
     return nullptr;
 }
 
-CreaturePersonalInfo const* ObjectMgr::GetCreaturePersonalInfo(uint32 entryId) const
+CreatureSummonedData const* ObjectMgr::GetCreatureSummonedData(uint32 entryId) const
 {
-    return Trinity::Containers::MapGetValuePtr(_creaturePersonalStore, entryId);
+    return Trinity::Containers::MapGetValuePtr(_creatureSummonedDataStore, entryId);
 }
 
 CreatureModel const* ObjectMgr::ChooseDisplayId(CreatureTemplate const* cinfo, CreatureData const* data /*= nullptr*/)
@@ -6303,7 +6304,7 @@ void ObjectMgr::LoadInstanceTemplate()
 
         uint16 mapID = fields[0].GetUInt16();
 
-        if (!MapManager::IsValidMAP(mapID, true))
+        if (!MapManager::IsValidMAP(mapID))
         {
             TC_LOG_ERROR("sql.sql", "ObjectMgr::LoadInstanceTemplate: bad mapid %d for template!", mapID);
             continue;
@@ -7473,31 +7474,25 @@ void ObjectMgr::LoadAccessRequirements()
  */
 AreaTriggerStruct const* ObjectMgr::GetGoBackTrigger(uint32 Map) const
 {
-    bool useParentDbValue = false;
-    uint32 parentId = 0;
+    Optional<uint32> parentId;
     MapEntry const* mapEntry = sMapStore.LookupEntry(Map);
     if (!mapEntry || mapEntry->CorpseMapID < 0)
         return nullptr;
 
     if (mapEntry->IsDungeon())
-    {
-        InstanceTemplate const* iTemplate = sObjectMgr->GetInstanceTemplate(Map);
+        if (InstanceTemplate const* iTemplate = sObjectMgr->GetInstanceTemplate(Map))
+            parentId = iTemplate->Parent;
 
-        if (!iTemplate)
-            return nullptr;
-
-        parentId = iTemplate->Parent;
-        useParentDbValue = true;
-    }
-
-    uint32 entrance_map = uint32(mapEntry->CorpseMapID);
+    uint32 entrance_map = parentId.value_or(mapEntry->CorpseMapID);
     for (AreaTriggerContainer::const_iterator itr = _areaTriggerStore.begin(); itr != _areaTriggerStore.end(); ++itr)
-        if ((!useParentDbValue && itr->second.target_mapId == entrance_map) || (useParentDbValue && itr->second.target_mapId == parentId))
+    {
+        if (itr->second.target_mapId == entrance_map)
         {
             AreaTriggerEntry const* atEntry = sAreaTriggerStore.LookupEntry(itr->first);
             if (atEntry && atEntry->ContinentID == int32(Map))
                 return &itr->second;
         }
+    }
     return nullptr;
 }
 
