@@ -179,32 +179,6 @@ public:
 };
 
 template<>
-class ViewerDependentValue<UF::ObjectData::EntryIDTag>
-{
-public:
-    using value_type = UF::ObjectData::EntryIDTag::value_type;
-
-    static value_type GetValue(UF::ObjectData const* objectData, Object const* object, Player const* receiver)
-    {
-        value_type entryID = objectData->EntryID;
-
-        if (Unit const* unit = object->ToUnit())
-        {
-            if (TempSummon const* summon = unit->ToTempSummon())
-            {
-                if (receiver == summon->GetSummoner())
-                {
-                    if (CreaturePersonalInfo const* personalInfo = sObjectMgr->GetCreaturePersonalInfo(summon->GetEntry()))
-                        entryID = personalInfo->EntryForSummoner;
-                }
-            }
-        }
-
-        return entryID;
-    }
-};
-
-template<>
 class ViewerDependentValue<UF::UnitData::FactionTemplateTag>
 {
 public:
