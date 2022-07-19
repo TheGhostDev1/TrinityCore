@@ -43,10 +43,6 @@ Emote randomEmotes[5] =
 struct npc_aspiring_trainee : public ScriptedAI
 {
 
-private:
-    TaskScheduler _scheduler;
-    EventMap events;
-
     npc_aspiring_trainee(Creature* c) : ScriptedAI(c)
     {
         events.ScheduleEvent(EVENT_INSTRUCTOR_ZHI_RANDOM_EMOTE, 6s);
@@ -137,6 +133,10 @@ private:
 
         DoMeleeAttackIfReady();
     }
+
+private:
+    TaskScheduler _scheduler;
+    EventMap events;
 
 };
 
