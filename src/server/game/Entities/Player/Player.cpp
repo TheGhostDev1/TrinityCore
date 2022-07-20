@@ -4769,7 +4769,7 @@ void Player::RepopAtGraveyard()
         ClosestGrave = bg->GetClosestGraveyard(this);
     else
     {
-        if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(GetZoneId()))
+        if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(GetMap(), GetZoneId()))
             ClosestGrave = bf->GetClosestGraveyard(this);
         else
             ClosestGrave = sObjectMgr->GetClosestGraveyard(*this, GetTeam(), this);
@@ -6216,7 +6216,7 @@ void Player::CheckAreaExploreAndOutdoor()
         return;
     }
 
-    uint32 offset = areaEntry->AreaBit / 64;
+    uint32 offset = areaEntry->AreaBit / PLAYER_EXPLORED_ZONES_BITS;
 
     if (offset >= PLAYER_EXPLORED_ZONES_SIZE)
     {
@@ -6225,7 +6225,7 @@ void Player::CheckAreaExploreAndOutdoor()
         return;
     }
 
-    uint64 val = UI64LIT(1) << (areaEntry->AreaBit % 64);
+    uint64 val = UI64LIT(1) << (areaEntry->AreaBit % PLAYER_EXPLORED_ZONES_BITS);
     uint64 currFields = m_activePlayerData->ExploredZones[offset];
 
     if (!(currFields & val))
@@ -12694,6 +12694,10 @@ void Player::SplitItem(uint16 src, uint16 dst, uint32 count)
 
 void Player::SwapItem(uint16 src, uint16 dst)
 {
+    // If we want to swap the same item it is useless.
+    if (src == dst)
+        return;
+
     uint8 srcbag = src >> 8;
     uint8 srcslot = src & 255;
 
@@ -14115,7 +14119,11 @@ void Player::SendPreparedGossip(WorldObject* source)
             return;
         }
     }
+    SendPreparedGossipForced(source);
+}
 
+void Player::SendPreparedGossipForced(WorldObject* source)
+{
     // in case non empty gossip menu (that not included quests list size) show it
     // (quest entries from quest menu will be included in list)
 
@@ -14189,7 +14197,7 @@ void Player::OnGossipSelect(WorldObject* source, uint32 gossipListId, uint32 men
             break;
         case GOSSIP_OPTION_QUESTGIVER:
             PrepareQuestMenu(guid);
-            SendPreparedQuest(source);
+            SendPreparedGossip(source);
             break;
         case GOSSIP_OPTION_VENDOR:
         case GOSSIP_OPTION_ARMORER:
@@ -14430,7 +14438,10 @@ void Player::SendPreparedQuest(WorldObject* source)
         }
     }
 
-    PlayerTalkClass->SendQuestGiverQuestListMessage(source);
+    if (sObjectMgr->GetQuestGreeting(source->GetTypeId(), source->GetEntry()))
+        PlayerTalkClass->SendQuestGiverQuestListMessage(source);
+    else
+        SendPreparedGossipForced(source); // fallback to regular gossip menu
 }
 
 bool Player::IsActiveQuest(uint32 quest_id) const
@@ -16291,11 +16302,11 @@ void Player::SetQuestCompletedBit(uint32 questBit, bool completed)
     if (!questBit)
         return;
 
-    uint32 fieldOffset = (questBit - 1) >> 6;
+    uint32 fieldOffset = (questBit - 1) / QUESTS_COMPLETED_BITS_PER_BLOCK;
     if (fieldOffset >= QUESTS_COMPLETED_BITS_SIZE)
         return;
 
-    uint64 flag = UI64LIT(1) << ((questBit - 1) & 63);
+    uint64 flag = UI64LIT(1) << ((questBit - 1) % QUESTS_COMPLETED_BITS_PER_BLOCK);
     if (completed)
         SetUpdateFieldFlagValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::QuestCompleted, fieldOffset), flag);
     else
@@ -17419,9 +17430,8 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     SetXP(fields.xp);
 
     std::vector<std::string_view> exploredZones = Trinity::Tokenize(fields.exploredZones, ' ', false);
-    if (exploredZones.size() == PLAYER_EXPLORED_ZONES_SIZE * 2)
-        for (std::size_t i = 0; i < exploredZones.size(); ++i)
-            SetUpdateFieldFlagValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::ExploredZones, i / 2),
+    for (std::size_t i = 0; i < exploredZones.size() && i / 2 < PLAYER_EXPLORED_ZONES_SIZE; ++i)
+        SetUpdateFieldFlagValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::ExploredZones, i / 2),
             Trinity::StringTo<uint64>(exploredZones[i]).value_or(UI64LIT(0)) << (32 * (i % 2)));
 
     std::vector<std::string_view> knownTitles = Trinity::Tokenize(fields.knownTitles, ' ', false);
@@ -25062,7 +25072,7 @@ void Player::AutoUnequipOffhandIfNeed(bool force /*= false*/)
 
 OutdoorPvP* Player::GetOutdoorPvP() const
 {
-    return sOutdoorPvPMgr->GetOutdoorPvPToZoneId(GetZoneId());
+    return sOutdoorPvPMgr->GetOutdoorPvPToZoneId(GetMap(), GetZoneId());
 }
 
 bool Player::HasItemFitToSpellRequirements(SpellInfo const* spellInfo, Item const* ignoreItem) const
@@ -26737,7 +26747,7 @@ bool Player::IsAreaThatActivatesPvpTalents(uint32 areaID) const
             if (area->Flags[0] & AREA_FLAG_ARENA)
                 return true;
 
-            if (sBattlefieldMgr->GetBattlefieldToZoneId(area->ID))
+            if (sBattlefieldMgr->IsWorldPvpArea(area->ID))
                 return true;
 
             area = sAreaTableStore.LookupEntry(area->ParentAreaID);
@@ -28813,4 +28823,70 @@ void Player::SendDisplayToast(uint32 entry, DisplayToastType type, bool isBonusR
     }
 
     SendDirectMessage(displayToast.Write());
+}
+
+void Player::ApplyOnBagsItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function)
+{
+    for (uint32 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+    {
+        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            if (!function(this, item, INVENTORY_SLOT_BAG_0, i))
+                return;
+        }
+    }
+
+    for (uint32 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
+    {
+        if (Bag* bag = (Bag*)GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            for (uint32 j = 0; j < bag->GetBagSize(); ++j)
+            {
+                if (Item* item = GetItemByPos(i, j))
+                {
+                    if (!function(this, item, i, j))
+                        return;
+                }
+            }
+        }
+    }
+}
+
+void Player::ApplyOnBankItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function)
+{
+    for (uint32 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; ++i)
+    {
+        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            if (!function(this, item, INVENTORY_SLOT_BAG_0, i))
+                return;
+        }
+    }
+
+    for (uint32 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; ++i)
+    {
+        if (Bag* bag = (Bag*)GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            for (uint32 j = 0; j < bag->GetBagSize(); ++j)
+            {
+                if (Item* item = GetItemByPos(i, j))
+                {
+                    if (!function(this, item, i, j))
+                        return;
+                }
+            }
+        }
+    }
+}
+
+void Player::ApplyOnReagentBankItems(std::function<bool(Player*, Item*, uint8 /*bag*/, uint8 /*slot*/)>&& function)
+{
+    for (uint32 i = REAGENT_SLOT_START; i < REAGENT_SLOT_END; ++i)
+    {
+        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            if (!function(this, item, INVENTORY_SLOT_BAG_0, i))
+                return;
+        }
+    }
 }

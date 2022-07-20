@@ -167,6 +167,12 @@ public:
             }
         }
 
+        if (!_stopFrames.empty())
+        {
+            _pathProgress = 0;
+            _stateChangeProgress = 0;
+        }
+
         _positionUpdateTimer.Reset(PositionUpdateInterval);
     }
 
@@ -2711,7 +2717,49 @@ void GameObject::Use(Unit* user)
                 return;
 
             spellId = info->newflag.pickupSpell;
+            spellCaster = nullptr;
             break;
+        }
+        case GAMEOBJECT_TYPE_NEW_FLAG_DROP:
+        {
+            GameObjectTemplate const* info = GetGOInfo();
+            if (!info)
+                return;
+
+            if (user->GetTypeId() != TYPEID_PLAYER)
+                return;
+
+            if (GameObject* owner = GetMap()->GetGameObject(GetOwnerGUID()))
+            {
+                if (owner->GetGoType() == GAMEOBJECT_TYPE_NEW_FLAG)
+                {
+                    // friendly with enemy flag means you're taking it
+                    bool defenderInteract = !owner->IsFriendlyTo(user);
+                    if (defenderInteract && owner->GetGOInfo()->newflag.ReturnonDefenderInteract)
+                    {
+                        // TODO respawn owner gameobject
+                        Delete();
+                        return;
+                    }
+                    else
+                    {
+                        // in sniffs the aura is added to player, no spell go is send (maybe because owner is invisible)
+                        CastSpellExtraArgs args;
+                        args.SetTriggerFlags(TRIGGERED_FULL_MASK);
+                        // we let the owner cast the spell for now
+                        // so that caster guid is set correctly
+                        SpellCastResult result = owner->CastSpell(user, owner->GetGOInfo()->newflag.pickupSpell, args);
+                        if (result == SPELL_CAST_OK)
+                        {
+                            Delete();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            Delete();
+            return;
         }
         case GAMEOBJECT_TYPE_ITEM_FORGE:
         {
@@ -3745,4 +3793,10 @@ SpellInfo const* GameObject::GetSpellForLock(Player const* player) const
     }
 
     return nullptr;
+}
+
+bool ForcedGameObjectDespawnDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
+{
+    m_owner.DespawnOrUnsummon(0s, m_respawnTimer);
+    return true;
 }

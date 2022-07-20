@@ -2166,7 +2166,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
 
         target->SetUnitFlag(UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
         target->SetUnitFlag2(UNIT_FLAG2_FEIGN_DEATH);
-        target->SetDynamicFlag(UNIT_DYNFLAG_DEAD);
+        target->SetUnitFlag3(UNIT_FLAG3_FAKE_DEAD);
         target->AddUnitState(UNIT_STATE_DIED);
 
         if (Creature* creature = target->ToCreature())
@@ -2176,7 +2176,7 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
     {
         target->RemoveUnitFlag(UNIT_FLAG_PREVENT_EMOTES_FROM_CHAT_TEXT);
         target->RemoveUnitFlag2(UNIT_FLAG2_FEIGN_DEATH);
-        target->RemoveDynamicFlag(UNIT_DYNFLAG_DEAD);
+        target->RemoveUnitFlag3(UNIT_FLAG3_FAKE_DEAD);
         target->ClearUnitState(UNIT_STATE_DIED);
 
         if (Creature* creature = target->ToCreature())
@@ -3173,6 +3173,18 @@ void AuraEffect::HandleAuraModEffectImmunity(AuraApplication const* aurApp, uint
         }
         else
             sOutdoorPvPMgr->HandleDropFlag(player, GetSpellInfo()->Id);
+
+        if (GameObject* gameObjectCaster = player->GetMap()->GetGameObject(GetCasterGUID()))
+        {
+            if (gameObjectCaster->GetGoType() == GAMEOBJECT_TYPE_NEW_FLAG)
+            {
+                if (GameObject* droppedFlag = gameObjectCaster->SummonGameObject(gameObjectCaster->GetGOInfo()->newflag.FlagDrop, player->GetPosition(), QuaternionData::fromEulerAnglesZYX(player->GetOrientation(), 0.f, 0.f), Seconds(gameObjectCaster->GetGOInfo()->newflag.ExpireDuration / 1000), GO_SUMMON_TIMED_DESPAWN))
+                {
+                    droppedFlag->m_Events.AddEvent(new ForcedGameObjectDespawnDelayEvent(*droppedFlag, 0s), Milliseconds(gameObjectCaster->GetGOInfo()->newflag.ExpireDuration));
+                    droppedFlag->SetOwnerGUID(gameObjectCaster->GetGUID());
+                }
+            }
+        }
     }
 }
 
@@ -4583,7 +4595,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
                             {
                                 if (Battleground* bg = target->ToPlayer()->GetBattleground())
                                     bg->RemovePlayerFromResurrectQueue(target->GetGUID());
-                                if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(target->GetZoneId()))
+                                if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(target->GetMap(), target->GetZoneId()))
                                     bf->RemovePlayerFromResurrectQueue(target->GetGUID());
                             }
                             break;
