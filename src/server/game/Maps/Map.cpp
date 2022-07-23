@@ -16,6 +16,7 @@
  */
 
 #include "Map.h"
+#include "BattlefieldMgr.h"
 #include "Battleground.h"
 #include "CellImpl.h"
 #include "CharacterPackets.h"
@@ -43,6 +44,7 @@
 #include "ObjectAccessor.h"
 #include "ObjectGridLoader.h"
 #include "ObjectMgr.h"
+#include "OutdoorPvPMgr.h"
 #include "Pet.h"
 #include "PhasingHandler.h"
 #include "PoolMgr.h"
@@ -93,6 +95,9 @@ Map::~Map()
 
     if (!m_scriptSchedule.empty())
         sMapMgr->DecreaseScheduledScriptCount(m_scriptSchedule.size());
+
+    sOutdoorPvPMgr->DestroyOutdoorPvPForMap(this);
+    sBattlefieldMgr->DestroyBattlefieldsForMap(this);
 
     if (m_parentMap == this)
         delete m_childTerrainMaps;
@@ -374,6 +379,9 @@ i_scriptLock(false), _respawnCheckTimer(0)
     MMAP::MMapFactory::createOrGetMMapManager()->loadMapInstance(sWorld->GetDataPath(), GetId(), i_InstanceId);
 
     _worldStateValues = sWorldStateMgr->GetInitialWorldStatesForMap(this);
+
+    sOutdoorPvPMgr->CreateOutdoorPvPForMap(this);
+    sBattlefieldMgr->CreateBattlefieldsForMap(this);
 
     sScriptMgr->OnCreateMap(this);
 }
@@ -696,10 +704,13 @@ int32 Map::GetWorldStateValue(int32 worldStateId) const
     return 0;
 }
 
-void Map::SetWorldStateValue(int32 worldStateId, int32 value)
+void Map::SetWorldStateValue(int32 worldStateId, int32 value, bool hidden)
 {
-    auto itr = _worldStateValues.try_emplace(worldStateId, 0).first;
+    auto [itr, inserted] = _worldStateValues.try_emplace(worldStateId, 0);
     int32 oldValue = itr->second;
+    if (oldValue == value && !inserted)
+        return;
+
     itr->second = value;
 
     WorldStateTemplate const* worldStateTemplate = sWorldStateMgr->GetWorldStateTemplate(worldStateId);
@@ -710,6 +721,7 @@ void Map::SetWorldStateValue(int32 worldStateId, int32 value)
     WorldPackets::WorldState::UpdateWorldState updateWorldState;
     updateWorldState.VariableID = worldStateId;
     updateWorldState.Value = value;
+    updateWorldState.Hidden = hidden;
     updateWorldState.Write();
 
     for (MapReference const& mapReference : m_mapRefManager)
@@ -3699,7 +3711,7 @@ void Map::UpdateSpawnGroupConditions()
         if (shouldBeActive)
             SpawnGroupSpawn(spawnGroupId);
         else if (ASSERT_NOTNULL(GetSpawnGroupData(spawnGroupId))->flags & SPAWNGROUP_FLAG_DESPAWN_ON_CONDITION_FAILURE)
-            SpawnGroupDespawn(spawnGroupId);
+            SpawnGroupDespawn(spawnGroupId, true);
         else
             SetSpawnGroupInactive(spawnGroupId);
     }

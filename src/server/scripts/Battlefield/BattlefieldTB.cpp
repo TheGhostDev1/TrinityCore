@@ -45,8 +45,6 @@ bool BattlefieldTB::SetupBattlefield()
     m_TypeId = BATTLEFIELD_TB;                              // See enum BattlefieldTypes
     m_BattleId = BATTLEFIELD_BATTLEID_TB;
     m_ZoneId = BATTLEFIELD_TB_ZONEID;
-    m_MapId = BATTLEFIELD_TB_MAPID;
-    m_Map = sMapMgr->CreateBaseMap(m_MapId);
 
     InitStalker(NPC_DEBUG_ANNOUNCER, TolBaradDebugAnnouncerPos);
 
@@ -71,35 +69,34 @@ bool BattlefieldTB::SetupBattlefield()
 
     m_Data32.resize(BATTLEFIELD_TB_DATA_MAX);
 
-    m_saveTimer = 5 * MINUTE * IN_MILLISECONDS;
-
     updatedNPCAndObjects = true;
     m_updateObjectsTimer = 0;
 
     // Was there a battle going on or time isn't set yet? Then use m_RestartAfterCrash
-    if (sWorld->getWorldState(WS_BATTLEFIELD_TB_STATE_BATTLE) == 1 || sWorld->getWorldState(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE) == 0)
-        sWorld->setWorldState(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, m_RestartAfterCrash);
+    if (sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_STATE_BATTLE, m_Map) == 1 || sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, m_Map) < GameTime::GetGameTime())
+    {
+        sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_STATE_BATTLE, 0, false, m_Map);
+        sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, GameTime::GetGameTime() + m_RestartAfterCrash / IN_MILLISECONDS, false, m_Map);
+    }
 
     // Set timer
-    m_Timer = sWorld->getWorldState(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE);
+    m_Timer = sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, m_Map) - GameTime::GetGameTime();
 
     // Defending team isn't set yet? Choose randomly.
-    if (sWorld->getWorldState(WS_BATTLEFIELD_TB_FACTION_CONTROLLING) == 0)
-        sWorld->setWorldState(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, uint32(urand(1, 2)));
+    if (sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, m_Map) == 0)
+        sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, uint32(urand(1, 2)), false, m_Map);
 
     // Set defender team
-    SetDefenderTeam(TeamId(sWorld->getWorldState(WS_BATTLEFIELD_TB_FACTION_CONTROLLING) - 1));
+    SetDefenderTeam(TeamId(sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, m_Map) - 1));
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 1, false, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, GetDefenderTeam() + 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_ALLIANCE, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_HORDE, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, m_Map);
-
-    SaveWorldStateValues();
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, GetDefenderTeam() + 1, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_ALLIANCE, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_HORDE, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, false, m_Map);
 
     // Create capture points
     for (uint8 i = 0; i < TB_BASE_COUNT; i++)
@@ -186,14 +183,6 @@ bool BattlefieldTB::Update(uint32 diff)
             m_updateObjectsTimer -= diff;
     }
 
-    if (m_saveTimer <= diff)
-    {
-        SaveWorldStateValues();
-        m_saveTimer = 60 * IN_MILLISECONDS;
-    }
-    else
-        m_saveTimer -= diff;
-
     return m_return;
 }
 
@@ -237,18 +226,11 @@ void BattlefieldTB::RemoveAurasFromPlayer(Player* player)
     player->RemoveAurasDueToSpell(SPELL_TB_SPIRITUAL_IMMUNITY);
 }
 
-void BattlefieldTB::SaveWorldStateValues()
-{
-    sWorld->setWorldState(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, uint32(GetDefenderTeam()));
-    sWorld->setWorldState(WS_BATTLEFIELD_TB_STATE_BATTLE, uint32(IsWarTime() ? 1 : 0));
-    sWorld->setWorldState(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, uint32(!IsWarTime() ? m_Timer : 0));
-}
-
 void BattlefieldTB::OnStartGrouping()
 {
     UpdateNPCsAndGameObjects();
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_PREPARATIONS, 1, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_PREPARATIONS, 1, false, m_Map);
 
     // Teleport players out of questing area
     for (uint8 team = 0; team < PVP_TEAMS_COUNT; ++team)
@@ -266,35 +248,35 @@ void BattlefieldTB::OnBattleStart()
 
     UpdateNPCsAndGameObjects();
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END_SHOW, 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END_SHOW, 1, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 0, false, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_ATTACKING_SHOW, GetAttackerTeam() == TEAM_ALLIANCE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_ATTACKING_SHOW, GetAttackerTeam() == TEAM_HORDE ? 1 : 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_ATTACKING_SHOW, GetAttackerTeam() == TEAM_ALLIANCE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_ATTACKING_SHOW, GetAttackerTeam() == TEAM_HORDE ? 1 : 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED_SHOW, 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED_SHOW, 1, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED_SHOW, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED_SHOW, 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_PREPARATIONS, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_BATTLE, 1, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_PREPARATIONS, 0, false, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_STATE_BATTLE, 1, false, m_Map);
 
     // Towers/spires
     for (uint8 i = 0; i < TB_TOWERS_COUNT; i++)
     {
-        sWorldStateMgr->SetValue(TBTowers[i].wsIntact[GetDefenderTeam()], 1, m_Map);
-        sWorldStateMgr->SetValue(TBTowers[i].wsDamaged[GetDefenderTeam()], 0, m_Map);
-        sWorldStateMgr->SetValue(TBTowers[i].wsDestroyed, 0, m_Map);
-        sWorldStateMgr->SetValue(TBTowers[i].wsDamaged[GetAttackerTeam()], 0, m_Map);
-        sWorldStateMgr->SetValue(TBTowers[i].wsIntact[GetAttackerTeam()], 0, m_Map);
+        sWorldStateMgr->SetValue(TBTowers[i].wsIntact[GetDefenderTeam()], 1, false, m_Map);
+        sWorldStateMgr->SetValue(TBTowers[i].wsDamaged[GetDefenderTeam()], 0, false, m_Map);
+        sWorldStateMgr->SetValue(TBTowers[i].wsDestroyed, 0, false, m_Map);
+        sWorldStateMgr->SetValue(TBTowers[i].wsDamaged[GetAttackerTeam()], 0, false, m_Map);
+        sWorldStateMgr->SetValue(TBTowers[i].wsIntact[GetAttackerTeam()], 0, false, m_Map);
     }
 }
 
@@ -332,24 +314,24 @@ void BattlefieldTB::OnBattleEnd(bool endByTimer)
     warnedTwoMinutes = false;
     warnedOneMinute = false;
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END_SHOW, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END_SHOW, 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, GameTime::GetGameTime() + m_NoWarBattleTime / IN_MILLISECONDS, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE_SHOW, 1, false, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_TIME_NEXT_BATTLE, GameTime::GetGameTime() + m_NoWarBattleTime / IN_MILLISECONDS, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_ATTACKING_SHOW, 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_ATTACKING_SHOW, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_ATTACKING_SHOW, 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_ATTACKING_SHOW, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, GetDefenderTeam() + 1, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_ALLIANCE, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, m_Map);
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_HORDE, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_FACTION_CONTROLLING, GetDefenderTeam() + 1, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_ALLIANCE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_HORDE_CONTROLS_SHOW, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_ALLIANCE, GetDefenderTeam() == TEAM_ALLIANCE ? 1 : 0, false, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_KEEP_HORDE, GetDefenderTeam() == TEAM_HORDE ? 1 : 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED_SHOW, 0, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED_SHOW, 0, false, m_Map);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_STATE_BATTLE, 0, m_Map);
+    sWorldStateMgr->SetValueAndSaveInDb(WS_BATTLEFIELD_TB_STATE_BATTLE, 0, false, m_Map);
 }
 
 void BattlefieldTB::UpdateNPCsAndGameObjects()
@@ -627,8 +609,8 @@ void BattlefieldTB::TowerDamaged(TBTowerId tbTowerId)
 
     SetData(BATTLEFIELD_TB_DATA_TOWERS_INTACT, GetData(BATTLEFIELD_TB_DATA_TOWERS_INTACT) - 1);
 
-    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsIntact[GetDefenderTeam()], 0, m_Map);
-    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDamaged[GetDefenderTeam()], 1, m_Map);
+    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsIntact[GetDefenderTeam()], 0, false, m_Map);
+    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDamaged[GetDefenderTeam()], 1, false, m_Map);
 
     TeamCastSpell(GetAttackerTeam(), SPELL_REWARD_TOWER_DAMAGED);
 }
@@ -640,16 +622,16 @@ void BattlefieldTB::TowerDestroyed(TBTowerId tbTowerId)
 
     // Add 5 minute bonus time
     m_Timer += m_BonusTime;
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TIME_BATTLE_END, GameTime::GetGameTime() + m_Timer / IN_MILLISECONDS, false, m_Map);
 
     SendWarning(TBTowers[tbTowerId].textDestroyed);
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED_SHOW, 1, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED_SHOW, 1, false, m_Map);
     int32 towersDestroyed = sWorldStateMgr->GetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED, m_Map) + 1;
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED, towersDestroyed, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_TOWERS_DESTROYED, towersDestroyed, false, m_Map);
 
-    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDamaged[GetDefenderTeam()], 0, m_Map);
-    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDestroyed, 1, m_Map);
+    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDamaged[GetDefenderTeam()], 0, false, m_Map);
+    sWorldStateMgr->SetValue(TBTowers[tbTowerId].wsDestroyed, 1, false, m_Map);
 
     // Attack bonus buff
     for (ObjectGuid const& guid : m_PlayersInWar[GetAttackerTeam()])
@@ -668,7 +650,7 @@ void BattlefieldTB::UpdateCapturedBaseCount()
         if (itr->second->GetTeamId() == GetAttackerTeam())
             numCapturedBases += 1;
 
-    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED, numCapturedBases, m_Map);
+    sWorldStateMgr->SetValue(WS_BATTLEFIELD_TB_BUILDINGS_CAPTURED, numCapturedBases, false, m_Map);
 
     // Check if attackers won
     if (numCapturedBases == TB_BASE_COUNT)
@@ -723,15 +705,15 @@ void TolBaradCapturePoint::SendChangePhase()
     {
         case BF_CAPTUREPOINT_OBJECTIVESTATE_ALLIANCE:
         case BF_CAPTUREPOINT_OBJECTIVESTATE_HORDE:
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsControlled[GetTeamId()], 0, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsControlled[GetTeamId()], 0, false, m_Bf->GetMap());
             break;
         case BF_CAPTUREPOINT_OBJECTIVESTATE_HORDE_ALLIANCE_CHALLENGE:
         case BF_CAPTUREPOINT_OBJECTIVESTATE_NEUTRAL_ALLIANCE_CHALLENGE:
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_ALLIANCE], 0, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_ALLIANCE], 0, false, m_Bf->GetMap());
             break;
         case BF_CAPTUREPOINT_OBJECTIVESTATE_ALLIANCE_HORDE_CHALLENGE:
         case BF_CAPTUREPOINT_OBJECTIVESTATE_NEUTRAL_HORDE_CHALLENGE:
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_HORDE], 0, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_HORDE], 0, false, m_Bf->GetMap());
             break;
         default:
             break;
@@ -743,21 +725,21 @@ void TolBaradCapturePoint::SendChangePhase()
         case BF_CAPTUREPOINT_OBJECTIVESTATE_ALLIANCE:
         case BF_CAPTUREPOINT_OBJECTIVESTATE_HORDE:
             m_Bf->SendWarning(TBCapturePoints[iBase].textGained[GetTeamId()]);
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsControlled[GetTeamId()], 1, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsControlled[GetTeamId()], 1, false, m_Bf->GetMap());
             GetCapturePointGo()->SetGoArtKit(GetTeamId() == TEAM_ALLIANCE ? TB_GO_ARTKIT_FLAG_ALLIANCE : TB_GO_ARTKIT_FLAG_HORDE);
             break;
         case BF_CAPTUREPOINT_OBJECTIVESTATE_HORDE_ALLIANCE_CHALLENGE:
             m_Bf->SendWarning(TBCapturePoints[iBase].textLost[TEAM_HORDE]);
             [[fallthrough]];
         case BF_CAPTUREPOINT_OBJECTIVESTATE_NEUTRAL_ALLIANCE_CHALLENGE:
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_ALLIANCE], 1, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_ALLIANCE], 1, false, m_Bf->GetMap());
             GetCapturePointGo()->SetGoArtKit(TB_GO_ARTKIT_FLAG_NONE);
             break;
         case BF_CAPTUREPOINT_OBJECTIVESTATE_ALLIANCE_HORDE_CHALLENGE:
             m_Bf->SendWarning(TBCapturePoints[iBase].textLost[TEAM_ALLIANCE]);
             [[fallthrough]];
         case BF_CAPTUREPOINT_OBJECTIVESTATE_NEUTRAL_HORDE_CHALLENGE:
-            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_HORDE], 1, m_Bf->GetMap());
+            sWorldStateMgr->SetValue(TBCapturePoints[iBase].wsCapturing[TEAM_HORDE], 1, false, m_Bf->GetMap());
             GetCapturePointGo()->SetGoArtKit(TB_GO_ARTKIT_FLAG_NONE);
             break;
         default:
@@ -773,9 +755,9 @@ class Battlefield_tol_barad : public BattlefieldScript
 public:
     Battlefield_tol_barad() : BattlefieldScript("battlefield_tb") { }
 
-    Battlefield* GetBattlefield() const override
+    Battlefield* GetBattlefield(Map* map) const override
     {
-        return new BattlefieldTB();
+        return new BattlefieldTB(map);
     }
 };
 
