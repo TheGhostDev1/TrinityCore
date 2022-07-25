@@ -37,6 +37,7 @@ class DamageInfo;
 class DispelInfo;
 class DynamicObject;
 class GameObject;
+class HealInfo;
 class Item;
 class ModuleReference;
 class Player;
