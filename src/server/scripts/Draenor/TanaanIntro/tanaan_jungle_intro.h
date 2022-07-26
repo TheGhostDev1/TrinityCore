@@ -1,0 +1,108 @@
+/*
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+ #ifndef TANAAN_JUNGLE_H
+ #define TANAAN_JUNGLE_H
+
+struct Hut
+{
+	float X, Y, Z;
+	bool Fired;
+};
+
+enum Quests
+{
+    QuestAzerothLastStand                = 35933,
+    QuestOnslaughtEnd                    = 34392,
+    QuestThePortalPower                  = 34393,
+	QuestCostOfWar                       = 34420,
+    QuestBledDryAlly                     = 35240,
+    QuestBledDryHorde                    = 34421,
+    QuestBlazeOfGlory                    = 34422,
+    QuestAltarAltercation                = 34423,
+    QuestKargatharProvingGrounds         = 34425,
+	QuestKillYourHundred                 = 34429,
+    QuestAPotentialAlly                  = 34478,
+    QuestAPotentialAllyHorde             = 34427,
+    QuestMastersOfShadowAlly             = 34431,
+    QuestMastersOfShadowHorde            = 34737,
+    QuestKeliDanTheBreakerHorde          = 34741,
+    QuestKeliDanTheBreakerAlly           = 34436,
+    QuestTheGunpowderPlot                = 34987,
+    QuestATasteOfIron                    = 34445,
+    QuestTheHomeStretchHorde             = 34446,
+    QuestTheHomeStretchAlly              = 35884,
+    QuestYrelHorde                       = 34740,
+    QuestYrelTanaan                      = 34434,
+    QuestTheBattleOfTheForge             = 34439,
+    QuestTakingATripToTheTopOfTheTank    = 35747,
+    QuestGaNarOfTheFrostwolf             = 34442,
+    QuestShadowOfTheWorldbreaker         = 34958
+};
+
+enum SceneObjects
+{
+    SceneCostOfWarEscort                 = 806,
+    SceneGulDanFreedom                   = 808,
+    SceneSouthernCage                    = 812,
+    SceneEasterCage                      = 813,
+    SceneRingOfFire                      = 838,
+    SceneKargathFight                    = 839,
+    SceneShootingGallery                 = 871,
+    SceneBlackHandReveal                 = 896,
+    SceneBuildingExplosion               = 902,
+    SceneBridgeDestruction               = 903,
+    SceneDamExplosion                    = 910,
+    SceneFinaleIronBastion               = 912,
+    SceneFromCaveToRidge                 = 922,
+    SceneGulDanReavel                    = 925,
+    SceneWaterPortal                     = 928,
+    SceneKilRoggRevealed                 = 940,
+    SceneEnterKarGathArena               = 945,
+    SceneEscapingTheArena                = 946,
+    SceneLiadrinAndOlinEnter             = 948,
+    SceneKargathYells                    = 951,
+    SceneNerZhulReveal                   = 952,
+    SceneHordeBoat                       = 953,
+    SceneCaveIn                          = 956,
+    SceneChoGallsFreedom                 = 961,
+    SceneTeronGorsFreedom                = 962,
+    SceneAllianceBoat                    = 968,
+    SceneSoulTrain                       = 1018
+};
+
+enum Phases
+{
+	
+};
+
+enum KillCredits
+{
+	
+};
+
+enum QuestObjects
+{
+	
+};
+
+enum BlazeOfGloryData
+{
+	
+};
+
+#endif
