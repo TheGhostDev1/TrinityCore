@@ -1,4 +1,3 @@
-[submodule "src/server/game/LuaEngine"]
-	path = src/server/game/LuaEngine
-	url = https://github.com/MaxtorCoder/Eluna
-	branch = beta
+[submodule "src/server/scripts/Custom/Solocraft"]
+	path = src/server/scripts/Custom/Solocraft
+	url = https://github.com/DavidMacalaster/Solocraft.git

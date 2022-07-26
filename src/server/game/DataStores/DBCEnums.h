@@ -703,8 +703,6 @@ enum Difficulty : uint8
     DIFFICULTY_TEEMING_ISLAND       = 153
 };
 
-#define MAX_DIFFICULTY 154
-
 enum DifficultyFlags
 {
     DIFFICULTY_FLAG_HEROIC          = 0x01,
