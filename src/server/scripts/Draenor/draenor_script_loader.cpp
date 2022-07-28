@@ -29,6 +29,6 @@ void AddDraenorScripts()
     AddSC_draenor_shadowmoon_valley();
     AddSC_instance_garrison();
     AddSC_tanaan_jungle_intro();
-    AddSC_highmaul();
+    AddSC_void AddSC_highmaul();
     
 }
