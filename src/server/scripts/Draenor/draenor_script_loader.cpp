@@ -19,7 +19,7 @@
 void AddSC_draenor_shadowmoon_valley();
 void AddSC_instance_garrison();
 void AddSC_tanaan_jungle_intro();
-void AddSC_zone_draenor_shadowmoon_valley;
+
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
