@@ -58,7 +58,7 @@ public:
         
         void EnterCombat(Unit* unit)
         {
-            events.RescheduleEvent(EVENT_1, 9000);
+            events.RescheduleEvent(EVENT_1, 18000);
             events.RescheduleEvent(EVENT_2, 10000);
             events.RescheduleEvent(EVENT_3, 90000);
             events.RescheduleEvent(EVENT_4, 45000);
@@ -90,7 +90,7 @@ public:
                 {
                     case EVENT_1:
                         DoCast(SPELL_COLOSSAL_SLAM);
-                        events.RescheduleEvent(EVENT_1, 9000);
+                        events.RescheduleEvent(EVENT_1, 18000);
                         break;
                     case EVENT_2:
                         DoCast(SPELL_GROUND_PUNCH);
