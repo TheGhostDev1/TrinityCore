@@ -1,8 +1,4 @@
-# ![logo](https://community.trinitycore.org/public/style_images/1_trinitycore.png) TrinityCore (master)
-
-[![Average time to resolve an issue](https://isitmaintained.com/badge/resolution/TrinityCore/TrinityCore.svg)](https://isitmaintained.com/project/TrinityCore/TrinityCore "Average time to resolve an issue") [![Percentage of issues still open](https://isitmaintained.com/badge/open/TrinityCore/TrinityCore.svg)](https://isitmaintained.com/project/TrinityCore/TrinityCore "Percentage of issues still open")
-
---------------
+# ![logo](https://community.trinitycore.org/public/style_images/1_trinitycore.png) Legends of Azeroth (master)
 
 
 * [Build Status](#build-status)
@@ -27,7 +23,7 @@ master | 3.3.5
 
 ## Introduction
 
-TrinityCore is a *MMORPG* Framework based mostly in C++.
+Legends of Azeroth is a *MMORPG* Framework based mostly in C++.
 
 It is derived from *MaNGOS*, the *Massive Network Game Object Server*, and is
 based on the code of that project with extensive changes over time to optimize,
@@ -90,5 +86,5 @@ Read file [AUTHORS](AUTHORS).
 
 * [Website](https://www.trinitycore.org)
 * [Wiki](https://www.trinitycore.info)
-* [Forums](https://community.trinitycore.org)
-* [Discord](https://discord.trinitycore.org/)
+* [Forums](http://legendsemu.funbb.ru/)
+* [Discord](https://discord.gg/ZG8x5Zb6)
