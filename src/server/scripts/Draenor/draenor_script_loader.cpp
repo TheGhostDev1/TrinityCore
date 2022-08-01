@@ -19,7 +19,6 @@
 void AddSC_draenor_shadowmoon_valley();
 void AddSC_instance_garrison();
 void AddSC_tanaan_jungle_intro();
-void AddSC_world_bossess_draenor();
 
 
 // The name of this function should match:
@@ -30,6 +29,6 @@ void AddDraenorScripts()
     AddSC_draenor_shadowmoon_valley();
     AddSC_instance_garrison();
     AddSC_tanaan_jungle_intro();
-    AddSC_world_bossess_draenor();
+    AddSC_zone_draenor_shadowmoon_valley;
     
 }
