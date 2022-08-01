@@ -3377,7 +3377,7 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
     // Prepare data for triggers
     prepareDataForTriggerSystem();
 
-    m_casttime = m_spellInfo->CalcCastTime(this);
+    m_casttime = CallScriptCalcCastTimeHandlers(m_spellInfo->CalcCastTime(this));
 
     if (m_caster->IsUnit() && m_caster->ToUnit()->isMoving())
     {
@@ -8329,9 +8329,6 @@ void Spell::SetSpellValue(SpellValueMod mod, int32 value)
         case SPELLVALUE_DURATION:
             m_spellValue->Duration = value;
             break;
-        case SPELLVALUE_CAST_TIME:
-            m_spellValue->CastTime = value;
-            break;
         default:
             break;
     }
@@ -8422,6 +8419,17 @@ SpellCastResult Spell::CallScriptCheckCastHandlers()
         (*scritr)->_FinishScriptCall();
     }
     return retVal;
+}
+
+int32 Spell::CallScriptCalcCastTimeHandlers(int32 castTime)
+{
+    for (auto scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end(); ++scritr)
+    {
+        (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_CALC_CAST_TIME);
+        castTime = (*scritr)->CalcCastTime(castTime);
+        (*scritr)->_FinishScriptCall();
+    }
+    return castTime;
 }
 
 bool Spell::CallScriptEffectHandlers(SpellEffIndex effIndex, SpellEffectHandleMode mode)
