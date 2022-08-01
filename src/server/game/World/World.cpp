@@ -2248,6 +2248,9 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Gossip menu options...");
     sObjectMgr->LoadGossipMenuItems();
 
+    TC_LOG_INFO("server.loading", "Loading Creature Template Gossip...");
+    sObjectMgr->LoadCreatureTemplateGossip();
+
     TC_LOG_INFO("server.loading", "Loading Creature trainers...");
     sObjectMgr->LoadCreatureTrainers();                         // must be after LoadGossipMenuItems
 
