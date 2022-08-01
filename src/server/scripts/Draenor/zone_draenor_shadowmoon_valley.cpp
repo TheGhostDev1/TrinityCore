@@ -42,7 +42,7 @@ enum BarosAlexstonMisc
     SPELL_DESPAWN_ALL_SUMMONS_GARRISON_INTRO_ONLY    = 160938
 };
 
-Position const garrisonPlayerPosition = {1904.58f, 312.906f, 88.9542f, 4.303615f};
+Position const GarrisonLevelOneCreationPlayerPosition = { 1904.58f, 312.906f, 88.9542f, 4.303615f };
 
 class DelayedCastEvent : public BasicEvent
 {
@@ -67,7 +67,7 @@ public:
 
     bool Execute(uint64 /*time*/, uint32 /*diff*/) override
     {
-        _player->NearTeleportTo(garrisonPlayerPosition);
+        _player->NearTeleportTo(GarrisonLevelOneCreationPlayerPosition);
         return true;
     }
 
