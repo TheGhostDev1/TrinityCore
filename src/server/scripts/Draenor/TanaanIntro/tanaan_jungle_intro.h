@@ -105,4 +105,12 @@ enum BlazeOfGloryData
 	
 };
 
+enum TanaanCreatures
+{
+    NPC_KHADGAR = 78558,
+    NPC_OLIN    = 79315,
+    NPC_THAELIN = 78568,
+    NPC_HANSEL  = 78569,
+};
+
 #endif
