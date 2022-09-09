@@ -23,7 +23,6 @@
 #include "CreatureData.h"
 #include "DatabaseEnvFwd.h"
 #include "Duration.h"
-#include "Loot.h"
 #include "GridObject.h"
 #include "MapObject.h"
 #include <list>
@@ -35,6 +34,7 @@ class Quest;
 class Player;
 class SpellInfo;
 class WorldSession;
+struct Loot;
 
 enum MovementGeneratorType : uint8;
 
@@ -70,6 +70,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 {
     public:
         explicit Creature(bool isWorldObject = false);
+        ~Creature();
 
         void AddToWorld() override;
         void RemoveFromWorld() override;
@@ -150,7 +151,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool CanResetTalents(Player* player) const;
         bool CanCreatureAttack(Unit const* victim, bool force = true) const;
         void LoadTemplateImmunities();
-        bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster) const override;
+        bool IsImmunedToSpellEffect(SpellInfo const* spellInfo, SpellEffectInfo const& spellEffectInfo, WorldObject const* caster, bool requireImmunityPurgesEffectAttribute = false) const override;
         bool isElite() const;
         bool isWorldBoss() const;
 
@@ -223,7 +224,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         virtual void SaveToDB(uint32 mapid, std::vector<Difficulty> const& spawnDifficulties);
         static bool DeleteFromDB(ObjectGuid::LowType spawnId);
 
-        Loot loot;
+        std::unique_ptr<Loot> m_loot;
         void StartPickPocketRefillTimer();
         void ResetPickPocketRefillTimer() { _pickpocketLootRestore = 0; }
         bool CanGeneratePickPocketLoot() const;
@@ -232,6 +233,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         Group* GetLootRecipientGroup() const;
         bool hasLootRecipient() const { return !m_lootRecipient.IsEmpty() || !m_lootRecipientGroup.IsEmpty(); }
         bool isTappedBy(Player const* player) const;                          // return true if the creature is tapped by the player or a member of his party.
+        Loot* GetLootForPlayer(Player const* /*player*/) const override { return m_loot.get(); }
 
         void SetLootRecipient (Unit* unit, bool withGroup = true);
         void AllLootRemovedFromCorpse();

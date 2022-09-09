@@ -44,7 +44,7 @@ class Item;
 class Unit;
 class Vehicle;
 class Map;
-enum class GossipOptionIcon : uint8;
+enum class GossipOptionNpc : uint8;
 struct AccessRequirement;
 struct DeclinedName;
 struct DungeonEncounterEntry;
@@ -744,10 +744,9 @@ struct GossipMenuItems
 {
     uint32              MenuID;
     uint32              OptionID;
-    GossipOptionIcon    OptionIcon;
+    GossipOptionNpc     OptionNpc;
     std::string         OptionText;
     uint32              OptionBroadcastTextID;
-    uint32              OptionType;
     uint32              OptionNpcFlag;
     uint32              Language;
     uint32              ActionMenuID;
@@ -766,12 +765,18 @@ struct GossipMenus
     ConditionContainer  Conditions;
 };
 
+struct GossipMenuAddon
+{
+    int32 FriendshipFactionID;
+};
+
 typedef std::multimap<uint32, GossipMenus> GossipMenusContainer;
 typedef std::pair<GossipMenusContainer::const_iterator, GossipMenusContainer::const_iterator> GossipMenusMapBounds;
 typedef std::pair<GossipMenusContainer::iterator, GossipMenusContainer::iterator> GossipMenusMapBoundsNonConst;
 typedef std::multimap<uint32, GossipMenuItems> GossipMenuItemsContainer;
 typedef std::pair<GossipMenuItemsContainer::const_iterator, GossipMenuItemsContainer::const_iterator> GossipMenuItemsMapBounds;
 typedef std::pair<GossipMenuItemsContainer::iterator, GossipMenuItemsContainer::iterator> GossipMenuItemsMapBoundsNonConst;
+typedef std::unordered_map<uint32, GossipMenuAddon> GossipMenuAddonContainer;
 
 struct QuestPOIBlobPoint
 {
@@ -1392,6 +1397,7 @@ class TC_GAME_API ObjectMgr
 
         void LoadGossipMenu();
         void LoadGossipMenuItems();
+        void LoadGossipMenuFriendshipFactions();
 
         void LoadVendors();
         void LoadTrainers();
@@ -1687,6 +1693,13 @@ class TC_GAME_API ObjectMgr
         {
             return _gossipMenuItemsStore.equal_range(uiMenuId);
         }
+        GossipMenuAddon const* GetGossipMenuAddon(uint32 menuId) const
+        {
+            GossipMenuAddonContainer::const_iterator itr = _gossipMenuAddonStore.find(menuId);
+            if (itr != _gossipMenuAddonStore.end())
+                return &itr->second;
+            return nullptr;
+        }
 
         // for wintergrasp only
         GraveyardContainer GraveyardStore;
@@ -1820,6 +1833,7 @@ class TC_GAME_API ObjectMgr
 
         GossipMenusContainer _gossipMenusStore;
         GossipMenuItemsContainer _gossipMenuItemsStore;
+        GossipMenuAddonContainer _gossipMenuAddonStore;
         PointOfInterestContainer _pointsOfInterestStore;
 
         QuestPOIContainer _questPOIStore;
