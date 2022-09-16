@@ -23,11 +23,13 @@
 #include "Log.h"
 #include "LootMgr.h"
 #include "LootPackets.h"
+#include "Map.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "Random.h"
 #include "World.h"
+#include "WorldSession.h"
 
 //
 // --------- LootItem ---------
@@ -125,7 +127,9 @@ void LootItem::AddAllowedLooter(const Player* player)
 // --------- Loot ---------
 //
 
-Loot::Loot() : gold(0), unlootedCount(0), roundRobinPlayer(), loot_type(LOOT_NONE), maxDuplicates(1), _itemContext(ItemContext::NONE)
+Loot::Loot(Map* map, ObjectGuid owner, LootType type, LootMethod lootMethod) : gold(0), unlootedCount(0), loot_type(type), maxDuplicates(1),
+    _guid(map ? ObjectGuid::Create<HighGuid::LootObject>(map->GetId(), 0, map->GenerateLowGuid<HighGuid::LootObject>()) : ObjectGuid::Empty),
+    _owner(owner), _itemContext(ItemContext::NONE), _lootMethod(lootMethod)
 {
 }
 
@@ -148,7 +152,11 @@ void Loot::clear()
         delete itr->second;
     PlayerNonQuestNonFFAConditionalItems.clear();
 
+    for (ObjectGuid playerGuid : PlayersLooting)
+        if (Player* player = ObjectAccessor::FindConnectedPlayer(playerGuid))
+            player->GetSession()->DoLootRelease(this);
     PlayersLooting.clear();
+
     items.clear();
     quest_items.clear();
     gold = 0;
@@ -159,35 +167,31 @@ void Loot::clear()
     _itemContext = ItemContext::NONE;
 }
 
-void Loot::NotifyItemRemoved(uint8 lootIndex)
+void Loot::NotifyItemRemoved(uint8 lootIndex, Map const* map)
 {
     // notify all players that are looting this that the item was removed
     // convert the index to the slot the player sees
-    GuidSet::iterator i_next;
-    for (GuidSet::iterator i = PlayersLooting.begin(); i != PlayersLooting.end(); i = i_next)
+    for (auto itr = PlayersLooting.begin(); itr != PlayersLooting.end();)
     {
-        i_next = i;
-        ++i_next;
-        if (Player* player = ObjectAccessor::FindPlayer(*i))
-            player->SendNotifyLootItemRemoved(GetGUID(), lootIndex);
+        if (Player* player = ObjectAccessor::GetPlayer(map, *itr))
+        {
+            player->SendNotifyLootItemRemoved(GetGUID(), GetOwnerGUID(), lootIndex);
+            ++itr;
+        }
         else
-            PlayersLooting.erase(i);
+            itr = PlayersLooting.erase(itr);
     }
 }
 
-void Loot::NotifyQuestItemRemoved(uint8 questIndex)
+void Loot::NotifyQuestItemRemoved(uint8 questIndex, Map const* map)
 {
     // when a free for all questitem is looted
     // all players will get notified of it being removed
     // (other questitems can be looted by each group member)
     // bit inefficient but isn't called often
-
-    GuidSet::iterator i_next;
-    for (GuidSet::iterator i = PlayersLooting.begin(); i != PlayersLooting.end(); i = i_next)
+    for (auto itr = PlayersLooting.begin(); itr != PlayersLooting.end();)
     {
-        i_next = i;
-        ++i_next;
-        if (Player* player = ObjectAccessor::FindPlayer(*i))
+        if (Player* player = ObjectAccessor::GetPlayer(map, *itr))
         {
             NotNormalLootItemMap::const_iterator pq = PlayerQuestItems.find(player->GetGUID());
             if (pq != PlayerQuestItems.end() && pq->second)
@@ -201,26 +205,28 @@ void Loot::NotifyQuestItemRemoved(uint8 questIndex)
                         break;
 
                 if (j < pql.size())
-                    player->SendNotifyLootItemRemoved(GetGUID(), items.size() + j);
+                    player->SendNotifyLootItemRemoved(GetGUID(), GetOwnerGUID(), items.size() + j);
             }
+
+            ++itr;
         }
         else
-            PlayersLooting.erase(i);
+            itr = PlayersLooting.erase(itr);
     }
 }
 
-void Loot::NotifyMoneyRemoved()
+void Loot::NotifyMoneyRemoved(Map const* map)
 {
     // notify all players that are looting this that the money was removed
-    GuidSet::iterator i_next;
-    for (GuidSet::iterator i = PlayersLooting.begin(); i != PlayersLooting.end(); i = i_next)
+    for (auto itr = PlayersLooting.begin(); itr != PlayersLooting.end();)
     {
-        i_next = i;
-        ++i_next;
-        if (Player* player = ObjectAccessor::FindPlayer(*i))
+        if (Player* player = ObjectAccessor::GetPlayer(map, *itr))
+        {
             player->SendNotifyLootMoneyRemoved(GetGUID());
+            ++itr;
+        }
         else
-            PlayersLooting.erase(i);
+            itr = PlayersLooting.erase(itr);
     }
 }
 
@@ -244,8 +250,6 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     if (!lootOwner)
         return false;
 
-    lootOwnerGUID = lootOwner->GetGUID();
-
     LootTemplate const* tab = store.GetLootFor(lootId);
 
     if (!tab)
@@ -260,16 +264,16 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
     items.reserve(MAX_NR_LOOT_ITEMS);
     quest_items.reserve(MAX_NR_QUEST_ITEMS);
 
-    tab->Process(*this, store.IsRatesAllowed(), lootMode);          // Processing is done there, callback via Loot::AddItem()
+    tab->Process(*this, store.IsRatesAllowed(), lootMode, 0, lootOwner);    // Processing is done there, callback via Loot::AddItem()
 
     // Setting access rights for group loot case
-    Group* group = lootOwner->GetGroup();
+    Group const* group = lootOwner->GetGroup();
     if (!personal && group)
     {
         roundRobinPlayer = lootOwner->GetGUID();
 
-        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-            if (Player* player = itr->GetSource())   // should actually be looted object instead of lootOwner but looter has to be really close so doesnt really matter
+        for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            if (Player const* player = itr->GetSource())    // should actually be looted object instead of lootOwner but looter has to be really close so doesnt really matter
                 if (player->IsInMap(lootOwner))
                     FillNotNormalLootFor(player, player->IsAtGroupRewardDistance(lootOwner));
 
@@ -288,7 +292,7 @@ bool Loot::FillLoot(uint32 lootId, LootStore const& store, Player* lootOwner, bo
 }
 
 // Inserts the item into the loot (called by LootTemplate processors)
-void Loot::AddItem(LootStoreItem const& item)
+void Loot::AddItem(LootStoreItem const& item, Player const* player)
 {
     ItemTemplate const* proto = sObjectMgr->GetItemTemplate(item.itemid);
     if (!proto)
@@ -317,18 +321,15 @@ void Loot::AddItem(LootStoreItem const& item)
 
         // In some cases, a dropped item should be visible/lootable only for some players in group
         bool canSeeItemInLootWindow = false;
-        if (Player* player = ObjectAccessor::FindPlayer(lootOwnerGUID))
+        if (Group const* group = player->GetGroup())
         {
-            if (Group* group = player->GetGroup())
-            {
-                for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-                    if (Player* member = itr->GetSource())
-                        if (generatedLoot.AllowedForPlayer(member))
-                            canSeeItemInLootWindow = true;
-            }
-            else if (generatedLoot.AllowedForPlayer(player))
-                canSeeItemInLootWindow = true;
+            for (GroupReference const* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+                if (Player const* member = itr->GetSource())
+                    if (generatedLoot.AllowedForPlayer(member))
+                        canSeeItemInLootWindow = true;
         }
+        else if (generatedLoot.AllowedForPlayer(player))
+            canSeeItemInLootWindow = true;
 
         if (!canSeeItemInLootWindow)
             continue;
@@ -690,7 +691,7 @@ void Loot::BuildLootResponse(WorldPackets::Loot::LootResponse& packet, Player* v
     }
 }
 
-void Loot::FillNotNormalLootFor(Player* player, bool presentAtLooting)
+void Loot::FillNotNormalLootFor(Player const* player, bool presentAtLooting)
 {
     ObjectGuid plguid = player->GetGUID();
 
@@ -707,7 +708,7 @@ void Loot::FillNotNormalLootFor(Player* player, bool presentAtLooting)
         FillNonQuestNonFFAConditionalLoot(player, presentAtLooting);
 }
 
-NotNormalLootItemList* Loot::FillFFALoot(Player* player)
+NotNormalLootItemList* Loot::FillFFALoot(Player const* player)
 {
     NotNormalLootItemList* ql = new NotNormalLootItemList();
 
@@ -730,7 +731,7 @@ NotNormalLootItemList* Loot::FillFFALoot(Player* player)
     return ql;
 }
 
-NotNormalLootItemList* Loot::FillQuestLoot(Player* player)
+NotNormalLootItemList* Loot::FillQuestLoot(Player const* player)
 {
     if (items.size() == MAX_NR_LOOT_ITEMS)
         return nullptr;
@@ -741,7 +742,7 @@ NotNormalLootItemList* Loot::FillQuestLoot(Player* player)
     {
         LootItem &item = quest_items[i];
 
-        if (!item.is_looted && (item.AllowedForPlayer(player) || (item.follow_loot_rules && player->GetGroup() && ((player->GetGroup()->GetLootMethod() == MASTER_LOOT && player->GetGroup()->GetMasterLooterGuid() == player->GetGUID()) || player->GetGroup()->GetLootMethod() != MASTER_LOOT))))
+        if (!item.is_looted && (item.AllowedForPlayer(player) || (item.follow_loot_rules && player->GetGroup() && ((GetLootMethod() == MASTER_LOOT && player->GetGroup()->GetMasterLooterGuid() == player->GetGUID()) || GetLootMethod() != MASTER_LOOT))))
         {
             ql->push_back(NotNormalLootItem(i));
 
@@ -751,7 +752,7 @@ NotNormalLootItemList* Loot::FillQuestLoot(Player* player)
             // increase once if one looter only, looter-times if free for all
             if (item.freeforall || !item.is_blocked)
                 ++unlootedCount;
-            if (!player->GetGroup() || (player->GetGroup()->GetLootMethod() != GROUP_LOOT))
+            if (!player->GetGroup() || (GetLootMethod() != GROUP_LOOT))
                 item.is_blocked = true;
 
             if (items.size() + ql->size() == MAX_NR_LOOT_ITEMS)
@@ -768,7 +769,7 @@ NotNormalLootItemList* Loot::FillQuestLoot(Player* player)
     return ql;
 }
 
-NotNormalLootItemList* Loot::FillNonQuestNonFFAConditionalLoot(Player* player, bool presentAtLooting)
+NotNormalLootItemList* Loot::FillNonQuestNonFFAConditionalLoot(Player const* player, bool presentAtLooting)
 {
     NotNormalLootItemList* ql = new NotNormalLootItemList();
 
