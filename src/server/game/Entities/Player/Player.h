@@ -76,6 +76,7 @@ class Garrison;
 class Group;
 class Guild;
 class Item;
+class LootRoll;
 class LootStore;
 class OutdoorPvP;
 class Pet;
@@ -311,6 +312,7 @@ enum ActionButtonType
     ACTION_BUTTON_DROPDOWN  = 0x30,
     ACTION_BUTTON_MACRO     = 0x40,
     ACTION_BUTTON_CMACRO    = ACTION_BUTTON_C | ACTION_BUTTON_MACRO,
+    ACTION_BUTTON_COMPANION = 0x50,
     ACTION_BUTTON_MOUNT     = 0x60,
     ACTION_BUTTON_ITEM      = 0x80
 };
@@ -326,9 +328,9 @@ enum ReputationSource
     REPUTATION_SOURCE_SPELL
 };
 
-#define ACTION_BUTTON_ACTION(X) (uint64(X) & 0x00000000FFFFFFFF)
-#define ACTION_BUTTON_TYPE(X)   ((uint64(X) & 0xFFFFFFFF00000000) >> 56)
-#define MAX_ACTION_BUTTON_ACTION_VALUE (0xFFFFFFFF)
+#define ACTION_BUTTON_ACTION(X) (uint64(X) & 0x00FFFFFFFFFFFFFF)
+#define ACTION_BUTTON_TYPE(X)   ((uint64(X) & 0xFF00000000000000) >> 56)
+#define MAX_ACTION_BUTTON_ACTION_VALUE UI64LIT(0xFFFFFFFFFFFFFF)
 
 struct ActionButton
 {
@@ -339,8 +341,8 @@ struct ActionButton
 
     // helpers
     ActionButtonType GetType() const { return ActionButtonType(ACTION_BUTTON_TYPE(packedData)); }
-    uint32 GetAction() const { return ACTION_BUTTON_ACTION(packedData); }
-    void SetActionAndType(uint32 action, ActionButtonType type)
+    uint64 GetAction() const { return ACTION_BUTTON_ACTION(packedData); }
+    void SetActionAndType(uint64 action, ActionButtonType type)
     {
         uint64 newData = uint64(action) | (uint64(type) << 56);
         if (newData != packedData || uState == ACTIONBUTTON_DELETED)
@@ -1401,7 +1403,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         InventoryResult CanUseItem(Item* pItem, bool not_loading = true) const;
         bool HasItemTotemCategory(uint32 TotemCategory) const;
         InventoryResult CanUseItem(ItemTemplate const* pItem, bool skipRequiredLevelCheck = false) const;
-        InventoryResult CanRollForItemInLFG(ItemTemplate const* item, WorldObject const* lootedObject) const;
+        InventoryResult CanRollForItemInLFG(ItemTemplate const* item, Map const* map) const;
         Item* StoreNewItem(ItemPosCountVec const& pos, uint32 itemId, bool update, ItemRandomBonusListId randomBonusListId = 0, GuidSet const& allowedLooters = GuidSet(), ItemContext context = ItemContext::NONE, std::vector<int32> const& bonusListIDs = std::vector<int32>(), bool addToCollection = true);
         Item* StoreItem(ItemPosCountVec const& pos, Item* pItem, bool update);
         Item* EquipNewItem(uint16 pos, uint32 item, ItemContext context, bool update);
@@ -1916,12 +1918,12 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetMovie() const { return m_movie; }
         void SetMovie(uint32 movie) { m_movie = movie; }
 
-        ActionButton* AddActionButton(uint8 button, uint32 action, uint8 type);
+        ActionButton* AddActionButton(uint8 button, uint64 action, uint8 type);
         void RemoveActionButton(uint8 button);
         ActionButton const* GetActionButton(uint8 button);
         void SendInitialActionButtons() const { SendActionButtons(0); }
         void SendActionButtons(uint32 state) const;
-        bool IsActionButtonDataValid(uint8 button, uint32 action, uint8 type) const;
+        bool IsActionButtonDataValid(uint8 button, uint64 action, uint8 type) const;
         void SetMultiActionBars(uint8 mask) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_activePlayerData).ModifyValue(&UF::ActivePlayerData::MultiActionBars), mask); }
 
         PvPInfo pvpInfo;
@@ -2064,6 +2066,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetLootGUID(ObjectGuid const& guid) { SetUpdateFieldValue(m_values.ModifyValue(&Player::m_playerData).ModifyValue(&UF::PlayerData::LootTargetGUID), guid); }
         Loot* GetLootByWorldObjectGUID(ObjectGuid const& lootWorldObjectGuid) const;
         std::unordered_map<ObjectGuid, Loot*> const& GetAELootView() const { return m_AELootView; }
+        LootRoll* GetLootRoll(ObjectGuid const& lootObjectGuid, uint8 lootListId);
+        void AddLootRoll(LootRoll* roll) { m_lootRolls.push_back(roll); }
+        void RemoveLootRoll(LootRoll* roll);
 
         void RemovedInsignia(Player* looterPlr);
 
@@ -2347,11 +2352,11 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         PlayerMenu* PlayerTalkClass;
         std::vector<ItemSetEffect*> ItemSetEff;
 
-        void SendLoot(ObjectGuid guid, LootType loot_type, bool aeLooting = false);
+        void SendLoot(Loot& loot, bool aeLooting = false);
         void SendLootError(ObjectGuid const& lootObj, ObjectGuid const& owner, LootError error) const;
         void SendLootRelease(ObjectGuid guid) const;
         void SendLootReleaseAll() const;
-        void SendNotifyLootItemRemoved(ObjectGuid lootObj, ObjectGuid owner, uint8 lootSlot) const;
+        void SendNotifyLootItemRemoved(ObjectGuid lootObj, ObjectGuid owner, uint8 lootListId) const;
         void SendNotifyLootMoneyRemoved(ObjectGuid lootObj) const;
 
         /*********************************************************/
@@ -3177,6 +3182,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         SceneMgr m_sceneMgr;
 
         std::unordered_map<ObjectGuid /*LootObject*/, Loot*> m_AELootView;
+        std::vector<LootRoll*> m_lootRolls;                                     // loot rolls waiting for answer
 
         void _InitHonorLevelOnLoadFromDB(uint32 honor, uint32 honorLevel);
         std::unique_ptr<RestMgr> _restMgr;
