@@ -8353,7 +8353,7 @@ void ObjectMgr::LoadPointsOfInterest()
     uint32 count = 0;
 
     //                                               0   1          2          3          4     5      6           7     8
-    QueryResult result = WorldDatabase.Query("SELECT ID, PositionX, PositionY, PositionZ, Icon, Flags, Importance, Name, Unknown905 FROM points_of_interest");
+    QueryResult result = WorldDatabase.Query("SELECT ID, PositionX, PositionY, PositionZ, Icon, Flags, Importance, Name, WMOGroupID FROM points_of_interest");
 
     if (!result)
     {
@@ -8374,7 +8374,7 @@ void ObjectMgr::LoadPointsOfInterest()
         pointOfInterest.Flags           = fields[5].GetUInt32();
         pointOfInterest.Importance      = fields[6].GetUInt32();
         pointOfInterest.Name            = fields[7].GetString();
-        pointOfInterest.Unknown905      = fields[8].GetInt32();
+        pointOfInterest.WMOGroupID      = fields[8].GetInt32();
 
         if (!Trinity::IsValidMapCoord(pointOfInterest.Pos.GetPositionX(), pointOfInterest.Pos.GetPositionY(), pointOfInterest.Pos.GetPositionZ()))
         {
@@ -8889,6 +8889,14 @@ void ObjectMgr::LoadGameObjectForQuests()
             case GAMEOBJECT_TYPE_GOOBER:
             {
                 if (gameObjectTemplatePair.second.goober.questID > 0)              //quests objects
+                    break;
+                continue;
+            }
+            case GAMEOBJECT_TYPE_GATHERING_NODE:
+            {
+                // scan GO chest with loot including quest items
+                // find quest loot for GO
+                if (LootTemplates_Gameobject.HaveQuestLootFor(gameObjectTemplatePair.second.gatheringNode.chestLoot))
                     break;
                 continue;
             }

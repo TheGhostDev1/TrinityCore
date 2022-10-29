@@ -1612,7 +1612,7 @@ void Spell::EffectOpenLock()
             {
                 // Allow one skill-up until respawned
                 if (!gameObjTarget->IsInSkillupList(player->GetGUID()) &&
-                    player->UpdateGatherSkill(skillId, pureSkillValue, reqSkillValue))
+                    player->UpdateGatherSkill(skillId, pureSkillValue, reqSkillValue, 1, gameObjTarget))
                     gameObjTarget->AddToSkillupList(player->GetGUID());
             }
             else if (itemTarget)
@@ -5762,15 +5762,15 @@ void Spell::EffectCreatePrivateConversation()
         return;
 
     Unit* unitCaster = GetUnitCasterForEffectHandlers();
-    if (!unitCaster || !unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+    if (!unitCaster || unitCaster->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    Conversation::CreateConversation(effectInfo->MiscValue, unitCaster, unitTarget->GetPosition(), unitTarget->GetGUID(), GetSpellInfo());
+    Conversation::CreateConversation(effectInfo->MiscValue, unitCaster, destTarget->GetPosition(), unitCaster->GetGUID(), GetSpellInfo());
 }
 
 void Spell::EffectSendChatMessage()
 {
-    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT)
+    if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 
     Unit* unitCaster = GetUnitCasterForEffectHandlers();
