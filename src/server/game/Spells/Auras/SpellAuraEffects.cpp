@@ -573,10 +573,34 @@ NonDefaultConstructible<pAuraEffectHandler> AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //504 SPELL_AURA_MOD_HEALING_TAKEN_FROM_CASTER implemented in Unit::SpellHealingBonusTaken
     &AuraEffect::HandleNULL,                                      //505 SPELL_AURA_MOD_PLAYER_CHOICE_REROLLS
     &AuraEffect::HandleDisableInertia,                            //506 SPELL_AURA_DISABLE_INERTIA
-    &AuraEffect::HandleNULL,                                      //507
+    &AuraEffect::HandleNoImmediateEffect,                         //507 SPELL_AURA_MOD_DAMAGE_TAKEN_FROM_CASTER_BY_LABEL implemented in Unit::SpellDamageBonusTaken
     &AuraEffect::HandleNULL,                                      //508
     &AuraEffect::HandleNULL,                                      //509
     &AuraEffect::HandleNULL,                                      //510 SPELL_AURA_MODIFIED_RAID_INSTANCE
+    &AuraEffect::HandleNULL,                                      //511 SPELL_AURA_APPLY_PROFESSION_EFFECT
+    &AuraEffect::HandleNULL,                                      //512
+    &AuraEffect::HandleNULL,                                      //513
+    &AuraEffect::HandleNULL,                                      //514
+    &AuraEffect::HandleNULL,                                      //515
+    &AuraEffect::HandleNULL,                                      //516
+    &AuraEffect::HandleNULL,                                      //517
+    &AuraEffect::HandleNULL,                                      //518
+    &AuraEffect::HandleNULL,                                      //519 SPELL_AURA_MOD_COOLDOWN_RECOVERY_RATE_ALL
+    &AuraEffect::HandleNULL,                                      //520
+    &AuraEffect::HandleNULL,                                      //521
+    &AuraEffect::HandleNULL,                                      //522
+    &AuraEffect::HandleNULL,                                      //523
+    &AuraEffect::HandleNULL,                                      //524
+    &AuraEffect::HandleNULL,                                      //525 SPELL_AURA_DISPLAY_PROFESSION_EQUIPMENT
+    &AuraEffect::HandleNULL,                                      //526
+    &AuraEffect::HandleNULL,                                      //527
+    &AuraEffect::HandleNULL,                                      //528 SPELL_AURA_ALLOW_BLOCKING_SPELLS
+    &AuraEffect::HandleNULL,                                      //529 SPELL_AURA_MOD_SPELL_BLOCK_CHANCE
+    &AuraEffect::HandleNULL,                                      //530
+    &AuraEffect::HandleNULL,                                      //531
+    &AuraEffect::HandleNULL,                                      //532
+    &AuraEffect::HandleNULL,                                      //533 SPELL_AURA_DISABLE_NAVIGATION
+    &AuraEffect::HandleNULL,                                      //534
 };
 
 AuraEffect::AuraEffect(Aura* base, SpellEffectInfo const& spellEfffectInfo, int32 const* baseAmount, Unit* caster) :
@@ -1156,7 +1180,7 @@ bool AuraEffect::CheckEffectProc(AuraApplication* aurApp, ProcEventInfo& eventIn
         case SPELL_AURA_MECHANIC_IMMUNITY:
         case SPELL_AURA_MOD_MECHANIC_RESISTANCE:
             // compare mechanic
-            if (!spellInfo || !(spellInfo->GetAllEffectsMechanicMask() & (1 << GetMiscValue())))
+            if (!spellInfo || !(spellInfo->GetAllEffectsMechanicMask() & (UI64LIT(1) << GetMiscValue())))
                 return false;
             break;
         case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:
