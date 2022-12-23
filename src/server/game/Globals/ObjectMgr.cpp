@@ -2278,8 +2278,8 @@ void ObjectMgr::LoadGameobjects()
     QueryResult result = WorldDatabase.Query("SELECT gameobject.guid, id, map, position_x, position_y, position_z, orientation, "
     //   7          8          9          10         11             12            13     14                 15          16
         "rotation0, rotation1, rotation2, rotation3, spawntimesecs, animprogress, state, spawnDifficulties, eventEntry, pool_entry, "
-    //   17             18       19          20              21
-        "phaseUseFlags, phaseid, phasegroup, terrainSwapMap, ScriptName "
+    //   17             18       19          20              21        22
+        "phaseUseFlags, phaseid, phasegroup, terrainSwapMap, isActive, ScriptName "
         "FROM gameobject LEFT OUTER JOIN game_event_gameobject ON gameobject.guid = game_event_gameobject.guid "
         "LEFT OUTER JOIN pool_gameobject ON gameobject.guid = pool_gameobject.guid");
 
@@ -2455,6 +2455,7 @@ void ObjectMgr::LoadGameobjects()
                 data.terrainSwapMap = -1;
             }
         }
+        data.isActive = fields[19].GetBool();
 
         data.ScriptId = GetScriptId(fields[21].GetString());
         if (!data.ScriptId)

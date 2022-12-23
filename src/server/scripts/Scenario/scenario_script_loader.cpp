@@ -15,23 +15,12 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* Start of Things to Come. Early Development Stage */
+// This is where scripts' loading functions should be declared:
 
-#include "Conversation.h"
-#include "CreatureTextMgr.h"
-#include "GameObject.h"
-#include "MapManager.h"
-#include "ObjectMgr.h"
-#include "PhasingHandler.h"
-#include "Player.h"
-#include "ScriptMgr.h"
-#include "SpellMgr.h"
-#include "ScriptedCreature.h"
-#include "ScriptedEscortAI.h"
-#include "ScriptedGossip.h"
-#include "SpellScript.h"
 
-void AddSC_draenor_shadowmoon_valley()
+// The name of this function should match:
+// void Add${NameOfDirectory}Scripts()
+void AddScenarioScripts()
 {
 
 }

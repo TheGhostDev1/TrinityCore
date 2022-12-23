@@ -97,7 +97,7 @@ enum KillCredits
 
 enum QuestObjects
 {
-	
+	OBJECTIVE_PORTAL_CREDIT = 82573,
 };
 
 enum BlazeOfGloryData
@@ -111,6 +111,18 @@ enum TanaanCreatures
     NPC_OLIN    = 79315,
     NPC_THAELIN = 78568,
     NPC_HANSEL  = 78569,
+};
+
+enum Spells
+{
+    SPELL_PHASE_SHIFT_PLAYER  = 82238,
+    SPELL_CHAIN_LIGHT         = 15305,
+    SPELL_COMMAND_EARTH       = 167470,
+    SPELL_COMMAND_LIGHT       = 167014,
+    SPELL_SAVAGERY            = 167432,
+    SPELL_PROTECTOR           = 166114,
+    SPELL_GULDAN_REVEAL       = 163807,
+    SPELL_UNDER_PORTAL_CREDIT = 166319,
 };
 
 #endif

@@ -15,16 +15,63 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "MotionMaster.h"
-#include "MovementTypedefs.h"
-#include "ObjectAccessor.h"
-#include "PhasingHandler.h"
-#include "Player.h"
-#include "ScriptedCreature.h"
 #include "ScriptMgr.h"
-#include "TemporarySummon.h"
+#include "ScriptedCreature.h"
+#include "ScriptedGossip.h"
+#include "SpellScript.h"
+#include "Player.h"
+#include "Group.h"
+
+enum BlinkOfAnEye
+{
+    QUEST_BLINK_OF_AN_EYE = 44663,
+    MAP_BROKEN_ISLES = 1220,
+    KILL_CREDIT_TELEPORT_DALARAN = 114506,
+    GOSSIP_OPTION_DALARAN_TELE = 0,
+    SCENE_DALARAN_TELEPORT = 1149
+};
+
+struct npc_archmage_khadgar_dalaran_legion : public ScriptedAI
+{
+public:
+    npc_archmage_khadgar_dalaran_legion(Creature* creature) : ScriptedAI(creature) { }
+
+        bool GossipHello(Player* player)
+        {
+            if (me->IsQuestGiver())
+                player->PrepareQuestMenu(me->GetGUID());
+
+            if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_OPTION_DALARAN_TELE, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 0);
+
+            SendGossipMenuFor(player, player->GetGossipTextId(me), me->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
+        {
+            uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
+            if (action == GOSSIP_ACTION_INFO_DEF + 0)
+            {
+                if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
+                {
+                    CloseGossipMenuFor(player);
+                    player->AddMovieDelayedAction(SCENE_DALARAN_TELEPORT, [player]
+                        {
+                            player->TeleportTo(MAP_BROKEN_ISLES, -827.82f, 4369.25f, 738.64f, 1.893364f);
+                        });
+                    player->SendMovieStart(SCENE_DALARAN_TELEPORT);
+                    player->KilledMonsterCredit(KILL_CREDIT_TELEPORT_DALARAN);
+                    return true;
+                }
+                return true;
+            }
+            return true;
+        }
+};
 
 void AddSC_dalaran_legion()
 {
-
+    RegisterCreatureAI(npc_archmage_khadgar_dalaran_legion);
 }

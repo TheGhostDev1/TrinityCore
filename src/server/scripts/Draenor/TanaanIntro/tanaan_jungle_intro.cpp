@@ -20,7 +20,10 @@
 #include "ScriptedEscortAI.h"
 #include "CreatureTextMgr.h"
 #include "GameObjectAI.h"
+#include "GossipDef.h"
 #include "tanaan_jungle_intro.h"
+
+const uint32 spells[3] = { SPELL_CHAIN_LIGHT, SPELL_COMMAND_EARTH, SPELL_COMMAND_LIGHT };
 
 void AddSC_tanaan_jungle_intro()
 {
