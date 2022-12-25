@@ -1111,7 +1111,7 @@ bool WorldObject::IsWithinDist(WorldObject const* obj, float dist2compare, bool 
 
 bool WorldObject::IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D /*= true*/, bool incOwnRadius /*= true*/, bool incTargetRadius /*= true*/) const
 {
-    return obj && IsInMap(obj) && IsInPhase(obj) && _IsWithinDist(obj, dist2compare, is3D, incOwnRadius, incTargetRadius);
+    return obj && IsInMap(obj) && InSamePhase(obj) && _IsWithinDist(obj, dist2compare, is3D, incOwnRadius, incTargetRadius);
 }
 
 Position WorldObject::GetHitSpherePointFor(Position const& dest) const
@@ -1570,7 +1570,7 @@ bool WorldObject::CanSeeOrDetect(WorldObject const* obj, bool ignoreStealth, boo
 
 bool WorldObject::CanNeverSee(WorldObject const* obj) const
 {
-    return GetMap() != obj->GetMap() || !IsInPhase(obj);
+    return GetMap() != obj->GetMap() || !InSamePhase(obj);
 }
 
 bool WorldObject::CanDetect(WorldObject const* obj, bool ignoreStealth, bool checkAlert) const
@@ -1956,12 +1956,14 @@ ZoneScript* WorldObject::FindZoneScript() const
     {
         if (InstanceMap* instanceMap = map->ToInstanceMap())
             return reinterpret_cast<ZoneScript*>(instanceMap->GetInstanceScript());
-        else if (!map->IsBattlegroundOrArena())
+        if (BattlegroundMap* bgMap = map->ToBattlegroundMap())
+            return reinterpret_cast<ZoneScript*>(bgMap->GetBG());
+        if (!map->IsBattlegroundOrArena())
         {
             if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(map, GetZoneId()))
                 return bf;
-            else
-                return sOutdoorPvPMgr->GetOutdoorPvPToZoneId(map, GetZoneId());
+
+            return sOutdoorPvPMgr->GetOutdoorPvPToZoneId(map, GetZoneId());
         }
     }
     return nullptr;
@@ -2632,6 +2634,25 @@ ReputationRank WorldObject::GetReactionTo(WorldObject const* target) const
     // always friendly to self
     if (this == target)
         return REP_FRIENDLY;
+
+    auto isAttackableBySummoner = [&](Unit const* me, ObjectGuid const& targetGuid)
+    {
+        if (!me)
+            return false;
+
+        TempSummon const* tempSummon = me->ToTempSummon();
+        if (!tempSummon || !tempSummon->m_Properties)
+            return false;
+
+        if (tempSummon->m_Properties->GetFlags().HasFlag(SummonPropertiesFlags::AttackableBySummoner)
+            && targetGuid == tempSummon->GetSummonerGUID())
+            return true;
+
+        return false;
+    };
+
+    if (isAttackableBySummoner(ToUnit(), target->GetGUID()) || isAttackableBySummoner(target->ToUnit(), GetGUID()))
+        return REP_NEUTRAL;
 
     // always friendly to charmer or owner
     if (GetCharmerOrOwnerOrSelf() == target->GetCharmerOrOwnerOrSelf())
