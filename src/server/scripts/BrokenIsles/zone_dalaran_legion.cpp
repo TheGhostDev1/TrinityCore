@@ -20,58 +20,45 @@
 #include "ScriptedGossip.h"
 #include "SpellScript.h"
 #include "Player.h"
+#include "PhasingHandler.h"
 #include "Group.h"
 
 enum BlinkOfAnEye
 {
-    QUEST_BLINK_OF_AN_EYE = 44663,
     MAP_BROKEN_ISLES = 1220,
     KILL_CREDIT_TELEPORT_DALARAN = 114506,
-    GOSSIP_OPTION_DALARAN_TELE = 0,
-    SCENE_DALARAN_TELEPORT = 1149
 };
 
-struct npc_archmage_khadgar_dalaran_legion : public ScriptedAI
+class scene_dalaran_teleportation : public SceneScript
 {
 public:
-    npc_archmage_khadgar_dalaran_legion(Creature* creature) : ScriptedAI(creature) { }
+    scene_dalaran_teleportation() : SceneScript("scene_dalaran_teleportation") { }
 
-        bool GossipHello(Player* player)
-        {
-            if (me->IsQuestGiver())
-                player->PrepareQuestMenu(me->GetGUID());
+    void OnSceneStart(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        player->KilledMonsterCredit(KILL_CREDIT_TELEPORT_DALARAN);
+    }
 
-            if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_OPTION_DALARAN_TELE, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 0);
+    // Called when a scene is canceled
+    void OnSceneCancel(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        SceneFinished(player);
+    }
 
-            SendGossipMenuFor(player, player->GetGossipTextId(me), me->GetGUID());
+    // Called when a scene is completed
+    void OnSceneComplete(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        SceneFinished(player);
+    }
 
-            return true;
-        }
-
-        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
-        {
-            uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
-            if (action == GOSSIP_ACTION_INFO_DEF + 0)
-            {
-                if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
-                {
-                    CloseGossipMenuFor(player);
-                    player->AddMovieDelayedAction(SCENE_DALARAN_TELEPORT, [player]
-                        {
-                            player->TeleportTo(MAP_BROKEN_ISLES, -827.82f, 4369.25f, 738.64f, 1.893364f);
-                        });
-                    player->SendMovieStart(SCENE_DALARAN_TELEPORT);
-                    player->KilledMonsterCredit(KILL_CREDIT_TELEPORT_DALARAN);
-                    return true;
-                }
-                return true;
-            }
-            return true;
-        }
+    void SceneFinished(Player* player)
+    {
+        player->TeleportTo(MAP_BROKEN_ISLES, -827.82f, 4369.25f, 738.64f, 1.893364f);
+        PhasingHandler::OnConditionChange(player);
+    }
 };
 
 void AddSC_dalaran_legion()
 {
-    RegisterCreatureAI(npc_archmage_khadgar_dalaran_legion);
+    new scene_dalaran_teleportation();
 }
