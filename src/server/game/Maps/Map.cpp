@@ -2459,11 +2459,19 @@ void Map::UpdateSpawnGroupConditions()
     for (uint32 spawnGroupId : *spawnGroups)
     {
         SpawnGroupTemplateData const* spawnGroupTemplate = ASSERT_NOTNULL(GetSpawnGroupData(spawnGroupId));
-        if (spawnGroupTemplate->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN)
-            continue;
 
         bool isActive = IsSpawnGroupActive(spawnGroupId);
         bool shouldBeActive = sConditionMgr->IsMapMeetingNotGroupedConditions(CONDITION_SOURCE_TYPE_SPAWN_GROUP, spawnGroupId, this);
+
+        if (spawnGroupTemplate->flags & SPAWNGROUP_FLAG_MANUAL_SPAWN)
+        {
+            // Only despawn the group if it isn't meeting conditions
+            if (isActive && !shouldBeActive && spawnGroupTemplate->flags & SPAWNGROUP_FLAG_DESPAWN_ON_CONDITION_FAILURE)
+                SpawnGroupDespawn(spawnGroupId, true);
+
+            continue;
+        }
+
         if (isActive == shouldBeActive)
             continue;
 
@@ -2852,7 +2860,7 @@ bool InstanceMap::AddPlayerToMap(Player* player, bool initPlayer /*= true*/)
     player->AddInstanceEnterTime(GetInstanceId(), GameTime::GetGameTime());
 
     MapDb2Entries entries{ GetEntry(), GetMapDifficulty() };
-    if (entries.MapDifficulty->HasResetSchedule() && i_instanceLock && i_instanceLock->GetData()->CompletedEncountersMask)
+    if (entries.MapDifficulty->HasResetSchedule() && i_instanceLock && !i_instanceLock->IsNew())
     {
         if (!entries.MapDifficulty->IsUsingEncounterLocks())
         {
@@ -2940,7 +2948,7 @@ void InstanceMap::CreateInstanceData()
     if (!i_data)
         return;
 
-    if (!i_instanceLock || !i_instanceLock->GetInstanceId())
+    if (!i_instanceLock || i_instanceLock->IsNew())
     {
         i_data->Create();
         return;
@@ -2977,7 +2985,7 @@ void InstanceMap::TrySetOwningGroup(Group* group)
 InstanceResetResult InstanceMap::Reset(InstanceResetMethod method)
 {
     // raids can be reset if no boss was killed
-    if (method != InstanceResetMethod::Expire && i_instanceLock && i_instanceLock->GetData()->CompletedEncountersMask)
+    if (method != InstanceResetMethod::Expire && i_instanceLock && !i_instanceLock->IsNew())
         return InstanceResetResult::CannotReset;
 
     if (HavePlayers())
@@ -3067,7 +3075,7 @@ void InstanceMap::UpdateInstanceLock(UpdateBossStateSaveDataEvent const& updateS
                 playerCompletedEncounters = playerLock->GetData()->CompletedEncountersMask | (1u << updateSaveDataEvent.DungeonEncounter->Bit);
             }
 
-            bool isNewLock = !playerLock || !playerLock->GetData()->CompletedEncountersMask || playerLock->IsExpired();
+            bool isNewLock = !playerLock || playerLock->IsNew() || playerLock->IsExpired();
 
             InstanceLock const* newLock = sInstanceLockMgr.UpdateInstanceLockForPlayer(trans, player->GetGUID(), entries,
                 InstanceLockUpdateEvent(GetInstanceId(), i_data->UpdateBossStateSaveData(oldData ? *oldData : "", updateSaveDataEvent),
@@ -3113,7 +3121,7 @@ void InstanceMap::UpdateInstanceLock(UpdateAdditionalSaveDataEvent const& update
             if (playerLock)
                 oldData = &playerLock->GetData()->Data;
 
-            bool isNewLock = !playerLock || !playerLock->GetData()->CompletedEncountersMask || playerLock->IsExpired();
+            bool isNewLock = !playerLock || playerLock->IsNew() || playerLock->IsExpired();
 
             InstanceLock const* newLock = sInstanceLockMgr.UpdateInstanceLockForPlayer(trans, player->GetGUID(), entries,
                 InstanceLockUpdateEvent(GetInstanceId(), i_data->UpdateAdditionalSaveData(oldData ? *oldData : "", updateSaveDataEvent),
@@ -3138,7 +3146,7 @@ void InstanceMap::CreateInstanceLockForPlayer(Player* player)
     MapDb2Entries entries{ GetEntry(), GetMapDifficulty() };
     InstanceLock const* playerLock = sInstanceLockMgr.FindActiveInstanceLock(player->GetGUID(), entries);
 
-    bool isNewLock = !playerLock || !playerLock->GetData()->CompletedEncountersMask || playerLock->IsExpired();
+    bool isNewLock = !playerLock || playerLock->IsNew() || playerLock->IsExpired();
 
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 

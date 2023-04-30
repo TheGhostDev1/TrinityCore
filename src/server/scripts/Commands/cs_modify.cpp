@@ -495,15 +495,12 @@ public:
     //Edit Player or Creature Scale
     static bool HandleModifyScaleCommand(ChatHandler* handler, char const* args)
     {
-        float Scale;
+        float scale;
         Unit* target = handler->getSelectedUnit();
-        if (CheckModifySpeed(handler, args, target, Scale, 0.1f, 10.0f, false))
+        if (CheckModifySpeed(handler, args, target, scale, 0.1f, 10.0f, false))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_SIZE, LANG_YOURS_SIZE_CHANGED, Scale);
-            if (Creature* creatureTarget = target->ToCreature())
-                creatureTarget->SetDisplayId(creatureTarget->GetDisplayId(), Scale);
-            else
-                target->SetObjectScale(Scale);
+            NotifyModification(handler, target, LANG_YOU_CHANGE_SIZE, LANG_YOURS_SIZE_CHANGED, scale);
+            target->SetObjectScale(scale);
             return true;
         }
         return false;
@@ -995,7 +992,7 @@ public:
         if (!amount)
             return false;
 
-        target->ModifyCurrency(currencyId, amount, true, true);
+        target->ModifyCurrency(currencyId, amount, CurrencyGainSource::Cheat, CurrencyDestroyReason::Cheat);
 
         return true;
     }

@@ -182,7 +182,7 @@ struct AreaTriggerEntry
     float BoxYaw;
     int8 ShapeType;
     int16 ShapeID;
-    int16 AreaTriggerActionSetID;
+    int32 AreaTriggerActionSetID;
     int8 Flags;
 };
 
@@ -446,6 +446,18 @@ struct BarberShopStyleEntry
     uint8 Race;
     uint8 Sex;
     uint8 Data;                                                     // real ID to hair/facial hair
+};
+
+struct BattlePetAbilityEntry
+{
+    uint32 ID;
+    LocalizedString Name;
+    LocalizedString Description;
+    int32 IconFileDataID;
+    int8 PetTypeEnum;
+    uint32 Cooldown;
+    uint16 BattlePetVisualID;
+    uint8 Flags;
 };
 
 struct BattlePetBreedQualityEntry
@@ -1259,7 +1271,7 @@ struct CurrencyContainerEntry
     int32 MinAmount;
     int32 MaxAmount;
     int32 ContainerIconID;
-    int32 ContainerQuality;
+    int8 ContainerQuality;
     int32 OnLootSpellVisualKitID;
     uint32 CurrencyTypesID;
 };
@@ -1284,6 +1296,60 @@ struct CurrencyTypesEntry
     uint32 RechargingAmountPerCycle;
     uint32 RechargingCycleDurationMS;
     std::array<int32, 2> Flags;
+
+    EnumFlag<CurrencyTypesFlags> GetFlags() const { return static_cast<CurrencyTypesFlags>(Flags[0]); }
+    EnumFlag<CurrencyTypesFlagsB> GetFlagsB() const { return static_cast<CurrencyTypesFlagsB>(Flags[1]); }
+
+    // Helpers
+    int32 GetScaler() const
+    {
+        return GetFlags().HasFlag(CurrencyTypesFlags::_100_Scaler) ? 100 : 1;
+    }
+
+    bool HasMaxEarnablePerWeek() const
+    {
+        return MaxEarnablePerWeek || GetFlags().HasFlag(CurrencyTypesFlags::ComputedWeeklyMaximum);
+    }
+
+    bool HasMaxQuantity(bool onLoad = false, bool onUpdateVersion = false) const
+    {
+        if (onLoad && GetFlags().HasFlag(CurrencyTypesFlags::IgnoreMaxQtyOnLoad))
+           return false;
+
+        if (onUpdateVersion && GetFlags().HasFlag(CurrencyTypesFlags::UpdateVersionIgnoreMax))
+           return false;
+
+        return MaxQty || MaxQtyWorldStateID || GetFlags().HasFlag(CurrencyTypesFlags::DynamicMaximum);
+    }
+
+    bool HasTotalEarned() const
+    {
+        return GetFlagsB().HasFlag(CurrencyTypesFlagsB::UseTotalEarnedForEarned);
+    }
+
+    bool IsAlliance() const
+    {
+        return GetFlags().HasFlag(CurrencyTypesFlags::IsAllianceOnly);
+    }
+
+    bool IsHorde() const
+    {
+        return GetFlags().HasFlag(CurrencyTypesFlags::IsHordeOnly);
+    }
+
+    bool IsSuppressingChatLog(bool onUpdateVersion = false) const
+    {
+        if ((onUpdateVersion && GetFlags().HasFlag(CurrencyTypesFlags::SuppressChatMessageOnVersionChange)) ||
+            GetFlags().HasFlag(CurrencyTypesFlags::SuppressChatMessages))
+            return true;
+
+        return false;
+    }
+
+    bool IsTrackingQuantity() const
+    {
+        return GetFlags().HasFlag(CurrencyTypesFlags::TrackQuantity);
+    }
 };
 
 struct CurveEntry
@@ -1342,9 +1408,9 @@ struct DifficultyEntry
     uint16 Flags;
     uint8 ItemContext;
     uint8 ToggleDifficultyID;
-    uint16 GroupSizeHealthCurveID;
-    uint16 GroupSizeDmgCurveID;
-    uint16 GroupSizeSpellPointsCurveID;
+    uint32 GroupSizeHealthCurveID;
+    uint32 GroupSizeDmgCurveID;
+    uint32 GroupSizeSpellPointsCurveID;
 };
 
 struct DungeonEncounterEntry
@@ -1595,7 +1661,7 @@ struct GarrBuildingEntry
     LocalizedString AllianceName;
     LocalizedString Description;
     LocalizedString Tooltip;
-    uint8 GarrTypeID;
+    int8 GarrTypeID;
     int8 BuildingType;
     int32 HordeGameObjectID;
     int32 AllianceGameObjectID;
@@ -1644,7 +1710,7 @@ struct GarrFollowerEntry
     LocalizedString HordeSourceText;
     LocalizedString AllianceSourceText;
     LocalizedString TitleName;
-    uint8 GarrTypeID;
+    int8 GarrTypeID;
     int8 GarrFollowerTypeID;
     int32 HordeCreatureID;
     int32 AllianceCreatureID;
@@ -1693,7 +1759,7 @@ struct GarrMissionEntry
     LocalizedString Description;
     DBCPosition2D MapPos;
     DBCPosition2D WorldPos;
-    uint8 GarrTypeID;
+    int8 GarrTypeID;
     uint8 GarrMissionTypeID;
     int8 GarrFollowerTypeID;
     uint8 MaxFollowers;
@@ -1774,7 +1840,7 @@ struct GarrTalentTreeEntry
 {
     uint32 ID;
     LocalizedString Name;
-    uint8 GarrTypeID;
+    int8 GarrTypeID;
     int32 ClassID;
     int8 MaxTiers;
     int8 UiOrder;
@@ -2435,11 +2501,12 @@ struct LanguageWordsEntry
 
 struct LanguagesEntry
 {
-    uint32 ID;
     LocalizedString Name;
+    uint32 ID;
     int32 Flags;
     int32 UiTextureKitID;
     int32 UiTextureKitElementCount;
+    int32 LearningCurveID;
 };
 
 struct LFGDungeonsEntry
@@ -3013,7 +3080,7 @@ struct QuestInfoEntry
     LocalizedString InfoName;
     int8 Type;
     int32 Modifiers;
-    int32 Profession;
+    uint16 Profession;
 };
 
 struct QuestLineXQuestEntry
@@ -3479,6 +3546,15 @@ struct SpellItemEnchantmentConditionEntry
     std::array<uint8, 5> RtOperandType;
     std::array<uint8, 5> RtOperand;
     std::array<uint8, 5> Logic;
+};
+
+struct SpellKeyboundOverrideEntry
+{
+    uint32 ID;
+    char const* Function;
+    int8 Type;
+    int32 Data;
+    int32 Flags;
 };
 
 struct SpellLabelEntry
@@ -3966,6 +4042,8 @@ struct TraitNodeEntryEntry
     int32 TraitDefinitionID;
     int32 MaxRanks;
     uint8 NodeEntryType;
+
+    TraitNodeEntryType GetNodeEntryType() const { return static_cast<TraitNodeEntryType>(NodeEntryType); }
 };
 
 struct TraitNodeEntryXTraitCondEntry
@@ -4021,7 +4099,7 @@ struct TraitNodeXTraitCondEntry
 struct TraitNodeXTraitCostEntry
 {
     uint32 ID;
-    uint32 TraitNodeID;
+    int32 TraitNodeID;
     int32 TraitCostID;
 };
 

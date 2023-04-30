@@ -436,7 +436,7 @@ namespace WorldPackets
         class RatedPvpInfo final : public ServerPacket
         {
         public:
-            RatedPvpInfo() : ServerPacket(SMSG_RATED_PVP_INFO, 6 * sizeof(BracketInfo)) { }
+            RatedPvpInfo() : ServerPacket(SMSG_RATED_PVP_INFO, 7 * sizeof(BracketInfo)) { }
 
             WorldPacket const* Write() override;
 
@@ -462,7 +462,14 @@ namespace WorldPackets
                 int32 Unused4 = 0;
                 int32 Rank = 0;
                 bool Disqualified = false;
-            } Bracket[6];
+            } Bracket[7];
+        };
+
+        struct RatedMatchDeserterPenalty
+        {
+            int32 PersonalRatingChange = 0;
+            int32 QueuePenaltySpellID = 0;
+            WorldPackets::Duration<Milliseconds, int32> QueuePenaltyDuration;
         };
 
         class PVPMatchInitialize final : public ServerPacket
@@ -483,6 +490,7 @@ namespace WorldPackets
             MatchState State = Inactive;
             Timestamp<> StartTime;
             WorldPackets::Duration<Seconds> Duration;
+            Optional<RatedMatchDeserterPenalty> DeserterPenalty;
             uint8 ArenaFaction = 0;
             uint32 BattlemasterListID = 0;
             bool Registered = false;

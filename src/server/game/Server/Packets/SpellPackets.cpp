@@ -907,7 +907,6 @@ void SelfRes::Read()
 void GetMirrorImageData::Read()
 {
     _worldPacket >> UnitGUID;
-    _worldPacket >> DisplayID;
 }
 
 MirrorImageComponentedData::MirrorImageComponentedData()
@@ -951,7 +950,6 @@ void SpellClick::Read()
 {
     _worldPacket >> SpellClickUnitGuid;
     TryAutoDismount = _worldPacket.ReadBit();
-    IsSoftInteract = _worldPacket.ReadBit();
 }
 
 WorldPacket const* ResyncRunes::Write()
@@ -1053,5 +1051,10 @@ void TradeSkillSetFavorite::Read()
 {
     _worldPacket >> RecipeID;
     IsFavorite = _worldPacket.ReadBit();
+}
+
+void KeyboundOverride::Read()
+{
+    _worldPacket >> OverrideID;
 }
 }

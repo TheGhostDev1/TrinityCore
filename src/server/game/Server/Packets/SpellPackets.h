@@ -906,7 +906,6 @@ namespace WorldPackets
             void Read() override;
 
             ObjectGuid UnitGUID;
-            uint32 DisplayID = 0;
         };
 
         class MirrorImageComponentedData final : public ServerPacket
@@ -950,7 +949,6 @@ namespace WorldPackets
 
             ObjectGuid SpellClickUnitGuid;
             bool TryAutoDismount = false;
-            bool IsSoftInteract = false;
         };
 
         class ResyncRunes final : public ServerPacket
@@ -1082,6 +1080,16 @@ namespace WorldPackets
 
             int32 RecipeID = 0;
             bool IsFavorite = false;
+        };
+
+        class KeyboundOverride final : public ClientPacket
+        {
+        public:
+            KeyboundOverride(WorldPacket&& packet) : ClientPacket(CMSG_KEYBOUND_OVERRIDE,  std::move(packet)) { }
+
+            void Read() override;
+
+            uint16 OverrideID = 0;
         };
 
         ByteBuffer& operator>>(ByteBuffer& buffer, SpellCastRequest& request);
