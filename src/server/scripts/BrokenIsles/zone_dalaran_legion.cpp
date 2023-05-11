@@ -20,58 +20,148 @@
 #include "ScriptedGossip.h"
 #include "SpellScript.h"
 #include "Player.h"
+#include "PhasingHandler.h"
 #include "Group.h"
 
 enum BlinkOfAnEye
 {
-    QUEST_BLINK_OF_AN_EYE = 44663,
     MAP_BROKEN_ISLES = 1220,
     KILL_CREDIT_TELEPORT_DALARAN = 114506,
-    GOSSIP_OPTION_DALARAN_TELE = 0,
-    SCENE_DALARAN_TELEPORT = 1149
+    QUEST_BLINK_OF_AN_EYE        = 446633,
+    NPC_EMISSARY_AULDBRIDGE      = 111109,
+
+    ACTION_AULDBRIDGE_FIRST_LINE,
+    EVENT_AULDBRIDGE_SAY_FIRST_LINE,
+    EVENT_AULDBRIDGE_SAY_SECOND_LINE,
+    EVENT_AULDBRIDGE_SAY_THIRD_LINE,
+    EVENT_AULDBRIDGE_WAYPOINT_START,
+    SAY_AULDBRIDGE_FIRST_LINE = 0,
+    SAY_AULDBRIDGE_SECOND_LINE = 1,
+    SAY_AULDBRIDGE_THIRD_LINE = 2,
+
+    AULDBRIDGE_PATH = 11110910,
+
+    WAYPOINT_22,
 };
 
-struct npc_archmage_khadgar_dalaran_legion : public ScriptedAI
+class scene_dalaran_teleportation : public SceneScript
 {
 public:
-    npc_archmage_khadgar_dalaran_legion(Creature* creature) : ScriptedAI(creature) { }
+    scene_dalaran_teleportation() : SceneScript("scene_dalaran_teleportation") { }
 
-        bool GossipHello(Player* player)
+    void OnSceneStart(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        player->KilledMonsterCredit(KILL_CREDIT_TELEPORT_DALARAN);
+    }
+
+    // Called when a scene is canceled
+    void OnSceneCancel(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        SceneFinished(player);
+    }
+
+    // Called when a scene is completed
+    void OnSceneComplete(Player* player, uint32 /*sceneInstanceID*/, SceneTemplate const* /*sceneTemplate*/) override
+    {
+        SceneFinished(player);
+    }
+
+    void SceneFinished(Player* player)
+    {
+        player->TeleportTo(MAP_BROKEN_ISLES, -827.82f, 4369.25f, 738.64f, 1.893364f);
+        PhasingHandler::OnConditionChange(player);
+    }
+};
+
+struct npc_emissary_auldbridge_111109 : public ScriptedAI
+{
+    npc_emissary_auldbridge_111109(Creature* creature) : ScriptedAI(creature) { Initialize(); }
+
+    EventMap events;
+    std::set<ObjectGuid> pList;
+    ObjectGuid   m_playerGUID;
+
+    void Initialize()
+    {
+        m_playerGUID = ObjectGuid::Empty;
+    }
+
+    void sQuestReward(Player* player, Quest const* quest, uint32 /*opt*/)  override
+    {
+        if (quest->GetQuestId() == QUEST_BLINK_OF_AN_EYE)
         {
-            if (me->IsQuestGiver())
-                player->PrepareQuestMenu(me->GetGUID());
-
-            if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_OPTION_DALARAN_TELE, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 0);
-
-            SendGossipMenuFor(player, player->GetGossipTextId(me), me->GetGUID());
-
-            return true;
+            if (Creature* auldbridge = me->FindNearestCreature(NPC_EMISSARY_AULDBRIDGE, 5.0f))
+                if (TempSummon* waypointAuldbridge = player->SummonCreature(auldbridge->GetEntry(), auldbridge->GetPosition(), TEMPSUMMON_TIMED_DESPAWN, 60000, 0, true))
+                    waypointAuldbridge->AI()->DoAction(ACTION_AULDBRIDGE_FIRST_LINE);
+            m_playerGUID = player->GetGUID();
+            PhasingHandler::OnConditionChange(player);
         }
+    }
 
-        bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
+    void UpdateAI(uint32 diff) override
+    {
+        events.Update(diff);
+        while (uint32 eventId = events.ExecuteEvent())
         {
-            uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
-            if (action == GOSSIP_ACTION_INFO_DEF + 0)
+            switch (eventId)
             {
-                if (player->GetQuestStatus(QUEST_BLINK_OF_AN_EYE) == QUEST_STATUS_INCOMPLETE)
+                case EVENT_AULDBRIDGE_SAY_FIRST_LINE:
                 {
-                    CloseGossipMenuFor(player);
-                    player->AddMovieDelayedAction(SCENE_DALARAN_TELEPORT, [player]
-                        {
-                            player->TeleportTo(MAP_BROKEN_ISLES, -827.82f, 4369.25f, 738.64f, 1.893364f);
-                        });
-                    player->SendMovieStart(SCENE_DALARAN_TELEPORT);
-                    player->KilledMonsterCredit(KILL_CREDIT_TELEPORT_DALARAN);
-                    return true;
+                    Talk(SAY_AULDBRIDGE_FIRST_LINE);
+                    events.ScheduleEvent(EVENT_AULDBRIDGE_SAY_SECOND_LINE, 3s);
+                    break;
                 }
-                return true;
+                case EVENT_AULDBRIDGE_SAY_SECOND_LINE:
+                {
+                    Talk(SAY_AULDBRIDGE_SECOND_LINE);
+                    events.ScheduleEvent(EVENT_AULDBRIDGE_SAY_THIRD_LINE, 3s);
+                    break;
+                }
+                case EVENT_AULDBRIDGE_SAY_THIRD_LINE:
+                {
+                    Talk(SAY_AULDBRIDGE_THIRD_LINE);
+                    events.ScheduleEvent(EVENT_AULDBRIDGE_WAYPOINT_START, 3s);
+                    break;
+                }
+                case EVENT_AULDBRIDGE_WAYPOINT_START:
+                {
+                    me->GetMotionMaster()->MovePath(AULDBRIDGE_PATH, false);
+                    break;
+                }
             }
-            return true;
         }
+    }
+
+    void DoAction(int32 action) override
+    {
+        switch (action)
+        {
+            case ACTION_AULDBRIDGE_FIRST_LINE:
+            {
+                events.ScheduleEvent(EVENT_AULDBRIDGE_SAY_FIRST_LINE, 1s);
+                break;
+            }
+        }
+    }
+
+    void WaypointReached(uint32 pointId)
+    {
+        switch (pointId)
+        {
+            case WAYPOINT_22:
+            {
+                me->DespawnOrUnsummon();
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
 };
 
 void AddSC_dalaran_legion()
 {
-    RegisterCreatureAI(npc_archmage_khadgar_dalaran_legion);
+    new scene_dalaran_teleportation();
+    RegisterCreatureAI(npc_emissary_auldbridge_111109);
 }

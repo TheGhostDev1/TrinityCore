@@ -24,6 +24,7 @@ Quest support: 3628.
 #include "ScriptedCreature.h"
 #include "ScriptedGossip.h"
 #include "SpellScript.h"
+#include "ObjectMgr.h"
 #include "Player.h"
 #include "Group.h"
 
@@ -85,6 +86,8 @@ enum DraenorIntro
     QUEST_THE_DARK_PORTAL_2   = 34398,
 
     MAP_TANAAN_JUNGLE         = 1265,
+    MAP_BLASTED_LANDS_PHASE   = 1190,
+    MAP_EASTERN_KINGDOMS      = 0,
 
     CREDIT_SPEAK_WITH_KHADGAR = 78419,
 
@@ -92,6 +95,67 @@ enum DraenorIntro
 
     GOSSIP_MENU_DRAENOR_INTRO = 16863,
     GOSSIP_MENU_OPTION        = 0,
+
+    SPELL_TIME_TRAVELLING     = 176111
+};
+
+// Need to update this with non hard coded gossip.
+class npc_zidormi_blasted_lands : public CreatureScript
+{
+public:
+    npc_zidormi_blasted_lands() : CreatureScript("npc_zidormi_blasted_lands") { }
+
+    struct npc_zidormi_blasted_landsAI : public ScriptedAI
+    {
+        npc_zidormi_blasted_landsAI(Creature* creature) : ScriptedAI(creature) { }
+
+        bool GossipHello(Player* player)
+        {
+            if (player->getLevel() < 90)
+                return true;
+
+            if (player->GetMapId() == MAP_BLASTED_LANDS_PHASE)
+            {
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "I would like to visit the past", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 0);
+            }
+            else if (player->GetMapId() == MAP_EASTERN_KINGDOMS)
+            {
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Return to the present", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            }
+
+            SendGossipMenuFor(player, player->GetGossipTextId(me), me->GetGUID());
+
+            return true;
+        }
+
+        bool GossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId)
+        {
+            uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
+            ClearGossipMenuFor(player);
+
+            if (action == GOSSIP_ACTION_INFO_DEF + 0)
+            {
+                CloseGossipMenuFor(player);
+
+                player->CastSpell(player, SPELL_TIME_TRAVELLING, true);
+                player->SeamlessTeleportToMap(MAP_EASTERN_KINGDOMS);
+            }
+            else if (action == GOSSIP_ACTION_INFO_DEF + 1)
+            {
+                CloseGossipMenuFor(player);
+
+                player->RemoveAurasDueToSpell(SPELL_TIME_TRAVELLING);
+                player->SeamlessTeleportToMap(MAP_BLASTED_LANDS_PHASE);
+            }
+
+            return true;
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_zidormi_blasted_landsAI(creature);
+    }
 };
 
 struct npc_archmage_khadgar_blastedlands : public ScriptedAI
@@ -151,4 +215,5 @@ void AddSC_blasted_lands()
 {
     new spell_razelikh_teleport_group();
     RegisterCreatureAI(npc_archmage_khadgar_blastedlands);
+    new npc_zidormi_blasted_lands();
 }

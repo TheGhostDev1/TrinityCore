@@ -16,11 +16,13 @@
 */
 
 // This is where scripts' loading functions should be declared:
+void AddSC_tanaan_jungle_intro();
 // void AddSC_draenor_shadowmoon_valley();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddDraenorScripts()
 {
+    AddSC_tanaan_jungle_intro();
   // AddSC_draenor_shadowmoon_valley();
 }

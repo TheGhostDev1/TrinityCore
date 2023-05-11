@@ -18,9 +18,12 @@
 // This is where scripts' loading functions should be declared:
 
 void AddSC_startup_script();
+void AddSC_dk_startzone_skip_module();
+
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddCustomScripts()
 {
     AddSC_startup_script();
+    AddSC_dk_startzone_skip_module();
 }
