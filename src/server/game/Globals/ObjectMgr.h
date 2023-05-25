@@ -1230,6 +1230,7 @@ class TC_GAME_API ObjectMgr
 
         WorldSafeLocsEntry const* GetDefaultGraveyard(uint32 team) const;
         WorldSafeLocsEntry const* GetClosestGraveyard(WorldLocation const& location, uint32 team, WorldObject* conditionObject) const;
+        WorldSafeLocsEntry const* GetClosestGraveyardInZone(WorldLocation const& location, uint32 team, WorldObject* conditionObject, uint32 zoneId) const;
         bool AddGraveyardLink(uint32 id, uint32 zoneId, uint32 team, bool persist = true);
         void RemoveGraveyardLink(uint32 id, uint32 zoneId, uint32 team, bool persist = false);
         void LoadGraveyardZones();
@@ -1705,7 +1706,7 @@ class TC_GAME_API ObjectMgr
         // for wintergrasp only
         GraveyardContainer GraveyardStore;
 
-        static void AddLocaleString(std::string&& value, LocaleConstant localeConstant, std::vector<std::string>& data);
+        static void AddLocaleString(std::string_view value, LocaleConstant localeConstant, std::vector<std::string>& data);
         static std::string_view GetLocaleString(std::vector<std::string> const& data, LocaleConstant locale)
         {
             if (locale < data.size())
