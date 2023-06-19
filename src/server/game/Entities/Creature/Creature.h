@@ -215,6 +215,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         CreatureTemplate const* GetCreatureTemplate() const { return m_creatureInfo; }
         CreatureData const* GetCreatureData() const { return m_creatureData; }
+        CreatureDifficulty const* GetCreatureDifficulty() const { return m_creatureDifficulty; }
         CreatureAddon const* GetCreatureAddon() const;
 
         std::string const& GetAIName() const;
@@ -472,8 +473,9 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         bool DisableReputationGain;
 
-        CreatureTemplate const* m_creatureInfo;                 // Can differ from sObjectMgr->GetCreatureTemplate(GetEntry()) in difficulty mode > 0
+        CreatureTemplate const* m_creatureInfo;
         CreatureData const* m_creatureData;
+        CreatureDifficulty const* m_creatureDifficulty;
         std::array<std::string_view, 3> m_stringIds;
         Optional<std::string> m_scriptStringId;
 
@@ -508,6 +510,8 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
 
         time_t _lastDamagedTime; // Part of Evade mechanics
         CreatureTextRepeatGroup m_textRepeat;
+
+        void ApplyAllStaticFlags(CreatureStaticFlagsHolder const& flags);
 
         CreatureStaticFlagsHolder _staticFlags;
 
