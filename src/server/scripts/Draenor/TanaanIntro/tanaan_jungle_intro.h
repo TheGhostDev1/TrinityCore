@@ -24,6 +24,40 @@ struct Hut
 	bool Fired;
 };
 
+enum CreatureText
+{
+    SAY_KHADGAR_FIRST_LINE               = 0,
+    SAY_KHADGAR_SECOND_LINE              = 1,
+    SAY_KHADGAR_THIRD_LINE               = 2,
+    SAY_KHADGAR_FOURTH_LINE              = 3,
+    SAY_KHADGAR_FIFTH_LINE               = 4,
+    SAY_KHADGAR_SIXTH_LINE               = 5,
+    SAY_KHADGAR_SEVENTH_LINE             = 6,
+
+    SAY_THRALL_FIRST_LINE                = 0,
+    SAY_THRALL_SECOND_LINE               = 1,
+    SAY_THRALL_THIRD_LINE                = 2,
+    SAY_THRALL_FOURTH_LINE               = 3,
+    SAY_THRALL_FIFTH_LINE                = 4,
+    SAY_THRALL_SIXTH_LINE                = 5,
+    SAY_THRALL_SEVENTH_LINE              = 6,
+
+    SAY_MARAAD_FIRST_LINE                = 0,
+    SAY_MARAAD_SECOND_LINE               = 1,
+    SAY_MARAAD_THIRD_LINE                = 2,
+    SAY_MARAAD_FOURTH_LINE               = 3,
+
+    SAY_LADY_LIADRIN_FIRST_LINE          = 0,
+    SAY_LADY_LIADRIN_SECOND_LINE         = 1,
+
+    SAY_CORDANA_FELSONG_FIRST_LINE       = 0,
+};
+
+enum Events
+{
+
+};
+
 enum Quests
 {
     QuestAzerothLastStand                = 35933,
