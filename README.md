@@ -35,7 +35,7 @@ website at [TrinityCore.org](https://www.trinitycore.org).
 -Ubuntu Server 19.10 (No Version Before or After is Currently Supported. Full build instructions to come)
 -Visual Studio 2019 Latest
 -Boost 1.67 on Linux. Boost 1.71 on Windows
--MySQL 5.7 (8.0 not supported or tested yet)
+-MySQL 5.7 & 8.0
 -OpenSSL 1.1.1 Only
 ```
 
