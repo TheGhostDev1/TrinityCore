@@ -38,6 +38,12 @@ enum MardumConversationData
     CONVO_DEMONHUNTER_INTRO_START   = 705
 };
 
+enum MardumSoundData
+{
+    SOUND_METAL_WEAPON_UNSHEATH = 700,
+    SOUND_SPELL_DOUBLE_JUMP     = 53780,
+};
+
 class scene_demonhunter_intro : public SceneScript
 {
 public:
@@ -86,6 +92,7 @@ enum TheInvasionBeginsQuestData
     NPC_CYANA_NIGHTGLAIVE           = 98290,
     NPC_KORVAS_BLOODTHORN           = 98292,
     NPC_SEVIS_BRIGHTFLAME           = 99918,
+    NPC_WRATH_WARRIOR               = 94580,
 
     SPELL_THE_INVASION_BEGINS       = 187382,
     SPELL_TRACK_TARGET_IN_CHANNEL   = 175799,
@@ -113,7 +120,8 @@ enum TheInvasionsBeginsWaypointData
     PATH_SEVIS_INVASIONS_JUMP       = (99918 * 10 + 1) << 3,
 
     POINT_ILLIDARI_LAND_POS         = 1,
-    POINT_ILLIDARI_DOUBLE_JUMP      = 2
+    POINT_KAYN_TRIGGER_DOUBLE_JUMP  = 2,
+    POINT_KAYN_MOVE_TO_DEMON        = 3,
 };
 
 enum TheInvasionBeginsAnimKitsData
@@ -125,10 +133,11 @@ enum TheInvasionBeginsAnimKitsData
 
 enum TheInvasionBeginsVisualData
 {
-    SPELL_VISUAL_KAYN_GLIDE         = 59738,
-    SPELL_VISUAL_KAYN_WINGS         = 59406,
-    SPELL_VISUAL_KAYN_DOUBLE_JUMP   = 58110,
-    SPELL_VISUAL_KORVAS_JUMP        = 63071
+    SPELL_VISUAL_KAYN_GLIDE             = 59738,
+    SPELL_VISUAL_KAYN_WINGS             = 59406,
+    SPELL_VISUAL_KAYN_DOUBLE_JUMP       = 58110,
+    SPELL_VISUAL_KORVAS_JUMP            = 63071,
+    SPELL_VISUAL_KIT_WRATH_WARRIOR_DIE  = 58476,
 };
 
 enum TheInvasionBeginsEventData
@@ -137,7 +146,7 @@ enum TheInvasionBeginsEventData
     EVENT_ILLIDARI_START_PATH
 };
 
-Position const DemonSpawn = { 1069.71f, 3177.44f, 21.46352f };
+Position const WrathWarriorSpawnPosition = { 1069.71f, 3177.44f, 21.46352f };
 Position const KaynJumpPos = { 1172.17f, 3202.55f, 54.3479f };
 Position const KaynDoublePos = { 1096.99f, 3186.70f, 29.9815f };
 Position const JayceJumpPos = { 1119.24f, 3203.42f, 38.1061f };
@@ -156,7 +165,7 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
         if (quest->GetQuestId() == QUEST_THE_INVASION_BEGINS)
         {
             PhasingHandler::OnConditionChange(player);
-            player->CastSpell(DemonSpawn, SPELL_THE_INVASION_BEGINS, false);
+            player->CastSpell(WrathWarriorSpawnPosition, SPELL_THE_INVASION_BEGINS, false);
             Conversation::CreateConversation(CONVO_THE_INVASION_BEGINS, player, *player, player->GetGUID(), nullptr, false);
         }
     }
@@ -165,8 +174,14 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
     {
         if (pathId == PATH_KAYN_ATTACK_DEMON)
         {
-            // ToDo: Facing Demon + SpellVisualKit (58476, 0, 0)
+            Creature* wrathWarrior = me->FindNearestCreatureWithOptions(100.0f, { .CreatureId = NPC_WRATH_WARRIOR, .IgnorePhases = true, .OwnerGuid = me->GetOwnerGUID()});
+            if (!wrathWarrior)
+                return;
+
+            me->SetFacingToObject(wrathWarrior);
             me->SetAIAnimKitId(ANIM_DH_RUN);
+            wrathWarrior->SendPlaySpellVisualKit(SPELL_VISUAL_KIT_WRATH_WARRIOR_DIE, 0, 0);
+            wrathWarrior->DespawnOrUnsummon(7s);
             me->GetMotionMaster()->MovePath(PATH_KAYN_AFTER_DEMON, false);
         }
         else if (pathId == PATH_KAYN_AFTER_DEMON)
@@ -178,22 +193,17 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
         if (type != EFFECT_MOTION_TYPE)
             return;
 
-        if (pointId == POINT_ILLIDARI_LAND_POS)
-        {
-            // ToDo: Play Sheath Sound
-            me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 3000);
-            me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_GLIDE, 4, 4000);
-            me->SetSheath(SHEATH_STATE_MELEE);
-            me->SetNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
-            me->GetMotionMaster()->MoveJumpWithGravity(KaynDoublePos, 23.99f, 0.9874f, POINT_ILLIDARI_DOUBLE_JUMP);
-        }
-        else if (pointId == POINT_ILLIDARI_DOUBLE_JUMP)
+        if (pointId == POINT_KAYN_TRIGGER_DOUBLE_JUMP)
         {
             me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 3000);
-            // ToDo: Play Object Sound: Double Jump
+            //me->PlayDirectSound(SOUND_SPELL_DOUBLE_JUMP, me);
             me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_DOUBLE_JUMP, 0, 0);
-            me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_GLIDE, 4, 0);
-            me->GetMotionMaster()->MovePath(PATH_KAYN_ATTACK_DEMON, false);
+            me->GetMotionMaster()->MoveJumpWithGravity(KaynDoublePos, 24.0, 0.9874f, POINT_KAYN_MOVE_TO_DEMON);
+        }
+        else if (pointId == POINT_KAYN_MOVE_TO_DEMON)
+        {
+            me->SetNpcFlag2(me->GetNpcFlags2() | UNIT_NPC_FLAG_2_STEERING);
+            me->GetMotionMaster()->MovePath(PATH_KAYN_ATTACK_DEMON, false, {}, 4.0f);
         }
     }
 };
@@ -340,10 +350,6 @@ struct npc_cyana_nightglaive_invasion_begins : public ScriptedAI
             me->RemoveAurasDueToSpell(SPELL_DEMON_HUNTER_GLIDE_STATE);
             me->GetMotionMaster()->MovePath(PATH_CYANA_INVASIONS_JUMP, false);
         }
-        else if (pointId == POINT_ILLIDARI_DOUBLE_JUMP)
-        {
-
-        }
     }
 };
 
@@ -427,34 +433,45 @@ public:
 
         switch (_events.ExecuteEvent())
         {
-        case EVENT_ILLIDARI_FACE_PLAYERS:
-        {
-            StartCloneChannel(conversation->GetActorCreature(CONVO_ACROR_IDX_KAYN)->GetGUID(), conversation);
-            StartCloneChannel(conversation->GetActorCreature(CONVO_ACTOR_IDX_KORVAS)->GetGUID(), conversation);
-            StartCloneChannel(_jayceGUID, conversation);
-            StartCloneChannel(_allariGUID, conversation);
-            StartCloneChannel(_cyanaGUID, conversation);
-            StartCloneChannel(_sevisGUID, conversation);
-            break;
-        }
-        case EVENT_ILLIDARI_START_PATH:
-        {
-            Creature* kaynClone = conversation->GetActorCreature(CONVO_ACROR_IDX_KAYN);
-            if (!kaynClone)
+            case EVENT_ILLIDARI_FACE_PLAYERS:
+            {
+                StartCloneChannel(conversation->GetActorCreature(CONVO_ACROR_IDX_KAYN)->GetGUID(), conversation);
+                StartCloneChannel(conversation->GetActorCreature(CONVO_ACTOR_IDX_KORVAS)->GetGUID(), conversation);
+                StartCloneChannel(_jayceGUID, conversation);
+                StartCloneChannel(_allariGUID, conversation);
+                StartCloneChannel(_cyanaGUID, conversation);
+                StartCloneChannel(_sevisGUID, conversation);
                 break;
+            }
+            case EVENT_ILLIDARI_START_PATH:
+            {
+                Creature* kaynClone = conversation->GetActorCreature(CONVO_ACROR_IDX_KAYN);
+                if (!kaynClone)
+                    break;
 
-            kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_GLIDE, 4, 3000);
-            kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 4000);
-            kaynClone->GetMotionMaster()->MoveJumpWithGravity(KaynJumpPos, 20.49f, 396.3535f, POINT_ILLIDARI_LAND_POS);
-            StartCloneMovement(conversation->GetActorCreature(CONVO_ACTOR_IDX_KORVAS)->GetGUID(), PATH_KORVAS_INVASIONS_BEGINS, ANIM_DH_RUN, conversation);
-            StartCloneMovement(_jayceGUID, PATH_JAYCE_INVASIONS_BEGINS, 0, conversation);
-            StartCloneMovement(_allariGUID, PATH_ALLARI_INVASIONS_BEGINS, ANIM_DH_RUN_ALLARI, conversation);
-            StartCloneMovement(_cyanaGUID, PATH_CYANA_INVASIONS_BEGINS, 0, conversation);
-            StartCloneMovement(_sevisGUID, PATH_SEVIS_INVASIONS_BEGINS, ANIM_DH_RUN, conversation);
-            break;
-        }
-        default:
-            break;
+                /*
+                    ServerToClient: SMSG_PLAY_OBJECT_SOUND (0x275F) Length: 50 ConnIdx: 1 Time: 08/03/2023 16:12:47.494 Number: 2273
+                    SoundId: 700 (SHEATHINGMETALWEAPONUNSHEATHE)
+                    SourceObjectGUID: Full: 0x203AE8B9205AD4C000062700004BB5D8 Creature/0 R3770/S1575 Map: 1481 (Mardum) Entry: 93011 (Kayn Sunfury) Low: 4961752
+                    TargetObjectGUID: Full: 0x203AE8B9205AD4C000062700004BB5D8 Creature/0 R3770/S1575 Map: 1481 (Mardum) Entry: 93011 (Kayn Sunfury) Low: 4961752
+                    Position: X: 1179.566 Y: 3202.6067 Z: 51.426506
+                    BroadcastTextID: 0
+                */
+                //kaynClone->PlayDirectSound(SOUND_METAL_WEAPON_UNSHEATH, kaynClone);
+                kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_GLIDE, 4, 3000);
+                kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 4000);
+                kaynClone->GetMotionMaster()->MoveJumpWithGravity(KaynJumpPos, 20.5f, 396.3535f, POINT_KAYN_TRIGGER_DOUBLE_JUMP);
+                kaynClone->SetSheath(SHEATH_STATE_MELEE);
+                kaynClone->SetNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
+
+                StartCloneMovement(_jayceGUID, PATH_JAYCE_INVASIONS_BEGINS, 0, conversation);
+                StartCloneMovement(_allariGUID, PATH_ALLARI_INVASIONS_BEGINS, ANIM_DH_RUN_ALLARI, conversation);
+                StartCloneMovement(_cyanaGUID, PATH_CYANA_INVASIONS_BEGINS, 0, conversation);
+                StartCloneMovement(_sevisGUID, PATH_SEVIS_INVASIONS_BEGINS, ANIM_DH_RUN, conversation);
+                break;
+            }
+            default:
+                break;
         }
     }
 
