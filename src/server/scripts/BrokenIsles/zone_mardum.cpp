@@ -148,7 +148,7 @@ enum TheInvasionBeginsEventData
 
 Position const WrathWarriorSpawnPosition = { 1069.71f, 3177.44f, 21.46352f };
 Position const KaynJumpPos = { 1172.17f, 3202.55f, 54.3479f };
-Position const KaynDoublePos = { 1096.99f, 3186.70f, 29.9815f };
+Position const KaynDoubleJumpPosition = { 1096.99f, 3186.70f, 29.9815f };
 Position const JayceJumpPos = { 1119.24f, 3203.42f, 38.1061f };
 Position const AllariJumpPos = { 1120.08f, 3197.2f, 36.8502f };
 Position const KorvasJumpPos = { 1117.89f, 3196.24f, 36.2158f };
@@ -179,7 +179,7 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
                 return;
 
             me->SetFacingToObject(wrathWarrior);
-            me->SetAIAnimKitId(ANIM_DH_RUN);
+            wrathWarrior->StopMoving();
             wrathWarrior->SendPlaySpellVisualKit(SPELL_VISUAL_KIT_WRATH_WARRIOR_DIE, 0, 0);
             wrathWarrior->DespawnOrUnsummon(7s);
             me->GetMotionMaster()->MovePath(PATH_KAYN_AFTER_DEMON, false);
@@ -195,14 +195,24 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
 
         if (pointId == POINT_KAYN_TRIGGER_DOUBLE_JUMP)
         {
+            TempSummon* summon = me->ToTempSummon();
+            if (!summon)
+                return;
+            WorldObject* summoner = summon->GetSummoner();
+            if (!summoner)
+                return;
+            Player* summonerPlayer = summoner->ToPlayer();
+            if (!summonerPlayer)
+                return;
+
             me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 3000);
-            //me->PlayDirectSound(SOUND_SPELL_DOUBLE_JUMP, me);
+            me->PlayObjectSound(SOUND_SPELL_DOUBLE_JUMP, me->GetGUID(), summonerPlayer);
             me->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_DOUBLE_JUMP, 0, 0);
-            me->GetMotionMaster()->MoveJumpWithGravity(KaynDoublePos, 24.0, 0.9874f, POINT_KAYN_MOVE_TO_DEMON);
+            me->GetMotionMaster()->MoveJumpWithGravity(KaynDoubleJumpPosition, 24.0, 0.9874f, POINT_KAYN_MOVE_TO_DEMON);
         }
         else if (pointId == POINT_KAYN_MOVE_TO_DEMON)
         {
-            me->SetNpcFlag2(me->GetNpcFlags2() | UNIT_NPC_FLAG_2_STEERING);
+            me->SetAIAnimKitId(ANIM_DH_RUN);
             me->GetMotionMaster()->MovePath(PATH_KAYN_ATTACK_DEMON, false, {}, 4.0f);
         }
     }
@@ -449,15 +459,15 @@ public:
                 if (!kaynClone)
                     break;
 
-                /*
-                    ServerToClient: SMSG_PLAY_OBJECT_SOUND (0x275F) Length: 50 ConnIdx: 1 Time: 08/03/2023 16:12:47.494 Number: 2273
-                    SoundId: 700 (SHEATHINGMETALWEAPONUNSHEATHE)
-                    SourceObjectGUID: Full: 0x203AE8B9205AD4C000062700004BB5D8 Creature/0 R3770/S1575 Map: 1481 (Mardum) Entry: 93011 (Kayn Sunfury) Low: 4961752
-                    TargetObjectGUID: Full: 0x203AE8B9205AD4C000062700004BB5D8 Creature/0 R3770/S1575 Map: 1481 (Mardum) Entry: 93011 (Kayn Sunfury) Low: 4961752
-                    Position: X: 1179.566 Y: 3202.6067 Z: 51.426506
-                    BroadcastTextID: 0
-                */
-                //kaynClone->PlayDirectSound(SOUND_METAL_WEAPON_UNSHEATH, kaynClone);
+                Unit* privateObjectOwner = ObjectAccessor::GetUnit(*conversation, conversation->GetPrivateObjectOwner());
+                if (!privateObjectOwner)
+                    return;
+
+                Player* player = privateObjectOwner->ToPlayer();
+                if (!player)
+                    return;
+
+                kaynClone->PlayObjectSound(SOUND_METAL_WEAPON_UNSHEATH, kaynClone->GetGUID(), player);
                 kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_GLIDE, 4, 3000);
                 kaynClone->SendPlaySpellVisualKit(SPELL_VISUAL_KAYN_WINGS, 4, 4000);
                 kaynClone->GetMotionMaster()->MoveJumpWithGravity(KaynJumpPos, 20.5f, 396.3535f, POINT_KAYN_TRIGGER_DOUBLE_JUMP);
