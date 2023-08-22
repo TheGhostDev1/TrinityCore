@@ -102,22 +102,22 @@ enum TheInvasionBeginsQuestData
 enum TheInvasionsBeginsWaypointData
 {
     // Kayn
-    PATH_KAYN_ATTACK_DEMON          = (93011 * 10) << 3,
-    PATH_KAYN_AFTER_DEMON           = (93011 * 10 + 1) << 3,
+    PATH_KAYN_ATTACK_DEMON          = 9301100,
+    PATH_KAYN_AFTER_DEMON           = 9301101,
 
     // Path before Jump
-    PATH_JAYCE_INVASIONS_BEGINS     = (98228 * 10) << 3,
-    PATH_ALLARI_INVASIONS_BEGINS    = (98227 * 10) << 3,
-    PATH_CYANA_INVASIONS_BEGINS     = (98290 * 10) << 3,
-    PATH_KORVAS_INVASIONS_BEGINS    = (98292 * 10) << 3,
-    PATH_SEVIS_INVASIONS_BEGINS     = (99918 * 10) << 3,
+    PATH_JAYCE_INVASIONS_BEGINS     = 9822800,
+    PATH_ALLARI_INVASIONS_BEGINS    = 9822700,
+    PATH_CYANA_INVASIONS_BEGINS     = 9829000,
+    PATH_KORVAS_INVASIONS_BEGINS    = 9829200,
+    PATH_SEVIS_INVASIONS_BEGINS     = 9991800,
 
     // Path after Jump
-    PATH_JAYCE_INVASIONS_JUMP       = (98228 * 10 + 1) << 3,
-    PATH_ALLARI_INVASIONS_JUMP      = (98227 * 10 + 1) << 3,
-    PATH_CYANA_INVASIONS_JUMP       = (98290 * 10 + 1) << 3,
-    PATH_KORVAS_INVASIONS_JUMP      = (98292 * 10 + 1) << 3,
-    PATH_SEVIS_INVASIONS_JUMP       = (99918 * 10 + 1) << 3,
+    PATH_JAYCE_INVASIONS_JUMP       = 9822801,
+    PATH_ALLARI_INVASIONS_JUMP      = 9822701,
+    PATH_CYANA_INVASIONS_JUMP       = 9829001,
+    PATH_KORVAS_INVASIONS_JUMP      = 9829201,
+    PATH_SEVIS_INVASIONS_JUMP       = 9991801,
 
     POINT_ILLIDARI_LAND_POS         = 1,
     POINT_KAYN_TRIGGER_DOUBLE_JUMP  = 2,
@@ -146,14 +146,14 @@ enum TheInvasionBeginsEventData
     EVENT_ILLIDARI_START_PATH
 };
 
-Position const WrathWarriorSpawnPosition = { 1069.71f, 3177.44f, 21.46352f };
-Position const KaynJumpPos = { 1172.17f, 3202.55f, 54.3479f };
-Position const KaynDoubleJumpPosition = { 1096.99f, 3186.70f, 29.9815f };
-Position const JayceJumpPos = { 1119.24f, 3203.42f, 38.1061f };
-Position const AllariJumpPos = { 1120.08f, 3197.2f, 36.8502f };
-Position const KorvasJumpPos = { 1117.89f, 3196.24f, 36.2158f };
-Position const SevisJumpPos = { 1120.74f, 3199.47f, 37.5157f };
-Position const CyanaJumpPos = { 1120.34f, 3194.28f, 36.4321f };
+Position const WrathWarriorSpawnPosition    = { 1069.71f, 3177.44f, 21.46352f };
+Position const KaynJumpPos                  = { 1172.17f, 3202.55f, 54.3479f };
+Position const KaynDoubleJumpPosition       = { 1096.99f, 3186.70f, 29.9815f };
+Position const JayceJumpPos                 = { 1119.24f, 3203.42f, 38.1061f };
+Position const AllariJumpPos                = { 1120.08f, 3197.2f, 36.8502f };
+Position const KorvasJumpPos                = { 1117.89f, 3196.24f, 36.2158f };
+Position const SevisJumpPos                 = { 1120.74f, 3199.47f, 37.5157f };
+Position const CyanaJumpPos                 = { 1120.34f, 3194.28f, 36.4321f };
 
 // 93011 - Kayn Sunfury
 struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
@@ -474,6 +474,7 @@ public:
                 kaynClone->SetSheath(SHEATH_STATE_MELEE);
                 kaynClone->SetNpcFlag(UNIT_NPC_FLAG_QUESTGIVER);
 
+                StartCloneMovement(conversation->GetActorCreature(CONVO_ACTOR_IDX_KORVAS)->GetGUID(), PATH_KORVAS_INVASIONS_BEGINS, ANIM_DH_RUN, conversation);
                 StartCloneMovement(_jayceGUID, PATH_JAYCE_INVASIONS_BEGINS, 0, conversation);
                 StartCloneMovement(_allariGUID, PATH_ALLARI_INVASIONS_BEGINS, ANIM_DH_RUN_ALLARI, conversation);
                 StartCloneMovement(_cyanaGUID, PATH_CYANA_INVASIONS_BEGINS, 0, conversation);

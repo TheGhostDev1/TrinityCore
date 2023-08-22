@@ -76,14 +76,17 @@ INSERT INTO `smart_scripts` (`entryorguid`, `source_type`, `id`, `link`, `event_
 
 -- Waypoints for Illidari
 SET @ENTRY := 98228; -- Jayce Darkweaver
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1159.479, 3209.122, 50.16586, NULL, 0, 1),
 (@PATH, 1, 1146.019, 3207.825, 46.61276, NULL, 0, 1),
 (@PATH, 2, 1137.608, 3206.883, 43.31707, NULL, 324, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 98228;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1119.24, 3203.42, 38.1061, NULL, 404, 1),
@@ -96,14 +99,17 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Kayn Sunfury
 SET @ENTRY := 93011;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1095.367, 3186.3792, 29.398575, NULL, 0, 1),
 (@PATH, 1, 1096.117, 3186.6292, 29.898575, NULL, 0, 1),
 (@PATH, 2, 1096.995, 3186.7002, 29.981531, NULL, 0, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 93011;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1069.715, 3177.44, 21.46352, NULL, 3000, 1),
@@ -111,13 +117,16 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Allari the Souleater
 SET @ENTRY := 98227;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1150.981, 3205.185, 47.57572, NULL, 0, 1),
 (@PATH, 1, 1142.78, 3203.735, 44.76439, NULL, 366, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 98227;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1120.08, 3197.2, 36.8502, NULL, 320, 1),
@@ -131,13 +140,16 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Kor'vas Bloodthorn
 SET @ENTRY := 98292;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1155.078, 3204.171, 48.49304, NULL, 0, 1),
 (@PATH, 1, 1138.806, 3200.725, 42.95776, NULL, 213, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 98292;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1117.89, 3196.24, 36.2158, NULL, 237, 1),
@@ -149,13 +161,16 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Sevis Brightflame
 SET @ENTRY := 99918;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1150.524, 3206.556, 47.50604, NULL, 0, 1),
 (@PATH, 1, 1140.031, 3203.963, 43.88533, NULL, 93, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 99918;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1120.74, 3199.47, 37.5157, NULL, 278, 1),
@@ -167,13 +182,16 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Cyana Nightglaive
 SET @ENTRY := 98290;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1154.392, 3203.176, 48.01282, NULL, 0, 1),
 (@PATH, 1, 1144.257, 3200.841, 44.53834, NULL, 159, 1);
 
-SET @PATH := ((@ENTRY) * 10 + 1) << 3;
+SET @ENTRY := 98290;
+SET @PATHOFFSET := 1;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`, `move_type`) VALUES
 (@PATH, 0, 1120.34, 3194.28, 36.4321, NULL, 242, 1),
@@ -186,7 +204,8 @@ INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `positio
 
 -- Wrath Warrior
 SET @ENTRY := 94580;
-SET @PATH := ((@ENTRY) * 10) << 3;
+SET @PATHOFFSET := 0;
+SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`) VALUES
 (@PATH, 0, 1154.849, 3201.211, 47.56994, NULL, 0),
