@@ -146,9 +146,9 @@ enum TheInvasionBeginsEventData
     EVENT_ILLIDARI_START_PATH
 };
 
-Position const WrathWarriorSpawnPosition    = { 1069.71f, 3177.44f, 21.46352f };
+Position const WrathWarriorSpawnPosition    = { 1081.9166f, 3183.8716f, 26.335993f };
 Position const KaynJumpPos                  = { 1172.17f, 3202.55f, 54.3479f };
-Position const KaynDoubleJumpPosition       = { 1096.99f, 3186.70f, 29.9815f };
+Position const KaynDoubleJumpPosition       = { 1094.2384f, 3186.058f, 28.81562f };
 Position const JayceJumpPos                 = { 1119.24f, 3203.42f, 38.1061f };
 Position const AllariJumpPos                = { 1120.08f, 3197.2f, 36.8502f };
 Position const KorvasJumpPos                = { 1117.89f, 3196.24f, 36.2158f };
@@ -174,15 +174,19 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
     {
         if (pathId == PATH_KAYN_ATTACK_DEMON)
         {
-            Creature* wrathWarrior = me->FindNearestCreatureWithOptions(100.0f, { .CreatureId = NPC_WRATH_WARRIOR, .IgnorePhases = true, .OwnerGuid = me->GetOwnerGUID()});
+            Creature* wrathWarrior = me->FindNearestCreatureWithOptions(100.0f, { .CreatureId = NPC_WRATH_WARRIOR, .IgnorePhases = true, .OwnerGuid = me->GetOwnerGUID() });
             if (!wrathWarrior)
                 return;
 
             me->SetFacingToObject(wrathWarrior);
-            wrathWarrior->StopMoving();
+
             wrathWarrior->SendPlaySpellVisualKit(SPELL_VISUAL_KIT_WRATH_WARRIOR_DIE, 0, 0);
-            wrathWarrior->DespawnOrUnsummon(7s);
-            me->GetMotionMaster()->MovePath(PATH_KAYN_AFTER_DEMON, false);
+            wrathWarrior->KillSelf();
+
+            _scheduler.Schedule(600ms, [this](TaskContext /*context*/)
+            {
+                me->GetMotionMaster()->MovePath(PATH_KAYN_AFTER_DEMON, false);
+            });
         }
         else if (pathId == PATH_KAYN_AFTER_DEMON)
             me->DespawnOrUnsummon();
@@ -216,6 +220,14 @@ struct npc_kayn_sunfury_invasion_begins : public ScriptedAI
             me->GetMotionMaster()->MovePath(PATH_KAYN_ATTACK_DEMON, false, {}, 4.0f);
         }
     }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+    }
+
+private:
+    TaskScheduler _scheduler;
 };
 
 // 98228 - Jayce Darkweaver

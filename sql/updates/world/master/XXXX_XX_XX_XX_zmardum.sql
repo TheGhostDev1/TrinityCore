@@ -208,5 +208,5 @@ SET @PATHOFFSET := 0;
 SET @PATH := @ENTRY * 100 + @PATHOFFSET;
 DELETE FROM `waypoint_data` WHERE `id`= @PATH;
 INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `orientation`, `delay`) VALUES
-(@PATH, 0, 1154.849, 3201.211, 47.56994, NULL, 0),
-(@PATH, 1, 1104.016, 3188.272, 32.10395, NULL, 0);
+(@PATH, 0, 1088.1326, 3184.2913, 27.202965, NULL, 0),
+(@PATH, 1, 1098.8898, 3187.22, 30.489897, NULL, 0);
